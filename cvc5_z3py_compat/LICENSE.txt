@@ -1,5 +1,6 @@
-Much of the code and almost all of the API module is based on part of the Z3 distribution.
-Its license follows.
+Much of the code and almost all of the API for this module is taken from Z3's python API: Z3Py.
+
+Z3Py is part of the Z3 distribution. Its license follows.
 
 Z3
 Copyright (c) Microsoft Corporation
