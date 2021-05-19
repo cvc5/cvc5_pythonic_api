@@ -2,7 +2,7 @@
 # Copyright (c) 2021 The cvc5 Developers
 #               2012 The Microsoft Corporation
 #
-# cvc5's Z3-based Python interface
+# cvc5's Z3-compatible Python interface
 #
 # Author: Alex Ozdemir (aozdemir)
 # pyz3 Author: Leonardo de Moura (leonardo)
