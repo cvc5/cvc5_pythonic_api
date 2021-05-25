@@ -195,6 +195,215 @@ class ExprRef(object):
             self.ctx = None
             self.ast = None
 
+    def sexpr(self):
+        """Return a string representing the AST node in s-expression notation.
+
+        >>> x = Int('x')
+        >>> ((x + 1)*x).sexpr()
+        '(* (+ x 1) x)'
+        """
+        return str(self.ast)
+
+    def as_ast(self):
+        """Return a pointer to the underlying Term object."""
+        return self.ast
+
+    def get_id(self):
+        """Return unique identifier for object. It can be used for hash-tables and maps."""
+        return self.ast.getId()
+
+    def eq(self, other):
+        """Return `True` if `self` and `other` are structurally identical.
+
+        >>> x = Int('x')
+        >>> n1 = x + 1
+        >>> n2 = 1 + x
+        >>> n1.eq(n2)
+        False
+        """
+        if debugging():
+            _assert(is_ast(other), "SMT AST expected")
+        return self.ctx == other.ctx and self.as_ast() == other.as_ast()
+
+    def hash(self):
+        """Return a hashcode for the `self`.
+
+        >>> n1 = Int('x') + 1
+        >>> n2 = Int('x') + 1
+        >>> n1.hash() == n2.hash()
+        True
+        """
+        return self.as_ast().__hash__()
+
+    def sort(self):
+        """Return the sort of expression `self`.
+
+        >>> x = Int('x')
+        >>> (x + 1).sort()
+        Int
+        >>> y = Real('y')
+        >>> (x + y).sort()
+        Real
+        """
+        return _sort(self.ctx, self.ast)
+
+    def __hash__(self):
+        """Hash code."""
+        return self.ast.__hash__()
+
+    def params(self):
+        return self.decl().params()
+
+    def decl(self):
+        """Return the SMT function declaration associated with an SMT application.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> a = Int('a')
+        >>> t = f(a)
+        >>> eq(t.decl(), f)
+        True
+        """
+        if is_app_of(self, kinds.ApplyUf):
+            return _to_expr_ref(list(self.ast)[0], self.ctx)
+        else:
+            unimplemented("Declarations for non-function applications")
+
+    def kind(self):
+        """Return the kinds of this term
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> a = Int('a')
+        >>> t = f(a)
+        >>> t.kind() == kinds.ApplyUf
+        True
+        """
+        return self.ast.getKind()
+
+    def num_args(self):
+        """Return the number of arguments of an SMT application.
+
+        >>> a = Int('a')
+        >>> b = Int('b')
+        >>> (a + b).num_args()
+        2
+        >>> f = Function('f', IntSort(), IntSort(), IntSort(), IntSort())
+        >>> t = f(a, b, 0)
+        >>> t.num_args()
+        3
+        """
+        if debugging():
+            _assert(is_app(self), "SMT application expected")
+        if is_app_of(self, kinds.ApplyUf):
+            return len(list(self.as_ast())) - 1
+        else:
+            return len(list(self.as_ast()))
+
+    def arg(self, idx):
+        """Return argument `idx` of the application `self`.
+
+        This method assumes that `self` is a function application with at least `idx+1` arguments.
+
+        >>> a = Int('a')
+        >>> b = Int('b')
+        >>> f = Function('f', IntSort(), IntSort(), IntSort(), IntSort())
+        >>> t = f(a, b, 0)
+        >>> t.arg(0)
+        a
+        >>> t.arg(1)
+        b
+        >>> t.arg(2)
+        0
+        """
+        if debugging():
+            _assert(is_app(self), "SMT application expected")
+            _assert(idx < self.num_args(), "Invalid argument index")
+        if is_app_of(self, kinds.ApplyUf):
+            return _to_expr_ref(self.as_ast()[idx + 1], self.ctx)
+        elif self.reverse_children:
+            return _to_expr_ref(
+                self.as_ast()[self.num_args() - (idx + 1)], self.ctx
+            )
+        else:
+            return _to_expr_ref(self.as_ast()[idx], self.ctx)
+
+    def children(self):
+        """Return a list containing the children of the given expression
+
+        >>> a = Int('a')
+        >>> b = Int('b')
+        >>> f = Function('f', IntSort(), IntSort(), IntSort(), IntSort())
+        >>> t = f(a, b, 0)
+        >>> t.children()
+        [a, b, 0]
+        """
+        if is_app_of(self, kinds.ApplyUf):
+            return [_to_expr_ref(a, self.ctx) for a in list(self.ast)[1:]]
+        else:
+            if is_app(self):
+                args = list(self.ast)
+                if self.reverse_children:
+                    args = reversed(args)
+                return [_to_expr_ref(a, self.ctx) for a in args]
+            else:
+                return []
+
+
+def is_ast(a):
+    """Return `True` for expressions and sorts.
+
+    Exposed by the Z3 API. Less relevant to us.
+
+    >>> is_ast(10)
+    False
+    >>> is_ast(IntVal(10))
+    True
+    >>> is_ast(Int('x'))
+    True
+    >>> is_ast(BoolSort())
+    True
+    >>> is_ast(Function('f', IntSort(), IntSort()))
+    True
+    >>> is_ast("x")
+    False
+    >>> is_ast(Solver())
+    False
+    """
+    return isinstance(a, (ExprRef, SortRef))
+
+
+def eq(a, b):
+    """Return `True` if `a` and `b` are structurally identical AST nodes.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> eq(x, y)
+    False
+    >>> eq(x + 1, x + 1)
+    True
+    >>> eq(x + 1, 1 + x)
+    False
+    """
+    if debugging():
+        _assert(is_ast(a) and is_ast(b), "SMT ASTs expected")
+    return a.eq(b)
+
+
+def _ctx_from_ast_arg_list(args, default_ctx=None):
+    ctx = None
+    for a in args:
+        if is_ast(a):
+            if ctx is None:
+                ctx = a.ctx
+            else:
+                if debugging():
+                    _assert(ctx == a.ctx, "Context mismatch")
+    if ctx is None:
+        ctx = default_ctx
+    return ctx
+
+
+def _ctx_from_ast_args(*args):
+    return _ctx_from_ast_arg_list(args)
 
 #########################################
 #
@@ -217,6 +426,123 @@ class SortRef(object):
             self.ctx = None
         if self.ast is not None:
             self.ast = None
+
+    def __eq__(self, other):
+        return self.ast == other.ast
+
+    def sexpr(self):
+        """Return a string representing the AST node in s-expression notation.
+
+        >>> x = Int('x')
+        >>> ((x + 1)*x).sexpr()
+        '(* (+ x 1) x)'
+        """
+        return str(self.ast)
+
+    def as_ast(self):
+        """Return a pointer to the underlying Sort object."""
+        return self.ast
+
+    def eq(self, other):
+        """Return `True` if `self` and `other` are structurally identical.
+
+        >>> x = Int('x')
+        >>> n1 = x + 1
+        >>> n2 = 1 + x
+        >>> n1.eq(n2)
+        False
+        >>> n1.eq(x + 1)
+        True
+        """
+        instance_check(other, SortRef)
+        assert self.ctx == other.ctx
+        return self.as_ast() == other.as_ast()
+
+    def hash(self):
+        """Return a hashcode for the `self`.
+
+        >>> n1 = Int('x') + 1
+        >>> n2 = Int('x') + 1
+        >>> n1.hash() == n2.hash()
+        True
+        """
+        return self.as_ast().__hash__()
+
+    def subsort(self, other):
+        """Return `True` if `self` is a subsort of `other`.
+
+        >>> IntSort().subsort(RealSort())
+        True
+        """
+        # subclasses override
+        return False
+
+    def cast(self, val):
+        """Try to cast `val` as an element of sort `self`.
+
+        This method is used in SMT to convert Python objects such as integers,
+        floats, longs and strings into SMT expressions.
+
+        >>> x = Int('x')
+        >>> RealSort().cast(x)
+        ToReal(x)
+        """
+        if debugging():
+            _assert(is_expr(val), "SMT expression expected")
+            _assert(self.eq(val.sort()), "Sort mismatch")
+        # subclasses override
+        return val
+
+    def name(self):
+        """Return the name (string) of sort `self`.
+
+        >>> BoolSort().name()
+        'Bool'
+        >>> ArraySort(IntSort(), IntSort()).name()
+        '(Array Int Int)'
+        """
+        return str(self.ast)
+
+    def __ne__(self, other):
+        """Return `True` if `self` and `other` are not the same SMT sort.
+
+        >>> p = Bool('p')
+        >>> p.sort() != BoolSort()
+        False
+        >>> p.sort() != IntSort()
+        True
+        """
+        return self.ast != other.ast
+
+    def __hash__(self):
+        """Hash code."""
+        return self.ast.__hash__()
+
+
+def _sort(ctx, a):
+    if isinstance(a, ExprRef):
+        a = a.ast
+    instance_check(a, pc.Term)
+    return _to_sort_ref(a.getSort(), ctx)
+
+
+def DeclareSort(name, ctx=None):
+    """Create a new uninterpreted sort named `name`.
+
+    If `ctx=None`, then the new sort is declared in the global SMT context.
+
+    >>> A = DeclareSort('A')
+    >>> a = Const('a', A)
+    >>> b = Const('b', A)
+    >>> a.sort() == A
+    True
+    >>> b.sort() == A
+    True
+    >>> a == b
+    a == b
+    """
+    ctx = _get_ctx(ctx)
+    return SortRef(ctx.solver.mkUninterpretedSort(name), ctx)
 
 
 def is_sort(s):
@@ -258,8 +584,6 @@ def _to_sort_ref(s, ctx):
         return ArraySortRef(s, ctx)
     elif s.isSet():
         return SetSortRef(s, ctx)
-    elif s.isDatatype():
-        return DatatypeSortRef(s, ctx)
     return SortRef(s, ctx)
 
 
@@ -302,6 +626,8 @@ def _to_expr_ref(a, ctx, r=None):
         if r is None:
             r = False
         ast = a
+    else:
+        ast = a
     sort = ast.getSort()
     if sort.isBoolean():
         return BoolRef(ast, ctx, r)
@@ -322,9 +648,96 @@ def _to_expr_ref(a, ctx, r=None):
         return ArrayRef(ast, ctx, r)
     if sort.isSet():
         return SetRef(ast, ctx, r)
-    if sort.isDatatype():
-        return DatatypeRef(ast, ctx, r)
     return ExprRef(ast, ctx, r)
+
+
+def is_expr(a):
+    """Return `True` if `a` is an SMT expression.
+
+    >>> a = Int('a')
+    >>> is_expr(a)
+    True
+    >>> is_expr(a + 1)
+    True
+    >>> is_expr(IntSort())
+    False
+    >>> is_expr(1)
+    False
+    >>> is_expr(IntVal(1))
+    True
+    >>> x = Int('x')
+    """
+    return isinstance(a, ExprRef)
+
+
+def is_app(a):
+    """Return `True` if `a` is an SMT function application.
+
+    Note that, constants are function applications with 0 arguments.
+
+    >>> a = Int('a')
+    >>> is_app(a)
+    True
+    >>> is_app(a + 1)
+    True
+    >>> is_app(IntSort())
+    False
+    >>> is_app(1)
+    False
+    >>> is_app(IntVal(1))
+    True
+    >>> x = Int('x')
+    """
+    # Change later for quantifiers
+    return is_expr(a)
+
+
+def is_app_of(a, k):
+    """Return `True` if `a` is an application of the given kind `k`.
+
+    >>> x = Int('x')
+    >>> n = x + 1
+    >>> is_app_of(n, kinds.Plus)
+    True
+    >>> is_app_of(n, kinds.Mult)
+    False
+    """
+    return is_expr(a) and a.ast.getKind() == k
+
+
+def Const(name, sort):
+    """Create a constant of the given sort.
+
+    >>> Const('x', IntSort())
+    x
+    """
+    if debugging():
+        _assert(isinstance(sort, SortRef), "SMT sort expected")
+    ctx = sort.ctx
+    e = ctx.get_var(name, sort)
+    return _to_expr_ref(e, ctx)
+
+
+def Consts(names, sort):
+    """Create several constants of the given sort.
+
+    `names` is a string containing the names of all constants to be created.
+    Blank spaces separate the names of different constants.
+
+    >>> x, y, z = Consts('x y z', IntSort())
+    >>> x + y + z
+    x + y + z
+    """
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [Const(name, sort) for name in names]
+
+
+def FreshConst(sort, prefix="c"):
+    """Create a fresh constant of a specified sort"""
+    ctx = sort.ctx
+    name = ctx.next_fresh(sort, prefix)
+    return Const(name, sort)
 
 
 #########################################
