@@ -53,6 +53,42 @@ def _is_int(v):
         return isinstance(v, int)
 
 
+def unimplemented(msg=None):
+    if msg is None:
+        raise Exception("Unimplemented")
+    else:
+        raise Exception("Unimplemented: {}".format(msg))
+
+
+class SMTException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+# We use _assert instead of the assert command because we want to
+# produce nice error messages in SMTPy at rise4fun.com
+def _assert(cond, msg):
+    if not cond:
+        raise SMTException(msg)
+
+
+# Hack for having nary functions that can receive one argument that is the
+# list of arguments.
+# Use this when function takes a single list of arguments
+def _get_args(args):
+    try:
+        if len(args) == 1 and isinstance(args[0], (list, tuple)):
+            return list(args[0])
+        else:
+            return list(args)
+    except TypeError:
+        # len is not necessarily defined when args is not a sequence
+        return list(args)
+
+
 class Context(object):
     """A Context manages all terms, configurations, etc.
 
@@ -183,11 +219,262 @@ class SortRef(object):
             self.ast = None
 
 
+def is_sort(s):
+    """Return `True` if `s` is an SMT sort.
+
+    >>> is_sort(IntSort())
+    True
+    >>> is_sort(Int('x'))
+    False
+    >>> is_expr(Int('x'))
+    True
+    """
+    return isinstance(s, SortRef)
+
+
+def instance_check(item, instance):
+    _assert(
+        isinstance(item, instance),
+        "Expected {}, but got a {}".format(instance, type(item)),
+    )
+
+
+def _to_sort_ref(s, ctx):
+    """ Construct the correct SortRef subclass for `s`
+
+    s may be a base Sort or a SortRef.
+    """
+    if isinstance(s, SortRef):
+        s = s.ast
+    if debugging():
+        instance_check(s, pc.Sort)
+    if s.isBoolean():
+        return BoolSortRef(s, ctx)
+    elif s.isInteger() or s.isReal():
+        return ArithSortRef(s, ctx)
+    elif s.isBitVector():
+        return BitVecSortRef(s, ctx)
+    elif s.isArray():
+        return ArraySortRef(s, ctx)
+    elif s.isSet():
+        return SetSortRef(s, ctx)
+    elif s.isDatatype():
+        return DatatypeSortRef(s, ctx)
+    return SortRef(s, ctx)
+
+
+#########################################
+#
+# Function Declarations
+#
+#########################################
+
+
+class FuncDeclRef(ExprRef):
+    """Function declaration.
+    Every constant and function have an associated declaration.
+
+    The declaration assigns a name, a sort (i.e., type), and for function
+    the sort (i.e., type) of each of its arguments. Note that, in SMT,
+    a constant is a function with 0 arguments.
+    """
+
+
+#########################################
+#
+# Expressions
+#
+#########################################
+
+
+def _to_expr_ref(a, ctx, r=None):
+    """ Construct the correct ExprRef subclass for `a`
+
+    a may be a base Term or a ExprRef.
+
+    Based on the underlying sort of a.
+    """
+    if isinstance(a, ExprRef):
+        ast = a.ast
+        if r is None:
+            r = a.reverse_children
+    elif isinstance(a, pc.Term):
+        if r is None:
+            r = False
+        ast = a
+    sort = ast.getSort()
+    if sort.isBoolean():
+        return BoolRef(ast, ctx, r)
+    if sort.isInteger():
+        if ast.getKind() == kinds.ConstRational:
+            return IntNumRef(ast, ctx, r)
+        return ArithRef(ast, ctx, r)
+    if sort.isReal():
+        if ast.getKind() == kinds.ConstRational:
+            return RatNumRef(ast, ctx, r)
+        return ArithRef(ast, ctx, r)
+    if sort.isBitVector():
+        if ast.getKind() == kinds.ConstBV:
+            return BitVecNumRef(ast, ctx, r)
+        else:
+            return BitVecRef(ast, ctx, r)
+    if sort.isArray():
+        return ArrayRef(ast, ctx, r)
+    if sort.isSet():
+        return SetRef(ast, ctx, r)
+    if sort.isDatatype():
+        return DatatypeRef(ast, ctx, r)
+    return ExprRef(ast, ctx, r)
+
+
+#########################################
+#
+# Booleans
+#
+#########################################
+
+
+class BoolSortRef(SortRef):
+    """Boolean sort."""
+
+
+class BoolRef(ExprRef):
+    """All Boolean expressions are instances of this class."""
+
+
+#########################################
+#
+# Arithmetic
+#
+#########################################
+
+
+class ArithSortRef(SortRef):
+    """Real and Integer sorts."""
+
+
+class ArithRef(ExprRef):
+    """Integer and Real expressions."""
+
+
+class IntNumRef(ArithRef):
+    """Integer values."""
+
+
+class RatNumRef(ArithRef):
+    """Rational values."""
+
+
+#########################################
+#
+# Bit-Vectors
+#
+#########################################
+
+
+class BitVecSortRef(SortRef):
+    """Bit-vector sort."""
+
+
+class BitVecRef(ExprRef):
+    """Bit-vector expressions."""
+
+
+class BitVecNumRef(BitVecRef):
+    """Bit-vector values."""
+
+
+#########################################
+#
+# Arrays
+#
+#########################################
+
+
+class ArraySortRef(SortRef):
+    """Array sorts."""
+
+
+class ArrayRef(ExprRef):
+    """Array expressions."""
+
+
+#########################################
+#
+# Sets
+#
+#########################################
+
+
+class SetSortRef(SortRef):
+    """Array sorts."""
+
+
+class SetRef(ExprRef):
+    """Array expressions."""
+
+
 #########################################
 #
 # Solver
 #
 #########################################
+class CheckSatResult(object):
+    """Represents the result of a satisfiability check: sat, unsat, unknown.
+
+    >>> s = Solver()
+    >>> s.check()
+    sat
+    >>> r = s.check()
+    >>> isinstance(r, CheckSatResult)
+    True
+    """
+
+    def __init__(self, r):
+        instance_check(r, pc.Result)
+        self.r = r
+
+    def __deepcopy__(self, memo={}):
+        return CheckSatResult(self.r)
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        if self.r.isSat():
+            return "sat"
+        elif self.r.isUnsat():
+            return "unsat"
+        else:
+            return "unknown"
+
+
+class CheckSatResultLiteral(CheckSatResult):
+    """Represents the literal result of a satisfiability check: sat, unsat, unknown.
+
+    >>> s = Solver()
+    >>> s.check()
+    sat
+    >>> s.check() == CheckSatResultLiteral("sat")
+    True
+    """
+
+    def __init__(self, string):
+        self.string = string
+
+    def __deepcopy__(self, memo={}):
+        return CheckSatResultLiteral(self.string)
+
+    def __repr__(self):
+        return self.string
+
+
+sat = CheckSatResultLiteral("sat")
+unsat = CheckSatResultLiteral("unsat")
+unknown = CheckSatResultLiteral("unknown")
 
 
 class Solver(object):
@@ -212,3 +499,4 @@ class Solver(object):
             self.solver = None
         if self.ctx is not None:
             self.ctx = None
+
