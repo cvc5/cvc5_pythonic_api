@@ -627,7 +627,7 @@ def _to_expr_ref(a, ctx, r=None):
             r = False
         ast = a
     else:
-        ast = a
+        raise SMTException("Non-term/expression given to _to_expr_ref")
     sort = ast.getSort()
     if sort.isBoolean():
         return BoolRef(ast, ctx, r)
