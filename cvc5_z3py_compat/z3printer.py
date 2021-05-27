@@ -10,7 +10,6 @@
 import sys
 import io
 
-from ctypes import *
 import itertools as it
 
 from cvc5_z3py_compat import z3 as cvc
