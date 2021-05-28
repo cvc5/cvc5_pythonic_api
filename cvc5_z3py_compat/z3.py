@@ -69,7 +69,7 @@ class SMTException(Exception):
 
 
 # We use _assert instead of the assert command because we want to
-# produce nice error messages in SMTPy at rise4fun.com
+# use our own exception class
 def _assert(cond, msg):
     if not cond:
         raise SMTException(msg)
