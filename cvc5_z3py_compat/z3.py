@@ -1089,9 +1089,9 @@ class Solver(object):
         >>> s.reset()
         """
         assumptions = _get_args(assumptions)
-        return CheckSatResult(
-            self.solver.checkSatAssuming(*[a.ast for a in assumptions])
-        )
+        r = CheckSatResult(self.solver.checkSatAssuming(*[a.ast for a in assumptions]))
+        self.last_result = r
+        return r
 
     def model(self):
         """Return a model for the last `check()`.
