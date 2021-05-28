@@ -46,7 +46,7 @@ def debugging():
 
 
 def _is_int(v):
-    """ Python 2/3 agnostic int testing """
+    """Python 2/3 agnostic int testing"""
     if sys.version < "3":
         return isinstance(v, (int, long))  # type: ignore
     else:
@@ -209,7 +209,8 @@ class ExprRef(object):
         return self.ast
 
     def get_id(self):
-        """Return unique identifier for object. It can be used for hash-tables and maps."""
+        """Return unique identifier for object.
+        It can be used for hash-tables and maps."""
         return self.ast.getId()
 
     def eq(self, other):
@@ -301,7 +302,8 @@ class ExprRef(object):
     def arg(self, idx):
         """Return argument `idx` of the application `self`.
 
-        This method assumes that `self` is a function application with at least `idx+1` arguments.
+        This method assumes that `self` is a function application with at least
+        `idx+1` arguments.
 
         >>> a = Int('a')
         >>> b = Int('b')
@@ -320,9 +322,7 @@ class ExprRef(object):
         if is_app_of(self, kinds.ApplyUf):
             return _to_expr_ref(self.as_ast()[idx + 1], self.ctx)
         elif self.reverse_children:
-            return _to_expr_ref(
-                self.as_ast()[self.num_args() - (idx + 1)], self.ctx
-            )
+            return _to_expr_ref(self.as_ast()[self.num_args() - (idx + 1)], self.ctx)
         else:
             return _to_expr_ref(self.as_ast()[idx], self.ctx)
 
@@ -404,6 +404,7 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
 
 def _ctx_from_ast_args(*args):
     return _ctx_from_ast_arg_list(args)
+
 
 #########################################
 #
@@ -566,7 +567,7 @@ def instance_check(item, instance):
 
 
 def _to_sort_ref(s, ctx):
-    """ Construct the correct SortRef subclass for `s`
+    """Construct the correct SortRef subclass for `s`
 
     s may be a base Sort or a SortRef.
     """
@@ -612,7 +613,7 @@ class FuncDeclRef(ExprRef):
 
 
 def _to_expr_ref(a, ctx, r=None):
-    """ Construct the correct ExprRef subclass for `a`
+    """Construct the correct ExprRef subclass for `a`
 
     a may be a base Term or a ExprRef.
 
@@ -887,7 +888,8 @@ class CheckSatResult(object):
 
 
 class CheckSatResultLiteral(CheckSatResult):
-    """Represents the literal result of a satisfiability check: sat, unsat, unknown.
+    """Represents the literal result of a satisfiability check: sat, unsat,
+    unknown.
 
     >>> s = Solver()
     >>> s.check()
@@ -1003,7 +1005,8 @@ class Solver(object):
         return self.scopes
 
     def reset(self):
-        """Remove all asserted constraints and backtracking points created using `push()`.
+        """Remove all asserted constraints and backtracking points created
+        using `push()`.
 
         >>> x = Int('x')
         >>> s = Solver()
@@ -1072,7 +1075,8 @@ class Solver(object):
         self.assert_exprs(*args)
 
     def check(self, *assumptions):
-        """Check whether the assertions in the given solver plus the optional assumptions are consistent or not.
+        """Check whether the assertions in the given solver plus the optional
+        assumptions are consistent or not.
 
         >>> x = Int('x')
         >>> s = Solver()
@@ -1130,8 +1134,7 @@ class Solver(object):
         >>> s = SimpleSolver()
         """
         if self.last_result is None:
-            raise SMTException(
-                    "No previous check-sat call, so no reason for unknown")
+            raise SMTException("No previous check-sat call, so no reason for unknown")
         return self.last_result.r.getUnknownExplanation()
 
     def __repr__(self):
@@ -1139,7 +1142,8 @@ class Solver(object):
         return "[" + ", ".join(str(a) for a in self.assertions()) + "]"
 
     def sexpr(self):
-        """Return a formatted string (in Lisp-like format) with all added constraints. We say the string is in s-expression format.
+        """Return a formatted string (in Lisp-like format) with all added
+        constraints. We say the string is in s-expression format.
 
         >>> x = Int('x')
         >>> s = Solver()
@@ -1153,21 +1157,21 @@ class Solver(object):
 def SolverFor(logic, ctx=None, logFile=None):
     """Create a solver customized for the given logic.
 
-    The parameter `logic` is a string. It should be contains
-    the name of an SMT-LIB logic.
+    The parameter `logic` is a string. It should be the name of an SMT-LIB
+    logic.
     See http://www.smtlib.org/ for the name of all available logics.
     """
 
-# Pending multiple solvers
-#     >>> s = SolverFor("QF_LIA")
-#     >>> x = Int('x')
-#     >>> s.add(x > 0)
-#     >>> s.add(x < 2)
-#     >>> s.check()
-#     sat
-#     >>> s.model()
-#     [x = 1]
-#     """
+    # Pending multiple solvers
+    #     >>> s = SolverFor("QF_LIA")
+    #     >>> x = Int('x')
+    #     >>> s.add(x > 0)
+    #     >>> s.add(x < 2)
+    #     >>> s.check()
+    #     sat
+    #     >>> s.model()
+    #     [x = 1]
+    #     """
     solver = pc.Solver()
     solver.setLogic(logic)
     ctx = _get_ctx(ctx)
@@ -1239,7 +1243,10 @@ class ModelRef:
         return "[" + inner + "]"
 
     def eval(self, t, model_completion=False):
-        """Evaluate the expression `t` in the model `self`. If `model_completion` is enabled, then a default interpretation is automatically added for symbols that do not have an interpretation in the model `self`.
+        """Evaluate the expression `t` in the model `self`. If
+        `model_completion` is enabled, then a default interpretation is
+        automatically added for symbols that do not have an interpretation in
+        the model `self`.
 
         >>> x = Int('x')
         >>> s = Solver()
@@ -1271,7 +1278,8 @@ class ModelRef:
         return self.eval(t, model_completion)
 
     def __len__(self):
-        """Return the number of constant and function declarations in the model `self`.
+        """Return the number of constant and function declarations in the model
+        `self`.
 
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
@@ -1321,7 +1329,9 @@ class ModelRef:
         return None
 
     def decls(self):
-        """Return a list with all symbols that have an interpretation in the model `self`.
+        """Return a list with all symbols that have an interpretation in the
+        model `self`.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> s = Solver()
