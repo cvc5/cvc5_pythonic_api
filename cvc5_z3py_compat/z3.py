@@ -46,9 +46,9 @@ def debugging():
 
 
 def _is_int(v):
-    """ Python 2/3 agnostic int testing """
+    """Python 2/3 agnostic int testing"""
     if sys.version < "3":
-        return isinstance(v, (int, long))
+        return isinstance(v, (int, long))  # type: ignore
     else:
         return isinstance(v, int)
 
@@ -69,7 +69,7 @@ class SMTException(Exception):
 
 
 # We use _assert instead of the assert command because we want to
-# produce nice error messages in SMTPy at rise4fun.com
+# use our own exception class
 def _assert(cond, msg):
     if not cond:
         raise SMTException(msg)
@@ -209,7 +209,8 @@ class ExprRef(object):
         return self.ast
 
     def get_id(self):
-        """Return unique identifier for object. It can be used for hash-tables and maps."""
+        """Return unique identifier for object.
+        It can be used for hash-tables and maps."""
         return self.ast.getId()
 
     def eq(self, other):
@@ -264,7 +265,7 @@ class ExprRef(object):
         True
         """
         if is_app_of(self, kinds.ApplyUf):
-            return _to_expr_ref(list(self.ast)[0], self.ctx)
+            return _to_expr_ref(list(self.ast)[0], self.ctx)  # type: ignore
         else:
             unimplemented("Declarations for non-function applications")
 
@@ -294,14 +295,15 @@ class ExprRef(object):
         if debugging():
             _assert(is_app(self), "SMT application expected")
         if is_app_of(self, kinds.ApplyUf):
-            return len(list(self.as_ast())) - 1
+            return len(list(self.as_ast())) - 1  # type: ignore
         else:
-            return len(list(self.as_ast()))
+            return len(list(self.as_ast()))  # type: ignore
 
     def arg(self, idx):
         """Return argument `idx` of the application `self`.
 
-        This method assumes that `self` is a function application with at least `idx+1` arguments.
+        This method assumes that `self` is a function application with at least
+        `idx+1` arguments.
 
         >>> a = Int('a')
         >>> b = Int('b')
@@ -320,9 +322,7 @@ class ExprRef(object):
         if is_app_of(self, kinds.ApplyUf):
             return _to_expr_ref(self.as_ast()[idx + 1], self.ctx)
         elif self.reverse_children:
-            return _to_expr_ref(
-                self.as_ast()[self.num_args() - (idx + 1)], self.ctx
-            )
+            return _to_expr_ref(self.as_ast()[self.num_args() - (idx + 1)], self.ctx)
         else:
             return _to_expr_ref(self.as_ast()[idx], self.ctx)
 
@@ -337,10 +337,10 @@ class ExprRef(object):
         [a, b, 0]
         """
         if is_app_of(self, kinds.ApplyUf):
-            return [_to_expr_ref(a, self.ctx) for a in list(self.ast)[1:]]
+            return [_to_expr_ref(a, self.ctx) for a in list(self.ast)[1:]]  # type: ignore
         else:
             if is_app(self):
-                args = list(self.ast)
+                args = list(self.ast)  # type: ignore
                 if self.reverse_children:
                     args = reversed(args)
                 return [_to_expr_ref(a, self.ctx) for a in args]
@@ -404,6 +404,7 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
 
 def _ctx_from_ast_args(*args):
     return _ctx_from_ast_arg_list(args)
+
 
 #########################################
 #
@@ -566,7 +567,7 @@ def instance_check(item, instance):
 
 
 def _to_sort_ref(s, ctx):
-    """ Construct the correct SortRef subclass for `s`
+    """Construct the correct SortRef subclass for `s`
 
     s may be a base Sort or a SortRef.
     """
@@ -612,7 +613,7 @@ class FuncDeclRef(ExprRef):
 
 
 def _to_expr_ref(a, ctx, r=None):
-    """ Construct the correct ExprRef subclass for `a`
+    """Construct the correct ExprRef subclass for `a`
 
     a may be a base Term or a ExprRef.
 
@@ -754,6 +755,27 @@ class BoolSortRef(SortRef):
 class BoolRef(ExprRef):
     """All Boolean expressions are instances of this class."""
 
+    def sort(self):
+        return _sort(self.ctx, self.ast)
+
+
+def BoolSort(ctx=None):
+    """Return the Boolean SMT sort. If `ctx=None`, then the global context is used.
+
+    >>> BoolSort()
+    Bool
+    >>> p = Const('p', BoolSort())
+    >>> is_bool(p)
+    True
+    >>> r = Function('r', IntSort(), IntSort(), BoolSort())
+    >>> r(0, 1)
+    r(0, 1)
+    >>> is_bool(r(0, 1))
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return BoolSortRef(ctx.solver.getBooleanSort(), ctx)
+
 
 #########################################
 #
@@ -866,7 +888,8 @@ class CheckSatResult(object):
 
 
 class CheckSatResultLiteral(CheckSatResult):
-    """Represents the literal result of a satisfiability check: sat, unsat, unknown.
+    """Represents the literal result of a satisfiability check: sat, unsat,
+    unknown.
 
     >>> s = Solver()
     >>> s.check()
@@ -913,3 +936,432 @@ class Solver(object):
         if self.ctx is not None:
             self.ctx = None
 
+    def push(self):
+        """Create a backtracking point.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0)
+        >>> s
+        [x > 0]
+        >>> s.push()
+        >>> s.add(x < 1)
+        >>> s
+        [x > 0, x < 1]
+        >>> s.check()
+        unsat
+        >>> s.pop()
+        >>> s.check()
+        sat
+        >>> s
+        [x > 0]
+        """
+        self.scopes += 1
+        self.assertions_.append([])
+        self.solver.push(1)
+
+    def pop(self, num=1):
+        """Backtrack num backtracking points.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0)
+        >>> s
+        [x > 0]
+        >>> s.push()
+        >>> s.add(x < 1)
+        >>> s
+        [x > 0, x < 1]
+        >>> s.check()
+        unsat
+        >>> s.pop()
+        >>> s.check()
+        sat
+        >>> s
+        [x > 0]
+        """
+        assert num <= self.scopes
+        self.scopes -= num
+        for _ in range(num):
+            self.assertions_.pop()
+        self.solver.pop(num)
+
+    def num_scopes(self):
+        """Return the current number of backtracking points.
+
+        >>> s = Solver()
+        >>> s.num_scopes()
+        0
+        >>> s.push()
+        >>> s.num_scopes()
+        1
+        >>> s.push()
+        >>> s.num_scopes()
+        2
+        >>> s.pop()
+        >>> s.num_scopes()
+        1
+        """
+        return self.scopes
+
+    def reset(self):
+        """Remove all asserted constraints and backtracking points created
+        using `push()`.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0)
+        >>> s
+        [x > 0]
+        >>> s.reset()
+        >>> s
+        []
+        """
+        self.solver.resetAssertions()
+        self.scopes = 0
+        self.assertions_ = [[]]
+
+    def assert_exprs(self, *args):
+        """Assert constraints into the solver.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.assert_exprs(x > 0, x < 2)
+        >>> s
+        [x > 0, x < 2]
+        """
+        args = _get_args(args)
+        s = BoolSort(self.ctx)
+        for arg in args:
+            arg = s.cast(arg)
+            self.assertions_[-1].append(arg)
+            self.solver.assertFormula(arg.ast)
+
+    def add(self, *args):
+        """Assert constraints into the solver.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2)
+        >>> s
+        [x > 0, x < 2]
+        """
+        self.assert_exprs(*args)
+
+    def __iadd__(self, fml):
+        self.add(fml)
+        return self
+
+    def append(self, *args):
+        """Assert constraints into the solver.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.append(x > 0, x < 2)
+        >>> s
+        [x > 0, x < 2]
+        """
+        self.assert_exprs(*args)
+
+    def insert(self, *args):
+        """Assert constraints into the solver.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.insert(x > 0, x < 2)
+        >>> s
+        [x > 0, x < 2]
+        """
+        self.assert_exprs(*args)
+
+    def check(self, *assumptions):
+        """Check whether the assertions in the given solver plus the optional
+        assumptions are consistent or not.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.check()
+        sat
+        >>> s.add(x > 0, x < 2)
+        >>> s.check()
+        sat
+        >>> s.model().eval(x)
+        1
+        >>> s.add(x < 1)
+        >>> s.check()
+        unsat
+        >>> s.reset()
+        """
+        assumptions = _get_args(assumptions)
+        r = CheckSatResult(self.solver.checkSatAssuming(*[a.ast for a in assumptions]))
+        self.last_result = r
+        return r
+
+    def model(self):
+        """Return a model for the last `check()`.
+
+        This function raises an exception if
+        a model is not available (e.g., last `check()` returned unsat).
+
+        >>> s = Solver()
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0)
+        >>> s.check()
+        sat
+        >>> s.model()
+        [a = -2]
+        """
+        return ModelRef(self, self.ctx)
+
+    def assertions(self):
+        """Return an AST vector containing all added constraints.
+
+        >>> s = Solver()
+        >>> s.assertions()
+        []
+        >>> a = Int('a')
+        >>> s.add(a > 0)
+        >>> s.add(a < 10)
+        >>> s.assertions()
+        [a > 0, a < 10]
+        """
+        return ft.reduce(op.add, self.assertions_)
+
+    def reason_unknown(self):
+        """Return a string describing why the last `check()` returned `unknown`.
+
+        >>> x = Int('x')
+        >>> s = SimpleSolver()
+        """
+        if self.last_result is None:
+            raise SMTException("No previous check-sat call, so no reason for unknown")
+        return self.last_result.r.getUnknownExplanation()
+
+    def __repr__(self):
+        """Return a formatted string with all added constraints."""
+        return "[" + ", ".join(str(a) for a in self.assertions()) + "]"
+
+    def sexpr(self):
+        """Return a formatted string (in Lisp-like format) with all added
+        constraints. We say the string is in s-expression format.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0)
+        >>> s.add(x < 2)
+        >>> r = s.sexpr()
+        """
+        return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
+
+
+def SolverFor(logic, ctx=None, logFile=None):
+    """Create a solver customized for the given logic.
+
+    The parameter `logic` is a string. It should be the name of an SMT-LIB
+    logic.
+    See http://www.smtlib.org/ for the name of all available logics.
+    """
+
+    # Pending multiple solvers
+    #     >>> s = SolverFor("QF_LIA")
+    #     >>> x = Int('x')
+    #     >>> s.add(x > 0)
+    #     >>> s.add(x < 2)
+    #     >>> s.check()
+    #     sat
+    #     >>> s.model()
+    #     [x = 1]
+    #     """
+    solver = pc.Solver()
+    solver.setLogic(logic)
+    ctx = _get_ctx(ctx)
+    return Solver(solver, ctx, logFile)
+
+
+def SimpleSolver(ctx=None, logFile=None):
+    """Return a simple general purpose solver.
+
+    >>> s = SimpleSolver()
+    >>> x = Int('x')
+    >>> s.add(x > 0)
+    >>> s.check()
+    sat
+    """
+    ctx = _get_ctx(ctx)
+    return Solver(None, ctx, logFile)
+
+
+#########################################
+#
+# Utils
+#
+#########################################
+
+
+class ModelRef:
+    """Model/Solution of a satisfiability problem (aka system of constraints)."""
+
+    def __init__(self, solver, ctx):
+        assert solver is not None
+        assert ctx is not None
+        self.solver = solver
+        self.ctx = ctx
+
+    def __del__(self):
+        if self.solver is not None:
+            self.solver = None
+        if self.ctx is not None:
+            self.ctx = None
+
+    def vars(self):
+        """Returns the free constants in an assertion, as terms"""
+        visit = {a: True for a in self.solver.assertions()}
+        q = list(visit.keys())
+        vars_ = set()
+        while len(q) > 0:
+            a = q.pop()
+            if a.ast.getKind() == kinds.Constant:
+                vars_.add(a)
+            else:
+                for c in a.children():
+                    if c not in visit:
+                        visit[c] = True
+                        q.append(c)
+                if a.kind() == kinds.ApplyUf:
+                    c = a.decl()
+                    if c not in visit:
+                        visit[c] = True
+                        q.append(c)
+
+        return vars_
+
+    def __repr__(self):
+        var_vals = [(str(v), self[v]) for v in self.decls()]
+        inner = ", ".join(
+            v + " = " + str(val) for v, val in sorted(var_vals, key=lambda a: a[0])
+        )
+        return "[" + inner + "]"
+
+    def eval(self, t, model_completion=False):
+        """Evaluate the expression `t` in the model `self`. If
+        `model_completion` is enabled, then a default interpretation is
+        automatically added for symbols that do not have an interpretation in
+        the model `self`.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.eval(x + 1)
+        2
+        >>> m.eval(x == 1)
+        True
+        """
+        return _to_expr_ref(self.solver.solver.getValue(t.ast), self.solver.ctx)
+
+    def evaluate(self, t, model_completion=False):
+        """Alias for `eval`.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.evaluate(x + 1)
+        2
+        >>> m.evaluate(x == 1)
+        True
+        """
+        return self.eval(t, model_completion)
+
+    def __len__(self):
+        """Return the number of constant and function declarations in the model
+        `self`.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, f(x) != x)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> len(m)
+        2
+        """
+        return len(self.decls())
+
+    def __getitem__(self, idx):
+        """If `idx` is an integer,
+        then the declaration at position `idx` in the model `self` is returned.
+        If `idx` is a declaration, then the actual interpretation is returned.
+
+        The elements can be retrieved using position or the actual declaration.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2, f(x) == 0)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.decls()
+        [f, x]
+        >>> len(m)
+        2
+        >>> m[0]
+        f
+        >>> m[1]
+        x
+        >>> m[x]
+        1
+        """
+        if _is_int(idx):
+            return self.decls()[idx]
+        if isinstance(idx, ExprRef):
+            return self.eval(idx)
+        if isinstance(idx, SortRef):
+            unimplemented()
+        if debugging():
+            _assert(False, "Integer, SMT declaration, or SMT constant expected")
+        return None
+
+    def decls(self):
+        """Return a list with all symbols that have an interpretation in the
+        model `self`.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2, f(x) == 0)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.decls()
+        [f, x]
+        """
+        return sorted(self.vars(), key=lambda v: str(v))
+
+
+def evaluate(t):
+    """Evaluates the given term (assuming it is constant!)"""
+    s = Solver()
+    s.check()
+    m = s.model()
+    return m[t]
+
+
+def simplify(a):
+    """Simplify the expression `a`.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> simplify(x + 1 + y + x + 1)
+    2 + 2*x + y
+    """
+    if debugging():
+        _assert(is_expr(a), "SMT expression expected")
+    instance_check(a, ExprRef)
+    return _to_expr_ref(a.ctx.solver.simplify(a.ast), a.ctx)
