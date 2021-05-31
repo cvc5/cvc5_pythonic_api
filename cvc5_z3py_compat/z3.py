@@ -1198,6 +1198,132 @@ def SimpleSolver(ctx=None, logFile=None):
 #########################################
 
 
+def substitute(t, *m):
+    """Apply substitution m on t, m is a list of pairs of the form (from, to).
+    Every occurrence in t of from is replaced with to.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> # substitute(x + 1, (x, y + 1))
+    >>> f = Function('f', IntSort(), IntSort())
+    >>> substitute(f(x) + f(y), (f(x), IntVal(1)), (f(y), IntVal(1)))
+    1 + 1
+    """
+    if isinstance(m, tuple):
+        m1 = _get_args(m)
+        if isinstance(m1, list) and all(isinstance(p, tuple) for p in m1):
+            m = m1
+    if debugging():
+        _assert(is_expr(t), "SMT expression expected")
+        _assert(
+            all(
+                [
+                    isinstance(p, tuple)
+                    and is_expr(p[0])
+                    and is_expr(p[1])
+                    and p[0].sort().eq(p[1].sort())
+                    for p in m
+                ]
+            ),
+            "SMT invalid substitution, expression pairs expected.",
+        )
+    num = len(m)
+    froms = []
+    tos = []
+    for i in range(num):
+        froms.append(m[i][0].ast)
+        tos.append(m[i][1].ast)
+    return _to_expr_ref(t.ast.substitute(froms, tos), t.ctx)
+
+
+def solve(*args, **keywords):
+    """Solve the constraints `*args`.
+
+    This is a simple function for creating demonstrations. It creates a solver,
+    configure it using the options in `keywords`, adds the constraints
+    in `args`, and invokes check.
+
+    >>> a = Int('a')
+    >>> solve(a > 0, a < 2)
+    [a = 1]
+    """
+    s = Solver()
+    s.add(*args)
+    if keywords.get("show", False):
+        print(s)
+    r = s.check()
+    if r == unsat:
+        print("no solution")
+    elif r == unknown:
+        print("failed to solve")
+        try:
+            print(s.model())
+        except SMTException:
+            return
+    else:
+        m = s.model()
+        print(m)
+
+
+def solve_using(s, *args, **keywords):
+    """Solve the constraints `*args` using solver `s`.
+
+    This is a simple function for creating demonstrations.
+    It is similar to `solve`, but it uses the given solver `s`.
+    It configures solver `s` using the options in `keywords`,
+    adds the constraints in `args`, and invokes check.
+    """
+    if debugging():
+        _assert(isinstance(s, Solver), "Solver object expected")
+    s.set(**keywords)
+    s.add(*args)
+    if keywords.get("show", False):
+        print("Problem:")
+        print(s)
+    r = s.check()
+    print(r)
+    print(unsat == r)
+    if r == unsat:
+        print("no solution")
+    elif r == unknown:
+        print("failed to solve")
+        try:
+            print(s.model())
+        except SMTException:
+            return
+    else:
+        if keywords.get("show", False):
+            print("Solution:")
+        print(s.model())
+
+
+def prove(claim, **keywords):
+    """Try to prove the given claim.
+
+    This is a simple function for creating demonstrations.  It tries to prove
+    `claim` by showing the negation is unsatisfiable.
+
+    >>> p, q = Bools('p q')
+    >>> prove(Not(And(p, q)) == Or(Not(p), Not(q)))
+    proved
+    """
+    if debugging():
+        _assert(is_bool(claim), "SMT Boolean expression expected")
+    s = Solver()
+    s.add(Not(claim))
+    if keywords.get("show", False):
+        print(s)
+    r = s.check()
+    if r == unsat:
+        print("proved")
+    elif r == unknown:
+        print("failed to prove")
+        print(s.model())
+    else:
+        print("counterexample")
+        print(s.model())
+
+
 class ModelRef:
     """Model/Solution of a satisfiability problem (aka system of constraints)."""
 
