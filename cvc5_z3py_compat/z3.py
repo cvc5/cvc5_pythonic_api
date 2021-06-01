@@ -1153,6 +1153,12 @@ class Solver(object):
         """
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
+    def set(self, **kwargs):
+        for k, v in kwargs:
+            _assert(isinstance(k, str), "non-string key " + str(k))
+            _assert(isinstance(v, str), "non-string key " + str(v))
+            self.solver.setOption(k, v)
+
 
 def SolverFor(logic, ctx=None, logFile=None):
     """Create a solver customized for the given logic.
@@ -1209,30 +1215,21 @@ def substitute(t, *m):
     >>> substitute(f(x) + f(y), (f(x), IntVal(1)), (f(y), IntVal(1)))
     1 + 1
     """
-    if isinstance(m, tuple):
-        m1 = _get_args(m)
-        if isinstance(m1, list) and all(isinstance(p, tuple) for p in m1):
-            m = m1
-    if debugging():
-        _assert(is_expr(t), "SMT expression expected")
-        _assert(
-            all(
-                [
-                    isinstance(p, tuple)
-                    and is_expr(p[0])
-                    and is_expr(p[1])
-                    and p[0].sort().eq(p[1].sort())
-                    for p in m
-                ]
-            ),
-            "SMT invalid substitution, expression pairs expected.",
-        )
-    num = len(m)
+    split = _get_args(m)
+    if all(isinstance(p, tuple) for p in split):
+        m = split
+    assert(is_expr(t))
+    _assert(is_expr(t), "SMT expression expected")
     froms = []
     tos = []
-    for i in range(num):
-        froms.append(m[i][0].ast)
-        tos.append(m[i][1].ast)
+    for subst in m:
+        if debugging():
+            _assert(isinstance(subst, tuple), "each subst must be a tuple")
+            _assert(len(tuple) == 2, "each subst must be a pair")
+            _assert(is_expr(subst[0]) and is_expr(subst[1]), "each subst must be from an expression, to an expression")
+            _assert(subst[0].sort().eq(subst[1].sort()), "each subst must be sort-preserving")
+        froms.append(subst[0].ast)
+        tos.append(subst[1].ast)
     return _to_expr_ref(t.ast.substitute(froms, tos), t.ctx)
 
 
@@ -1250,7 +1247,8 @@ def solve(*args, **kwargs):
     s = Solver()
     s.set(**kwargs)
     s.add(*args)
-    if keywords.get("show", False):
+    if kwargs.get("show", False):
+        print("Problem:")
         print(s)
     r = s.check()
     if r == unsat:
@@ -1262,6 +1260,8 @@ def solve(*args, **kwargs):
         except SMTException:
             return
     else:
+        if kwargs.get("show", False):
+            print("Solution:")
         m = s.model()
         print(m)
 
@@ -1271,14 +1271,15 @@ def solve_using(s, *args, **kwargs):
 
     This is a simple function for creating demonstrations.
     It is similar to `solve`, but it uses the given solver `s`.
-    It configures solver `s` using the options in `keywords`,
+    It configures solver `s` using the options in `kwargs`,
+        ("Problem:")
     adds the constraints in `args`, and invokes check.
     """
     if debugging():
         _assert(isinstance(s, Solver), "Solver object expected")
     s.set(**kwargs)
     s.add(*args)
-    if keywords.get("show", False):
+    if kwargs.get("show", False):
         print("Problem:")
         print(s)
     r = s.check()
