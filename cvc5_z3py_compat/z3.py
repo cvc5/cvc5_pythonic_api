@@ -1236,11 +1236,11 @@ def substitute(t, *m):
     return _to_expr_ref(t.ast.substitute(froms, tos), t.ctx)
 
 
-def solve(*args, **keywords):
+def solve(*args, **kwargs):
     """Solve the constraints `*args`.
 
     This is a simple function for creating demonstrations. It creates a solver,
-    configure it using the options in `keywords`, adds the constraints
+    configure it using the options in `kwargs`, adds the constraints
     in `args`, and invokes check.
 
     >>> a = Int('a')
@@ -1248,6 +1248,7 @@ def solve(*args, **keywords):
     [a = 1]
     """
     s = Solver()
+    s.set(**kwargs)
     s.add(*args)
     if keywords.get("show", False):
         print(s)
@@ -1265,7 +1266,7 @@ def solve(*args, **keywords):
         print(m)
 
 
-def solve_using(s, *args, **keywords):
+def solve_using(s, *args, **kwargs):
     """Solve the constraints `*args` using solver `s`.
 
     This is a simple function for creating demonstrations.
@@ -1275,14 +1276,12 @@ def solve_using(s, *args, **keywords):
     """
     if debugging():
         _assert(isinstance(s, Solver), "Solver object expected")
-    s.set(**keywords)
+    s.set(**kwargs)
     s.add(*args)
     if keywords.get("show", False):
         print("Problem:")
         print(s)
     r = s.check()
-    print(r)
-    print(unsat == r)
     if r == unsat:
         print("no solution")
     elif r == unknown:
@@ -1292,7 +1291,7 @@ def solve_using(s, *args, **keywords):
         except SMTException:
             return
     else:
-        if keywords.get("show", False):
+        if kwargs.get("show", False):
             print("Solution:")
         print(s.model())
 
