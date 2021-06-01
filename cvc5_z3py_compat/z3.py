@@ -1210,7 +1210,6 @@ def substitute(t, *m):
 
     >>> x = Int('x')
     >>> y = Int('y')
-    >>> # substitute(x + 1, (x, y + 1))
     >>> f = Function('f', IntSort(), IntSort())
     >>> substitute(f(x) + f(y), (f(x), IntVal(1)), (f(y), IntVal(1)))
     1 + 1
