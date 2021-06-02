@@ -810,13 +810,84 @@ class RatNumRef(ArithRef):
 class BitVecSortRef(SortRef):
     """Bit-vector sort."""
 
+    def size(self):
+        """Return the size (number of bits) of the bit-vector sort `self`.
+
+        >>> b = BitVecSort(32)
+        >>> b.size()
+        32
+        """
+        return self.ast.getBVSize()
+
 
 class BitVecRef(ExprRef):
     """Bit-vector expressions."""
 
+    def sort(self):
+        """Return the sort of the bit-vector expression `self`.
+
+        >>> x = BitVec('x', 32)
+        >>> x.sort()
+        BitVec(32)
+        >>> x.sort() == BitVecSort(32)
+        True
+        """
+        return _sort(self.ctx, self.ast)
+
+    def size(self):
+        """Return the number of bits of the bit-vector expression `self`.
+
+        >>> x = BitVec('x', 32)
+        >>> (x + 1).size()
+        32
+        >>> Concat(x, x).size()
+        64
+        """
+        # safe b/c will always yield a BitVecSortRef
+        return self.sort().size()  # type: ignore
+
 
 class BitVecNumRef(BitVecRef):
     """Bit-vector values."""
+
+    def as_long(self):
+        """Return an SMT bit-vector numeral as a Python long (bignum) numeral.
+
+        >>> v = BitVecVal(0xbadc0de, 32)
+        >>> v
+        195936478
+        >>> print("0x%.8x" % v.as_long())
+        0x0badc0de
+        """
+        return int(self.as_string())
+
+    def as_signed_long(self):
+        """Return an SMT bit-vector numeral as a Python long (bignum) numeral. The most significant bit is assumed to be the sign.
+
+        >>> BitVecVal(4, 3).as_signed_long()
+        -4
+        >>> BitVecVal(7, 3).as_signed_long()
+        -1
+        >>> BitVecVal(3, 3).as_signed_long()
+        3
+        >>> BitVecVal(2**32 - 1, 32).as_signed_long()
+        -1
+        >>> BitVecVal(2**64 - 1, 64).as_signed_long()
+        -1
+        """
+        sz = self.size()
+        val = self.as_long()
+        if val >= 2 ** (sz - 1):
+            val = val - 2 ** sz
+        if val < -(2 ** (sz - 1)):
+            val = val + 2 ** sz
+        return int(val)
+
+    def as_string(self):
+        return str(int(self.as_binary_string(), 2))
+
+    def as_binary_string(self):
+        return str(self.ast)[2:]
 
 
 #########################################
