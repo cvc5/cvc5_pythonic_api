@@ -1224,7 +1224,7 @@ def substitute(t, *m):
     for subst in m:
         if debugging():
             _assert(isinstance(subst, tuple), "each subst must be a tuple")
-            _assert(len(tuple) == 2, "each subst must be a pair")
+            _assert(len(subst) == 2, "each subst must be a pair")
             _assert(is_expr(subst[0]) and is_expr(subst[1]), "each subst must be from an expression, to an expression")
             _assert(subst[0].sort().eq(subst[1].sort()), "each subst must be sort-preserving")
         froms.append(subst[0].ast)
@@ -1271,7 +1271,6 @@ def solve_using(s, *args, **kwargs):
     This is a simple function for creating demonstrations.
     It is similar to `solve`, but it uses the given solver `s`.
     It configures solver `s` using the options in `kwargs`,
-        ("Problem:")
     adds the constraints in `args`, and invokes check.
     """
     if debugging():
