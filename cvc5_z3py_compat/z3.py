@@ -1153,6 +1153,12 @@ class Solver(object):
         """
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
+    def set(self, **kwargs):
+        for k, v in kwargs:
+            _assert(isinstance(k, str), "non-string key " + str(k))
+            _assert(isinstance(v, str), "non-string key " + str(v))
+            self.solver.setOption(k, v)
+
 
 def SolverFor(logic, ctx=None, logFile=None):
     """Create a solver customized for the given logic.
@@ -1196,6 +1202,98 @@ def SimpleSolver(ctx=None, logFile=None):
 # Utils
 #
 #########################################
+
+
+def substitute(t, *m):
+    """Apply substitution m on t, m is a list of pairs of the form (from, to).
+    Every occurrence in t of from is replaced with to.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> f = Function('f', IntSort(), IntSort())
+    >>> substitute(f(x) + f(y), (f(x), IntVal(1)), (f(y), IntVal(1)))
+    1 + 1
+    """
+    split = _get_args(m)
+    if all(isinstance(p, tuple) for p in split):
+        m = split
+    assert(is_expr(t))
+    _assert(is_expr(t), "SMT expression expected")
+    froms = []
+    tos = []
+    for subst in m:
+        if debugging():
+            _assert(isinstance(subst, tuple), "each subst must be a tuple")
+            _assert(len(tuple) == 2, "each subst must be a pair")
+            _assert(is_expr(subst[0]) and is_expr(subst[1]), "each subst must be from an expression, to an expression")
+            _assert(subst[0].sort().eq(subst[1].sort()), "each subst must be sort-preserving")
+        froms.append(subst[0].ast)
+        tos.append(subst[1].ast)
+    return _to_expr_ref(t.ast.substitute(froms, tos), t.ctx)
+
+
+def solve(*args, **kwargs):
+    """Solve the constraints `*args`.
+
+    This is a simple function for creating demonstrations. It creates a solver,
+    configure it using the options in `kwargs`, adds the constraints
+    in `args`, and invokes check.
+
+    >>> a = Int('a')
+    >>> solve(a > 0, a < 2)
+    [a = 1]
+    """
+    s = Solver()
+    s.set(**kwargs)
+    s.add(*args)
+    if kwargs.get("show", False):
+        print("Problem:")
+        print(s)
+    r = s.check()
+    if r == unsat:
+        print("no solution")
+    elif r == unknown:
+        print("failed to solve")
+        try:
+            print(s.model())
+        except SMTException:
+            return
+    else:
+        if kwargs.get("show", False):
+            print("Solution:")
+        m = s.model()
+        print(m)
+
+
+def solve_using(s, *args, **kwargs):
+    """Solve the constraints `*args` using solver `s`.
+
+    This is a simple function for creating demonstrations.
+    It is similar to `solve`, but it uses the given solver `s`.
+    It configures solver `s` using the options in `kwargs`,
+        ("Problem:")
+    adds the constraints in `args`, and invokes check.
+    """
+    if debugging():
+        _assert(isinstance(s, Solver), "Solver object expected")
+    s.set(**kwargs)
+    s.add(*args)
+    if kwargs.get("show", False):
+        print("Problem:")
+        print(s)
+    r = s.check()
+    if r == unsat:
+        print("no solution")
+    elif r == unknown:
+        print("failed to solve")
+        try:
+            print(s.model())
+        except SMTException:
+            return
+    else:
+        if kwargs.get("show", False):
+            print("Solution:")
+        print(s.model())
 
 
 class ModelRef:
