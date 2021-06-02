@@ -844,9 +844,59 @@ class ArrayRef(ExprRef):
 class SetSortRef(SortRef):
     """Array sorts."""
 
+    def domain(self):
+        """Return the domain of the set sort `self`.
+
+        >>> A = SetSort(IntSort())
+        >>> A.domain()
+        Int
+        """
+        return _to_sort_ref(self.ast.getSetElementSort(), self.ctx)
+
+    def range(self):
+        """Return the range of the array sort `self`.
+        Included for compatibility with arrays.
+
+        >>> A = SetSort(IntSort())
+        >>> A.range()
+        Bool
+        """
+        return BoolSort(self.ctx)
+
 
 class SetRef(ExprRef):
     """Array expressions."""
+
+    def sort(self):
+        """Return the set sort of the set expression `self`.
+
+        >>> a = Set('a', IntSort())
+        >>> a.sort()
+        Set(Int)
+        """
+        return _sort(self.ctx, self.ast)
+
+    def domain(self):
+        """Shorthand for `self.sort().domain()`.
+
+        >>> a = Set('a', IntSort())
+        >>> a.domain()
+        Int
+        """
+        # safe b/c will always yield a SetSortRef
+        return self.sort().domain()  # type: ignore
+
+    def range(self):
+        """Shorthand for `self.sort().range()`.
+        Included for compatibility with arrays.
+
+        >>> a = Set('a', IntSort())
+        >>> a.range()
+        Bool
+        """
+        # safe b/c will always yield a SetSortRef
+        return self.sort().range()  # type: ignore
+
 
 
 #########################################
