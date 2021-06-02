@@ -604,6 +604,39 @@ class FuncDeclRef(ExprRef):
     a constant is a function with 0 arguments.
     """
 
+    def arity(self):
+        """Return the number of arguments of a function declaration.
+        If `self` is a constant, then `self.arity()` is 0.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.arity()
+        2
+        """
+        return self.ast.getSort().getFunctionArity()
+
+    def domain(self, i):
+        """Return the sort of the argument `i` of a function declaration.
+        This method assumes that `0 <= i < self.arity()`.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.domain(0)
+        Int
+        >>> f.domain(1)
+        Real
+        """
+        return _to_sort_ref(self.ast.getSort().getFunctionDomainSorts()[i], self.ctx)
+
+    def range(self):
+        """Return the sort of the range of a function declaration.
+        For constants, this is the sort of the constant.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.range()
+        Bool
+        """
+        return _to_sort_ref(self.ast.getSort().getFunctionCodomainSort(), self.ctx)
+
+
 def is_func_decl(a):
     """Return `True` if `a` is an SMT function declaration.
 
@@ -615,6 +648,7 @@ def is_func_decl(a):
     False
     """
     return isinstance(a, FuncDeclRef)
+
 
 #########################################
 #
@@ -818,7 +852,6 @@ class BoolRef(ExprRef):
         return _sort(self.ctx, self.ast)
 
 
-
 def is_bool(a):
     """Return `True` if `a` is an SMT Boolean expression.
 
@@ -998,7 +1031,6 @@ class ArithSortRef(SortRef):
         return self.is_int() and isinstance(other, ArithSortRef) and other.is_real()
 
 
-
 def is_arith_sort(s):
     """Return `True` if s is an arithmetical sort (type).
 
@@ -1054,7 +1086,6 @@ class ArithRef(ExprRef):
         """
         # safe b/c will always yield an ArithSortRef
         return self.sort().is_real()  # type: ignore
-
 
 
 def is_arith(a):
@@ -1484,7 +1515,6 @@ class RatNumRef(ArithRef):
         return self.ast.toPythonObj()
 
 
-
 #########################################
 #
 # Bit-Vectors
@@ -1494,7 +1524,6 @@ class RatNumRef(ArithRef):
 
 class BitVecSortRef(SortRef):
     """Bit-vector sort."""
-
 
 
 def is_bv_sort(s):
@@ -1514,7 +1543,6 @@ class BitVecRef(ExprRef):
 
 class BitVecNumRef(BitVecRef):
     """Bit-vector values."""
-
 
 
 def is_bv(a):
@@ -1544,7 +1572,6 @@ def is_bv_value(a):
     True
     """
     return is_bv(a) and _is_numeral(a.ctx, a.as_ast())
-
 
 
 #########################################
@@ -1607,7 +1634,6 @@ class ArrayRef(ExprRef):
         """
         # safe b/c will always yield an ArraySortRef
         return self.sort().range()  # type: ignore
-
 
 
 def is_array_sort(a):
@@ -1742,7 +1768,6 @@ class SetRef(ExprRef):
         """
         # safe b/c will always yield a SetSortRef
         return self.sort().range()  # type: ignore
-
 
 
 #########################################
@@ -2113,7 +2138,7 @@ def substitute(t, *m):
     split = _get_args(m)
     if all(isinstance(p, tuple) for p in split):
         m = split
-    assert(is_expr(t))
+    assert is_expr(t)
     _assert(is_expr(t), "SMT expression expected")
     froms = []
     tos = []
@@ -2121,8 +2146,14 @@ def substitute(t, *m):
         if debugging():
             _assert(isinstance(subst, tuple), "each subst must be a tuple")
             _assert(len(subst) == 2, "each subst must be a pair")
-            _assert(is_expr(subst[0]) and is_expr(subst[1]), "each subst must be from an expression, to an expression")
-            _assert(subst[0].sort().eq(subst[1].sort()), "each subst must be sort-preserving")
+            _assert(
+                is_expr(subst[0]) and is_expr(subst[1]),
+                "each subst must be from an expression, to an expression",
+            )
+            _assert(
+                subst[0].sort().eq(subst[1].sort()),
+                "each subst must be sort-preserving",
+            )
         froms.append(subst[0].ast)
         tos.append(subst[1].ast)
     return _to_expr_ref(t.ast.substitute(froms, tos), t.ctx)
