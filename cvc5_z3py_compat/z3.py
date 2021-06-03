@@ -1147,7 +1147,9 @@ def is_sub(a):
 
 
 def is_div(a):
-    """Return `True` if `a` is an expression of the form b / c.
+    """Return `True` if `a` is a rational division term (i.e. b / c).
+
+    Note: this returns false for integer division. See `is_idiv`.
 
     >>> x, y = Reals('x y')
     >>> is_div(x / y)
