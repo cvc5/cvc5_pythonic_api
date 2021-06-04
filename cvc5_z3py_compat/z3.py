@@ -844,6 +844,15 @@ def FreshConst(sort, prefix="c"):
 class BoolSortRef(SortRef):
     """Boolean sort."""
 
+    def subsort(self, other):
+        return isinstance(other, ArithSortRef)
+
+    def is_int(self):
+        return True
+
+    def is_bool(self):
+        return True
+
 
 class BoolRef(ExprRef):
     """All Boolean expressions are instances of this class."""
