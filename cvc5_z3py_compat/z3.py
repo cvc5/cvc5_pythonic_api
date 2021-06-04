@@ -604,6 +604,17 @@ class FuncDeclRef(ExprRef):
     a constant is a function with 0 arguments.
     """
 
+def is_func_decl(a):
+    """Return `True` if `a` is an SMT function declaration.
+
+    >>> f = Function('f', IntSort(), IntSort())
+    >>> is_func_decl(f)
+    True
+    >>> x = Real('x')
+    >>> is_func_decl(x)
+    False
+    """
+    return isinstance(a, FuncDeclRef)
 
 #########################################
 #
@@ -693,6 +704,54 @@ def is_app(a):
     return is_expr(a)
 
 
+def is_const(a):
+    """Return `True` if `a` is SMT constant/variable expression.
+
+    These include:
+        * concrete (i.e. literal, or non-symbolic) values
+        * declared constants
+    These do not include:
+        * bound variables
+        * quantified formulae
+        * applied operators
+
+    >>> a = Int('a')
+    >>> is_const(a)
+    True
+    >>> is_const(a + 1)
+    False
+    >>> is_const(1)
+    False
+    >>> is_const(IntVal(1))
+    True
+    >>> x = Int('x')
+    """
+    return is_expr(a) and a.ast.getKind() in [
+        kinds.ConstBoolean,
+        kinds.ConstBV,
+        kinds.ConstFP,
+        kinds.ConstRational,
+        kinds.Emptyset,
+        kinds.UniverseSet,
+        kinds.Constant,
+    ]
+
+
+def is_var(a):
+    """Return `True` if `a` is bound variable.
+
+    >>> x = Int('x')
+    >>> is_var(x)
+    False
+    >>> is_const(x)
+    True
+    """
+    if not is_expr(a):
+        return False
+    k = a.ast.getKind()
+    return k == kinds.Variable
+
+
 def is_app_of(a, k):
     """Return `True` if `a` is an application of the given kind `k`.
 
@@ -759,6 +818,125 @@ class BoolRef(ExprRef):
         return _sort(self.ctx, self.ast)
 
 
+
+def is_bool(a):
+    """Return `True` if `a` is an SMT Boolean expression.
+
+    >>> p = Bool('p')
+    >>> is_bool(p)
+    True
+    >>> q = Bool('q')
+    >>> is_bool(And(p, q))
+    True
+    >>> x = Real('x')
+    >>> is_bool(x)
+    False
+    >>> is_bool(x == 0)
+    True
+    """
+    return isinstance(a, BoolRef)
+
+
+def is_true(a):
+    """Return `True` if `a` is the SMT true expression.
+
+    >>> p = Bool('p')
+    >>> is_true(p)
+    False
+    >>> x = Real('x')
+    >>> is_true(x == 0)
+    False
+    >>> # True is a Python Boolean expression
+    >>> is_true(True)
+    False
+    """
+    return is_app_of(a, kinds.ConstBoolean) and a.ast == a.ctx.solver.mkTrue()
+
+
+def is_false(a):
+    """Return `True` if `a` is the SMT false expression.
+
+    >>> p = Bool('p')
+    >>> is_false(p)
+    False
+    >>> is_false(False)
+    False
+    >>> is_false(BoolVal(False))
+    True
+    """
+    return is_app_of(a, kinds.ConstBoolean) and a.ast == a.ctx.solver.mkFalse()
+
+
+def is_and(a):
+    """Return `True` if `a` is an SMT and expression.
+
+    >>> p, q = Bools('p q')
+    >>> is_and(And(p, q))
+    True
+    >>> is_and(Or(p, q))
+    False
+    """
+    return is_app_of(a, kinds.And)
+
+
+def is_or(a):
+    """Return `True` if `a` is an SMT or expression.
+
+    >>> p, q = Bools('p q')
+    >>> is_or(Or(p, q))
+    True
+    >>> is_or(And(p, q))
+    False
+    """
+    return is_app_of(a, kinds.Or)
+
+
+def is_implies(a):
+    """Return `True` if `a` is an SMT implication expression.
+
+    >>> p, q = Bools('p q')
+    >>> is_implies(Implies(p, q))
+    True
+    >>> is_implies(And(p, q))
+    False
+    """
+    return is_app_of(a, kinds.Implies)
+
+
+def is_not(a):
+    """Return `True` if `a` is an SMT not expression.
+
+    >>> p = Bool('p')
+    >>> is_not(p)
+    False
+    >>> is_not(Not(p))
+    True
+    """
+    return is_app_of(a, kinds.Not)
+
+
+def is_eq(a):
+    """Return `True` if `a` is an SMT equality expression.
+
+    >>> x, y = Ints('x y')
+    >>> is_eq(x == y)
+    True
+    """
+    return is_app_of(a, kinds.Equal)
+
+
+def is_distinct(a):
+    """Return `True` if `a` is an SMT distinct expression.
+
+    >>> x, y, z = Ints('x y z')
+    >>> is_distinct(x == y)
+    False
+    >>> is_distinct(Distinct(x, y, z))
+    True
+    """
+    return is_app_of(a, kinds.Distinct)
+
+
 def BoolSort(ctx=None):
     """Return the Boolean SMT sort. If `ctx=None`, then the global context is used.
 
@@ -788,8 +966,317 @@ class ArithSortRef(SortRef):
     """Real and Integer sorts."""
 
 
+
+def is_arith_sort(s):
+    """Return `True` if s is an arithmetical sort (type).
+
+    >>> is_arith_sort(IntSort())
+    True
+    >>> is_arith_sort(RealSort())
+    True
+    >>> is_arith_sort(BoolSort())
+    False
+    >>> n = Int('x') + 1
+    >>> is_arith_sort(n.sort())
+    True
+    """
+    return isinstance(s, ArithSortRef)
+
+
 class ArithRef(ExprRef):
     """Integer and Real expressions."""
+
+
+
+def is_arith(a):
+    """Return `True` if `a` is an arithmetical expression.
+
+    >>> x = Int('x')
+    >>> is_arith(x)
+    True
+    >>> is_arith(x + 1)
+    True
+    >>> is_arith(1)
+    False
+    >>> is_arith(IntVal(1))
+    True
+    >>> y = Real('y')
+    >>> is_arith(y)
+    True
+    >>> is_arith(y + 1)
+    True
+    """
+    return isinstance(a, ArithRef)
+
+
+def is_int(a):
+    """Return `True` if `a` is an integer expression.
+
+    >>> x = Int('x')
+    >>> is_int(x + 1)
+    True
+    >>> is_int(1)
+    False
+    >>> is_int(IntVal(1))
+    True
+    >>> y = Real('y')
+    >>> is_int(y)
+    False
+    >>> is_int(y + 1)
+    False
+    """
+    return is_arith(a) and a.is_int()
+
+
+def is_real(a):
+    """Return `True` if `a` is a real expression.
+
+    >>> x = Int('x')
+    >>> is_real(x + 1)
+    False
+    >>> y = Real('y')
+    >>> is_real(y)
+    True
+    >>> is_real(y + 1)
+    True
+    >>> is_real(1)
+    False
+    >>> is_real(RealVal(1))
+    True
+    """
+    return is_arith(a) and a.is_real()
+
+
+def _is_numeral(ctx, term):
+    return term.getKind() in [kinds.ConstRational, kinds.ConstBV, kinds.ConstBoolean]
+
+
+def is_int_value(a):
+    """Return `True` if `a` is an integer value of sort Int.
+
+    >>> is_int_value(IntVal(1))
+    True
+    >>> is_int_value(1)
+    False
+    >>> is_int_value(Int('x'))
+    False
+    >>> n = Int('x') + 1
+    >>> n
+    x + 1
+    >>> n.arg(1)
+    1
+    >>> is_int_value(n.arg(1))
+    True
+    >>> is_int_value(RealVal("1/3"))
+    False
+    >>> is_int_value(RealVal(1))
+    False
+    """
+    return is_arith(a) and a.is_int() and _is_numeral(a.ctx, a.as_ast())
+
+
+def is_rational_value(a):
+    """Return `True` if `a` is rational value of sort Real.
+
+    >>> is_rational_value(RealVal(1))
+    True
+    >>> is_rational_value(RealVal("3/5"))
+    True
+    >>> is_rational_value(IntVal(1))
+    False
+    >>> is_rational_value(1)
+    False
+    >>> n = Real('x') + 1
+    >>> n.arg(1)
+    1
+    >>> is_rational_value(n.arg(1))
+    True
+    >>> is_rational_value(Real('x'))
+    False
+    """
+    return is_arith(a) and a.is_real() and _is_numeral(a.ctx, a.as_ast())
+
+
+def is_bool_value(a):
+    """Return `True` if `a` is an integer value of sort Int.
+
+    >>> is_bool_value(IntVal(1))
+    False
+    >>> is_bool_value(Bool('x'))
+    False
+    >>> is_bool_value(BoolVal(False))
+    True
+    """
+    return is_bool(a) and _is_numeral(a.ctx, a.as_ast())
+
+
+def is_add(a):
+    """Return `True` if `a` is an expression of the form b + c.
+
+    >>> x, y = Ints('x y')
+    >>> is_add(x + y)
+    True
+    >>> is_add(x - y)
+    False
+    """
+    return is_app_of(a, kinds.Plus)
+
+
+def is_mul(a):
+    """Return `True` if `a` is an expression of the form b * c.
+
+    >>> x, y = Ints('x y')
+    >>> is_mul(x * y)
+    True
+    >>> is_mul(x - y)
+    False
+    """
+    return is_app_of(a, kinds.Mult)
+
+
+def is_sub(a):
+    """Return `True` if `a` is an expression of the form b - c.
+
+    >>> x, y = Ints('x y')
+    >>> is_sub(x - y)
+    True
+    >>> is_sub(x + y)
+    False
+    """
+    return is_app_of(a, kinds.Minus)
+
+
+def is_div(a):
+    """Return `True` if `a` is a rational division term (i.e. b / c).
+
+    Note: this returns false for integer division. See `is_idiv`.
+
+    >>> x, y = Reals('x y')
+    >>> is_div(x / y)
+    True
+    >>> is_div(x + y)
+    False
+    >>> x, y = Ints('x y')
+    >>> is_div(x / y)
+    False
+    >>> is_idiv(x / y)
+    True
+    """
+    return is_app_of(a, kinds.Division)
+
+
+def is_idiv(a):
+    """Return `True` if `a` is an expression of the form b div c.
+
+    >>> x, y = Ints('x y')
+    >>> is_idiv(x / y)
+    True
+    >>> is_idiv(x + y)
+    False
+    """
+    return is_app_of(a, kinds.IntsDivision)
+
+
+def is_mod(a):
+    """Return `True` if `a` is an expression of the form b % c.
+
+    >>> x, y = Ints('x y')
+    >>> is_mod(x % y)
+    True
+    >>> is_mod(x + y)
+    False
+    """
+    return is_app_of(a, kinds.IntsModulus)
+
+
+def is_le(a):
+    """Return `True` if `a` is an expression of the form b <= c.
+
+    >>> x, y = Ints('x y')
+    >>> is_le(x <= y)
+    True
+    >>> is_le(x < y)
+    False
+    """
+    return is_app_of(a, kinds.Leq)
+
+
+def is_lt(a):
+    """Return `True` if `a` is an expression of the form b < c.
+
+    >>> x, y = Ints('x y')
+    >>> is_lt(x < y)
+    True
+    >>> is_lt(x == y)
+    False
+    """
+    return is_app_of(a, kinds.Lt)
+
+
+def is_ge(a):
+    """Return `True` if `a` is an expression of the form b >= c.
+
+    >>> x, y = Ints('x y')
+    >>> is_ge(x >= y)
+    True
+    >>> is_ge(x == y)
+    False
+    """
+    return is_app_of(a, kinds.Geq)
+
+
+def is_gt(a):
+    """Return `True` if `a` is an expression of the form b > c.
+
+    >>> x, y = Ints('x y')
+    >>> is_gt(x > y)
+    True
+    >>> is_gt(x == y)
+    False
+    """
+    return is_app_of(a, kinds.Gt)
+
+
+def is_is_int(a):
+    """Return `True` if `a` is an expression of the form IsInt(b).
+
+    >>> x = Real('x')
+    >>> is_is_int(IsInt(x))
+    True
+    >>> is_is_int(x)
+    False
+    """
+    return is_app_of(a, kinds.IsInteger)
+
+
+def is_to_real(a):
+    """Return `True` if `a` is an expression of the form ToReal(b).
+
+    >>> x = Int('x')
+    >>> n = ToReal(x)
+    >>> n
+    ToReal(x)
+    >>> is_to_real(n)
+    True
+    >>> is_to_real(x)
+    False
+    """
+    return is_app_of(a, kinds.ToReal)
+
+
+def is_to_int(a):
+    """Return `True` if `a` is an expression of the form ToInt(b).
+
+    >>> x = Real('x')
+    >>> n = ToInt(x)
+    >>> n
+    ToInt(x)
+    >>> is_to_int(n)
+    True
+    >>> is_to_int(x)
+    False
+    """
+    return is_app_of(a, kinds.ToInteger)
 
 
 class IntNumRef(ArithRef):
@@ -811,12 +1298,55 @@ class BitVecSortRef(SortRef):
     """Bit-vector sort."""
 
 
+
+def is_bv_sort(s):
+    """Return True if `s` is an SMT bit-vector sort.
+
+    >>> is_bv_sort(BitVecSort(32))
+    True
+    >>> is_bv_sort(IntSort())
+    False
+    """
+    return isinstance(s, BitVecSortRef)
+
+
 class BitVecRef(ExprRef):
     """Bit-vector expressions."""
 
 
 class BitVecNumRef(BitVecRef):
     """Bit-vector values."""
+
+
+
+def is_bv(a):
+    """Return `True` if `a` is an SMT bit-vector expression.
+
+    >>> b = BitVec('b', 32)
+    >>> is_bv(b)
+    True
+    >>> is_bv(b + 10)
+    True
+    >>> is_bv(Int('x'))
+    False
+    """
+    return isinstance(a, BitVecRef)
+
+
+def is_bv_value(a):
+    """Return `True` if `a` is an SMT bit-vector numeral value.
+
+    >>> b = BitVec('b', 32)
+    >>> is_bv_value(b)
+    False
+    >>> b = BitVecVal(10, 32)
+    >>> b
+    10
+    >>> is_bv_value(b)
+    True
+    """
+    return is_bv(a) and _is_numeral(a.ctx, a.as_ast())
+
 
 
 #########################################
@@ -832,6 +1362,77 @@ class ArraySortRef(SortRef):
 
 class ArrayRef(ExprRef):
     """Array expressions."""
+
+
+
+def is_array_sort(a):
+    instance_check(a, SortRef)
+    return a.ast.isArray()
+
+
+def is_array(a):
+    """Return `True` if `a` is an SMT array expression.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_array(a)
+    True
+    >>> is_array(Store(a, 0, 1))
+    True
+    >>> is_array(a[0])
+    False
+    """
+    return isinstance(a, ArrayRef)
+
+
+def is_const_array(a):
+    """Return `True` if `a` is an SMT constant array.
+
+    >>> a = K(IntSort(), 10)
+    >>> is_const_array(a)
+    True
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_const_array(a)
+    False
+    """
+    return is_app_of(a, kinds.ConstArray)
+
+
+def is_K(a):
+    """Return `True` if `a` is an SMT constant array.
+
+    >>> a = K(IntSort(), 10)
+    >>> is_K(a)
+    True
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_K(a)
+    False
+    """
+    return is_const_array(a)
+
+
+def is_select(a):
+    """Return `True` if `a` is an SMT array select application.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_select(a)
+    False
+    >>> i = Int('i')
+    >>> is_select(a[i])
+    True
+    """
+    return is_app_of(a, kinds.Select)
+
+
+def is_store(a):
+    """Return `True` if `a` is an SMT array store application.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_store(a)
+    False
+    >>> is_store(Store(a, 0, 1))
+    True
+    """
+    return is_app_of(a, kinds.Store)
 
 
 #########################################
