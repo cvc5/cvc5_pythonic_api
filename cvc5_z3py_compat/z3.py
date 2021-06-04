@@ -859,7 +859,8 @@ class BitVecNumRef(BitVecRef):
         >>> print("0x%.8x" % v.as_long())
         0x0badc0de
         """
-        return int(self.as_string())
+        _assert(self.ast.isBitVectorValue())
+        return self.ast.getBitVectorValue()
 
     def as_signed_long(self):
         """Return an SMT bit-vector numeral as a Python long (bignum) numeral.
@@ -885,10 +886,11 @@ class BitVecNumRef(BitVecRef):
         return int(val)
 
     def as_string(self):
-        return str(int(self.as_binary_string(), 2))
+        return str(self.as_long())
 
     def as_binary_string(self):
-        return str(self.ast)[2:]
+        v = self.as_long()
+        return "{{:0{}b}}".format(self.size()).format(v)
 
 
 #########################################
