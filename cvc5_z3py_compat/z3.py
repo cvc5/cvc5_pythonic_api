@@ -965,6 +965,38 @@ def BoolSort(ctx=None):
 class ArithSortRef(SortRef):
     """Real and Integer sorts."""
 
+    def is_real(self):
+        """Return `True` if `self` is of the sort Real.
+
+        >>> x = Real('x')
+        >>> x.is_real()
+        True
+        >>> (x + 1).is_real()
+        True
+        >>> x = Int('x')
+        >>> x.is_real()
+        False
+        """
+        return self.ast == self.ctx.solver.getRealSort()
+
+    def is_int(self):
+        """Return `True` if `self` is of the sort Integer.
+
+        >>> x = Int('x')
+        >>> x.is_int()
+        True
+        >>> (x + 1).is_int()
+        True
+        >>> x = Real('x')
+        >>> x.is_int()
+        False
+        """
+        return self.ast == self.ctx.solver.getIntegerSort()
+
+    def subsort(self, other):
+        """Return `True` if `self` is a subsort of `other`."""
+        return self.is_int() and isinstance(other, ArithSortRef) and other.is_real()
+
 
 
 def is_arith_sort(s):
@@ -985,6 +1017,43 @@ def is_arith_sort(s):
 
 class ArithRef(ExprRef):
     """Integer and Real expressions."""
+
+    def sort(self):
+        """Return the sort (type) of the arithmetical expression `self`.
+
+        >>> Int('x').sort()
+        Int
+        >>> (Real('x') + 1).sort()
+        Real
+        """
+        return _sort(self.ctx, self.ast)
+
+    def is_int(self):
+        """Return `True` if `self` is an integer expression.
+
+        >>> x = Int('x')
+        >>> x.is_int()
+        True
+        >>> (x + 1).is_int()
+        True
+        >>> y = Real('y')
+        >>> (x + y).is_int()
+        False
+        """
+        # safe b/c will always yield an ArithSortRef
+        return self.sort().is_int()  # type: ignore
+
+    def is_real(self):
+        """Return `True` if `self` is an real expression.
+
+        >>> x = Real('x')
+        >>> x.is_real()
+        True
+        >>> (x + 1).is_real()
+        True
+        """
+        # safe b/c will always yield an ArithSortRef
+        return self.sort().is_real()  # type: ignore
 
 
 
@@ -1282,9 +1351,138 @@ def is_to_int(a):
 class IntNumRef(ArithRef):
     """Integer values."""
 
+    def as_long(self):
+        """Return an SMT integer numeral as a Python long (bignum) numeral.
+
+        >>> v = IntVal(1)
+        >>> v + 1
+        1 + 1
+        >>> v.as_long() + 1
+        2
+        """
+        if debugging():
+            _assert(self.is_int(), "Integer value expected")
+        return int(self.as_string())
+
+    def as_string(self):
+        """Return an SMT integer numeral as a Python string.
+        >>> v = IntVal(100)
+        >>> v.as_string()
+        '100'
+        """
+        return str(self.ast.toPythonObj())
+
+    def as_binary_string(self):
+        """Return an SMT integer numeral as a Python binary string.
+        >>> v = IntVal(10)
+        >>> v.as_binary_string()
+        '1010'
+        """
+        return "{:b}".format(int(self.as_string()))
+
 
 class RatNumRef(ArithRef):
     """Rational values."""
+
+    def numerator(self):
+        """Return the numerator of an SMT rational numeral.
+
+        >>> is_rational_value(RealVal("3/5"))
+        True
+        >>> n = RealVal("3/5")
+        >>> n.numerator()
+        3
+        >>> is_rational_value(Q(3,5))
+        True
+        >>> Q(3,5).numerator()
+        3
+        """
+        return self.as_fraction().numerator
+
+    def denominator(self):
+        """Return the denominator of an SMT rational numeral.
+
+        >>> is_rational_value(Q(3,5))
+        True
+        >>> n = Q(3,5)
+        >>> n.denominator()
+        5
+        """
+        return self.as_fraction().denominator
+
+    def numerator_as_long(self):
+        """Return the numerator as a Python long.
+
+        >>> v = RealVal(10000000000)
+        >>> v
+        10000000000
+        >>> v + 1
+        10000000000 + 1
+        >>> v.numerator_as_long() + 1 == 10000000001
+        True
+        """
+        return self.as_fraction().numerator
+
+    def denominator_as_long(self):
+        """Return the denominator as a Python long.
+
+        >>> v = RealVal("1/3")
+        >>> v
+        1/3
+        >>> v.denominator_as_long()
+        3
+        """
+        return self.as_fraction().denominator
+
+    def is_int(self):
+        return False
+
+    def is_real(self):
+        return True
+
+    def is_int_value(self):
+        return self.denominator().is_int() and self.denominator_as_long() == 1
+
+    def as_long(self):
+        _assert(self.is_int_value(), "Expected integer fraction")
+        return self.numerator_as_long()
+
+    def as_decimal(self, prec):
+        """Return an SMT rational value as a string in decimal notation using at most `prec` decimal places.
+
+        >>> v = RealVal("1/5")
+        >>> v.as_decimal(3)
+        '0.2'
+        >>> v = RealVal("1/3")
+        >>> v.as_decimal(3)
+        '0.333'
+        """
+        f = self.as_fraction()
+        decimal.getcontext().prec = prec
+        return str(Decimal(f.numerator) / Decimal(f.denominator))
+
+    def as_string(self):
+        """Return an SMT rational numeral as a Python string.
+
+        >>> v = Q(3,6)
+        >>> v.as_string()
+        '1/2'
+        """
+        r = self.as_fraction()
+        if r.denominator == 1:
+            return "{}".format(r.numerator)
+        else:
+            return "{}/{}".format(r.numerator, r.denominator)
+
+    def as_fraction(self):
+        """Return an SMT rational as a Python Fraction object.
+
+        >>> v = RealVal("1/5")
+        >>> v.as_fraction()
+        Fraction(1, 5)
+        """
+        return self.ast.toPythonObj()
+
 
 
 #########################################
