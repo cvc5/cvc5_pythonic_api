@@ -854,7 +854,7 @@ class SetSortRef(SortRef):
         return _to_sort_ref(self.ast.getSetElementSort(), self.ctx)
 
     def range(self):
-        """Return the range of the array sort `self`.
+        """Return the "range" of the set sort `self`.
         Included for compatibility with arrays.
 
         >>> A = SetSort(IntSort())
