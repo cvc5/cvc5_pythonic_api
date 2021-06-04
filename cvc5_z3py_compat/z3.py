@@ -997,6 +997,26 @@ def BoolSort(ctx=None):
     return BoolSortRef(ctx.solver.getBooleanSort(), ctx)
 
 
+def BoolVal(val, ctx=None):
+    """Return the Boolean value `True` or `False`. If `ctx=None`, then the
+    global context is used.
+
+    >>> BoolVal(True)
+    True
+    >>> is_true(BoolVal(True))
+    True
+    >>> is_true(True)
+    False
+    >>> is_false(BoolVal(False))
+    True
+    """
+    ctx = _get_ctx(ctx)
+    if not val:
+        return BoolRef(ctx.solver.mkFalse(), ctx)
+    else:
+        return BoolRef(ctx.solver.mkTrue(), ctx)
+
+
 #########################################
 #
 # Arithmetic
@@ -1522,6 +1542,73 @@ class RatNumRef(ArithRef):
         Fraction(1, 5)
         """
         return self.ast.toPythonObj()
+def _to_int_str(val):
+    if isinstance(val, float):
+        return str(int(val))
+    elif isinstance(val, bool):
+        if val:
+            return "1"
+        else:
+            return "0"
+    elif _is_int(val):
+        return str(val)
+    elif isinstance(val, str):
+        return val
+    if debugging():
+        _assert(False, "Python value cannot be used as an SMT integer")
+
+
+def IntVal(val, ctx=None):
+    """Return an SMT integer value. If `ctx=None`, then the global context is used.
+
+    >>> IntVal(1)
+    1
+    >>> IntVal("100")
+    100
+    """
+    ctx = _get_ctx(ctx)
+    return IntNumRef(ctx.solver.mkInteger(_to_int_str(val)), ctx)
+
+
+def RealVal(val, ctx=None):
+    """Return an SMT real value.
+
+    `val` may be a Python int, long, float or string representing a number in decimal or rational notation.
+    If `ctx=None`, then the global context is used.
+
+    >>> RealVal(1)
+    1
+    >>> RealVal(1).sort()
+    Real
+    >>> RealVal("3/5")
+    3/5
+    >>> RealVal("1.5")
+    3/2
+    """
+    ctx = _get_ctx(ctx)
+    return RatNumRef(ctx.solver.mkReal(str(val)), ctx)
+
+
+def RatVal(a, b, ctx=None):
+    """Return an SMT rational a/b.
+
+    If `ctx=None`, then the global context is used.
+
+    >>> RatVal(3,5)
+    3/5
+    >>> RatVal(3,5).sort()
+    Real
+    """
+    if debugging():
+        _assert(
+            _is_int(a) or isinstance(a, str),
+            "First argument cannot be converted into an integer",
+        )
+        _assert(
+            _is_int(b) or isinstance(b, str),
+            "Second argument cannot be converted into an integer",
+        )
+    return simplify(RealVal(a, ctx) / RealVal(b, ctx))
 
 
 #########################################
@@ -1655,6 +1742,25 @@ def is_bv_value(a):
     True
     """
     return is_bv(a) and _is_numeral(a.ctx, a.as_ast())
+
+
+def BitVecVal(val, bv, ctx=None):
+    """Return a bit-vector value with the given number of bits. If `ctx=None`, then the global context is used.
+
+    >>> v = BitVecVal(10, 32)
+    >>> v
+    10
+    >>> print("0x%.8x" % v.as_long())
+    0x0000000a
+    """
+    if is_bv_sort(bv):
+        ctx = bv.ctx
+        size = bv.size()
+    else:
+        size = bv
+        ctx = _get_ctx(ctx)
+    string = "{{:0{}b}}".format(size).format(val)
+    return BitVecNumRef(ctx.solver.mkBitVector(string), ctx)
 
 
 #########################################
