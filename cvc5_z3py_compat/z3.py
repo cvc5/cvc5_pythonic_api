@@ -649,6 +649,44 @@ def is_func_decl(a):
     """
     return isinstance(a, FuncDeclRef)
 
+def Function(name, *sig):
+    """Create a new SMT uninterpreted function with the given sorts.
+
+    >>> f = Function('f', IntSort(), IntSort())
+    >>> f(f(0))
+    f(f(0))
+    """
+    sig = _get_args(sig)
+    if debugging():
+        _assert(len(sig) > 0, "At least two arguments expected")
+    arity = len(sig) - 1
+    rng = sig[arity]
+    if debugging():
+        _assert(is_sort(rng), "SMT sort expected")
+    ctx = rng.ctx
+    sort = ctx.solver.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
+    e = ctx.get_var(name, _to_sort_ref(sort, ctx))
+    return FuncDeclRef(e, ctx)
+
+
+def FreshFunction(*sig):
+    """Create a new fresh SMT uninterpreted function with the given sorts."""
+    sig = _get_args(sig)
+    if debugging():
+        _assert(len(sig) > 0, "At least two arguments expected")
+    arity = len(sig) - 1
+    rng = sig[arity]
+    if debugging():
+        _assert(is_sort(rng), "SMT sort expected")
+    ctx = rng.ctx
+    sort = ctx.solver.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
+    name = ctx.next_fresh(sort, "freshfn")
+    return Function(name, *sig)
+
+
+def _to_func_decl_ref(a, ctx):
+    return FuncDeclRef(a, ctx)
+
 
 #########################################
 #
@@ -1015,6 +1053,66 @@ def BoolVal(val, ctx=None):
         return BoolRef(ctx.solver.mkFalse(), ctx)
     else:
         return BoolRef(ctx.solver.mkTrue(), ctx)
+
+
+def Bool(name, ctx=None):
+    """Return a Boolean constant named `name`. If `ctx=None`, then the global context is used.
+
+    >>> p = Bool('p')
+    >>> q = Bool('q')
+    >>> And(p, q)
+    And(p, q)
+    """
+    ctx = _get_ctx(ctx)
+    e = ctx.get_var(name, BoolSort(ctx))
+    return BoolRef(e, ctx)
+
+
+def Bools(names, ctx=None):
+    """Return a tuple of Boolean constants.
+
+    `names` is a single string containing all names separated by blank spaces.
+    If `ctx=None`, then the global context is used.
+
+    >>> p, q, r = Bools('p q r')
+    >>> And(p, Or(q, r))
+    And(p, Or(q, r))
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [Bool(name, ctx) for name in names]
+
+
+def BoolVector(prefix, sz, ctx=None):
+    """Return a list of Boolean constants of size `sz`.
+
+    The constants are named using the given prefix.
+    If `ctx=None`, then the global context is used.
+
+    >>> P = BoolVector('p', 3)
+    >>> P
+    [p__0, p__1, p__2]
+    >>> And(P)
+    And(p__0, p__1, p__2)
+    """
+    return [Bool("%s__%s" % (prefix, i)) for i in range(sz)]
+
+
+def FreshBool(prefix="b", ctx=None):
+    """Return a fresh Boolean constant in the given context using the given prefix.
+
+    If `ctx=None`, then the global context is used.
+
+    >>> b1 = FreshBool()
+    >>> b2 = FreshBool()
+    >>> eq(b1, b2)
+    False
+    """
+    ctx = _get_ctx(ctx)
+    sort = BoolSort(ctx)
+    name = ctx.next_fresh(sort, prefix)
+    return Bool(name, ctx)
 
 
 #########################################
@@ -1647,6 +1745,156 @@ def ToInt(a):
     return ArithRef(ctx.solver.mkTerm(kinds.ToInteger, a.ast), ctx)
 
 
+def IntSort(ctx=None):
+    """Return the integer sort in the given context. If `ctx=None`, then the global context is used.
+
+    >>> IntSort()
+    Int
+    >>> x = Const('x', IntSort())
+    >>> is_int(x)
+    True
+    >>> x.sort() == IntSort()
+    True
+    >>> x.sort() == BoolSort()
+    False
+    """
+    ctx = _get_ctx(ctx)
+    return ArithSortRef(ctx.solver.getIntegerSort(), ctx)
+
+
+def RealSort(ctx=None):
+    """Return the real sort in the given context. If `ctx=None`, then the global context is used.
+
+    >>> RealSort()
+    Real
+    >>> x = Const('x', RealSort())
+    >>> is_real(x)
+    True
+    >>> is_int(x)
+    False
+    >>> x.sort() == RealSort()
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return ArithSortRef(ctx.solver.getRealSort(), ctx)
+
+
+def Int(name, ctx=None):
+    """Return an integer constant named `name`. If `ctx=None`, then the global context is used.
+
+    >>> x = Int('x')
+    >>> is_int(x)
+    True
+    >>> is_int(x + 1)
+    True
+    """
+    ctx = _get_ctx(ctx)
+    e = ctx.get_var(name, IntSort(ctx))
+    return ArithRef(e, ctx)
+
+
+def Ints(names, ctx=None):
+    """Return a tuple of Integer constants.
+
+    >>> x, y, z = Ints('x y z')
+    >>> Sum(x, y, z)
+    x + y + z
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [Int(name, ctx) for name in names]
+
+
+def IntVector(prefix, sz, ctx=None):
+    """Return a list of integer constants of size `sz`.
+
+    >>> X = IntVector('x', 3)
+    >>> X
+    [x__0, x__1, x__2]
+    >>> Sum(X)
+    x__0 + x__1 + x__2
+    """
+    ctx = _get_ctx(ctx)
+    return [Int("%s__%s" % (prefix, i), ctx) for i in range(sz)]
+
+
+def FreshInt(prefix="x", ctx=None):
+    """Return a fresh integer constant in the given context using the given prefix.
+
+    >>> x = FreshInt()
+    >>> y = FreshInt()
+    >>> eq(x, y)
+    False
+    >>> x.sort()
+    Int
+    """
+    ctx = _get_ctx(ctx)
+    sort = IntSort(ctx)
+    name = ctx.next_fresh(sort, prefix)
+    return Int(name, ctx)
+
+
+def Real(name, ctx=None):
+    """Return a real constant named `name`. If `ctx=None`, then the global context is used.
+
+    >>> x = Real('x')
+    >>> is_real(x)
+    True
+    >>> is_real(x + 1)
+    True
+    """
+    ctx = _get_ctx(ctx)
+    e = ctx.get_var(name, RealSort(ctx))
+    return ArithRef(e, ctx)
+
+
+def Reals(names, ctx=None):
+    """Return a tuple of real constants.
+
+    >>> x, y, z = Reals('x y z')
+    >>> Sum(x, y, z)
+    x + y + z
+    >>> Sum(x, y, z).sort()
+    Real
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [Real(name, ctx) for name in names]
+
+
+def RealVector(prefix, sz, ctx=None):
+    """Return a list of real constants of size `sz`.
+
+    >>> X = RealVector('x', 3)
+    >>> X
+    [x__0, x__1, x__2]
+    >>> Sum(X)
+    x__0 + x__1 + x__2
+    >>> Sum(X).sort()
+    Real
+    """
+    ctx = _get_ctx(ctx)
+    return [Real("%s__%s" % (prefix, i), ctx) for i in range(sz)]
+
+
+def FreshReal(prefix="b", ctx=None):
+    """Return a fresh real constant in the given context using the given prefix.
+
+    >>> x = FreshReal()
+    >>> y = FreshReal()
+    >>> eq(x, y)
+    False
+    >>> x.sort()
+    Real
+    """
+    ctx = _get_ctx(ctx)
+    sort = RealSort(ctx)
+    name = ctx.next_fresh(sort, prefix)
+    return Real(name, ctx)
+
+
 #########################################
 #
 # Bit-Vectors
@@ -1780,6 +2028,21 @@ def is_bv_value(a):
     return is_bv(a) and _is_numeral(a.ctx, a.as_ast())
 
 
+def BitVecSort(sz, ctx=None):
+    """Return an SMT bit-vector sort of the given size. If `ctx=None`, then the global context is used.
+
+    >>> Byte = BitVecSort(8)
+    >>> Word = BitVecSort(16)
+    >>> Byte
+    BitVec(8)
+    >>> x = Const('x', Byte)
+    >>> eq(x, BitVec('x', 8))
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return BitVecSortRef(ctx.solver.mkBitVectorSort(sz), ctx)
+
+
 def BitVecVal(val, bv, ctx=None):
     """Return a bit-vector value with the given number of bits. If `ctx=None`, then the global context is used.
 
@@ -1797,6 +2060,50 @@ def BitVecVal(val, bv, ctx=None):
         ctx = _get_ctx(ctx)
     string = "{{:0{}b}}".format(size).format(val)
     return BitVecNumRef(ctx.solver.mkBitVector(string), ctx)
+
+
+def BitVec(name, bv, ctx=None):
+    """Return a bit-vector constant named `name`. `bv` may be the number of bits of a bit-vector sort.
+    If `ctx=None`, then the global context is used.
+
+    >>> x  = BitVec('x', 16)
+    >>> is_bv(x)
+    True
+    >>> x.size()
+    16
+    >>> x.sort()
+    BitVec(16)
+    >>> word = BitVecSort(16)
+    >>> x2 = BitVec('x', word)
+    >>> eq(x, x2)
+    True
+    """
+    if isinstance(bv, BitVecSortRef):
+        ctx = bv.ctx
+    else:
+        ctx = _get_ctx(ctx)
+        bv = BitVecSort(bv, ctx)
+    e = ctx.get_var(name, bv)
+    return BitVecRef(e, ctx)
+
+
+def BitVecs(names, bv, ctx=None):
+    """Return a tuple of bit-vector constants of size bv.
+
+    >>> x, y, z = BitVecs('x y z', 16)
+    >>> x.size()
+    16
+    >>> x.sort()
+    BitVec(16)
+    >>> Sum(x, y, z)
+    0 + x + y + z
+    >>> Product(x, y, z)
+    x*y*z
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [BitVec(name, bv, ctx) for name in names]
 
 
 #########################################
@@ -1906,6 +2213,52 @@ def is_K(a):
     return is_const_array(a)
 
 
+def ArraySort(*sig):
+    """Return the SMT array sort with the given domain and range sorts.
+
+    >>> A = ArraySort(IntSort(), BoolSort())
+    >>> A
+    Array(Int, Bool)
+    >>> A.domain()
+    Int
+    >>> A.range()
+    Bool
+    >>> AA = ArraySort(IntSort(), A)
+    >>> AA
+    Array(Int, Array(Int, Bool))
+    """
+    sig = _get_args(sig)
+    if debugging():
+        _assert(len(sig) > 1, "At least two arguments expected")
+    arity = len(sig) - 1
+    r = sig[arity]
+    d = sig[0]
+    if debugging():
+        for s in sig:
+            _assert(is_sort(s), "SMT sort expected")
+            _assert(s.ctx == r.ctx, "Context mismatch")
+    ctx = d.ctx
+    if len(sig) == 2:
+        return ArraySortRef(ctx.solver.mkArraySort(d.ast, r.ast), ctx)
+    else:
+        unimplemented("multi-domain array")
+
+
+def Array(name, dom, rng):
+    """Return an array constant named `name` with the given domain and range sorts.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> a.sort()
+    Array(Int, Int)
+    >>> a[0]
+    a[0]
+    """
+    ctx = dom.ctx
+    s = ctx.solver.mkArraySort(dom.ast, rng.ast)
+    e = ctx.get_var(name, _to_sort_ref(s, ctx))
+    return ArrayRef(e, ctx)
+
+
 def is_select(a):
     """Return `True` if `a` is an SMT array select application.
 
@@ -1993,6 +2346,22 @@ class SetRef(ExprRef):
         """
         # safe b/c will always yield a SetSortRef
         return self.sort().range()  # type: ignore
+
+
+def SetSort(s):
+    """Create a set sort over element sort s"""
+    ctx = s.ctx
+    instance_check(s, SortRef)
+    sort = ctx.solver.mkSetSort(s.ast)
+    return SetSortRef(sort, ctx)
+
+
+def Set(name, elem_sort):
+    """Creates a symbolic set of elements"""
+    sort = SetSort(elem_sort)
+    ctx = _get_ctx(sort.ctx)
+    e = ctx.get_var(name, sort)
+    return SetRef(e, ctx)
 
 
 #########################################
