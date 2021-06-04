@@ -1524,6 +1524,42 @@ class RatNumRef(ArithRef):
         return self.ast.toPythonObj()
 
 
+def ToReal(a):
+    """Return the SMT expression ToReal(a).
+
+    >>> x = Int('x')
+    >>> x.sort()
+    Int
+    >>> n = ToReal(x)
+    >>> n
+    ToReal(x)
+    >>> n.sort()
+    Real
+    """
+    if debugging():
+        _assert(a.is_int(), "SMT integer expression expected.")
+    ctx = a.ctx
+    return ArithRef(ctx.solver.mkTerm(kinds.ToReal, a.ast), ctx)
+
+
+def ToInt(a):
+    """Return the SMT expression ToInt(a).
+
+    >>> x = Real('x')
+    >>> x.sort()
+    Real
+    >>> n = ToInt(x)
+    >>> n
+    ToInt(x)
+    >>> n.sort()
+    Int
+    """
+    if debugging():
+        _assert(a.is_real(), "SMT real expression expected.")
+    ctx = a.ctx
+    return ArithRef(ctx.solver.mkTerm(kinds.ToInteger, a.ast), ctx)
+
+
 #########################################
 #
 # Bit-Vectors
