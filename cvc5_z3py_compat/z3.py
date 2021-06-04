@@ -1557,9 +1557,56 @@ def is_bv_value(a):
 class ArraySortRef(SortRef):
     """Array sorts."""
 
+    def domain(self):
+        """Return the domain of the array sort `self`.
+
+        >>> A = ArraySort(IntSort(), BoolSort())
+        >>> A.domain()
+        Int
+        """
+        return _to_sort_ref(self.ast.getArrayIndexSort(), self.ctx)
+
+    def range(self):
+        """Return the range of the array sort `self`.
+
+        >>> A = ArraySort(IntSort(), BoolSort())
+        >>> A.range()
+        Bool
+        """
+        return _to_sort_ref(self.ast.getArrayElementSort(), self.ctx)
+
 
 class ArrayRef(ExprRef):
     """Array expressions."""
+
+    def sort(self):
+        """Return the array sort of the array expression `self`.
+
+        >>> a = Array('a', IntSort(), BoolSort())
+        >>> a.sort()
+        Array(Int, Bool)
+        """
+        return _sort(self.ctx, self.ast)
+
+    def domain(self):
+        """Shorthand for `self.sort().domain()`.
+
+        >>> a = Array('a', IntSort(), BoolSort())
+        >>> a.domain()
+        Int
+        """
+        # safe b/c will always yield an ArraySortRef
+        return self.sort().domain()  # type: ignore
+
+    def range(self):
+        """Shorthand for `self.sort().range()`.
+
+        >>> a = Array('a', IntSort(), BoolSort())
+        >>> a.range()
+        Bool
+        """
+        # safe b/c will always yield an ArraySortRef
+        return self.sort().range()  # type: ignore
 
 
 
