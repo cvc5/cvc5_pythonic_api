@@ -1608,7 +1608,7 @@ def RatVal(a, b, ctx=None):
             _is_int(b) or isinstance(b, str),
             "Second argument cannot be converted into an integer",
         )
-    return simplify(RealVal(a, ctx) / RealVal(b, ctx))
+    return RatNumRef(ctx.solver.mkReal(str(a), str(b)), ctx)
 
 
 #########################################
