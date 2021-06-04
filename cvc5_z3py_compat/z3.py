@@ -862,7 +862,8 @@ class BitVecNumRef(BitVecRef):
         return int(self.as_string())
 
     def as_signed_long(self):
-        """Return an SMT bit-vector numeral as a Python long (bignum) numeral. The most significant bit is assumed to be the sign.
+        """Return an SMT bit-vector numeral as a Python long (bignum) numeral.
+        The most significant bit is assumed to be the sign.
 
         >>> BitVecVal(4, 3).as_signed_long()
         -4
