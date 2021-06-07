@@ -2560,6 +2560,133 @@ def Set(name, elem_sort):
     return SetRef(e, ctx)
 
 
+def EmptySet(s):
+    """Create the empty set
+    >>> EmptySet(IntSort())
+    Empty(Set(Int))
+    """
+    ctx = s.ctx
+    sort = SetSort(s)
+    return SetRef(ctx.solver.mkEmptySet(sort.ast), ctx)
+
+
+def FullSet(s):
+    """Create the full set
+    >>> FullSet(IntSort())
+    Full(Set(Int))
+    """
+    ctx = s.ctx
+    sort = SetSort(s)
+    return SetRef(ctx.solver.mkUniverseSet(sort.ast), ctx)
+
+
+def SetUnion(*args):
+    """Take the union of sets
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> b = Const('b', SetSort(IntSort()))
+    >>> SetUnion(a, b)
+    union(a, b)
+    """
+    args = _get_args(args)
+    ctx = _ctx_from_ast_arg_list(args)
+    return SetRef(ctx.solver.mkTerm(kinds.Union, *[a.ast for a in args]), ctx)
+
+
+def SetIntersect(*args):
+    """Take the union of sets
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> b = Const('b', SetSort(IntSort()))
+    >>> SetIntersect(a, b)
+    intersection(a, b)
+    """
+    args = _get_args(args)
+    ctx = _ctx_from_ast_arg_list(args)
+    return SetRef(ctx.solver.mkTerm(kinds.Intersection, *[a.ast for a in args]), ctx)
+
+
+def SetAdd(s, e):
+    """Add element e to set s
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> SetAdd(a, 1)
+    insert(a, 1)
+    """
+    ctx = _ctx_from_ast_arg_list([s, e])
+    e = _py2expr(e, ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.Insert, e.ast, s.ast), ctx, True)
+
+
+def SetDel(s, e):
+    """Remove element e to set s
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> SetDel(a, 1)
+    setminus(a, singleton(1))
+    """
+    return SetDifference(s, Singleton(e))
+
+
+def SetComplement(s):
+    """The complement of set s
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> SetComplement(a)
+    complement(a)
+    """
+    ctx = s.ctx
+    return ArrayRef(ctx.solver.mkTerm(kinds.Complement, s.ast), ctx)
+
+
+def Singleton(s):
+    """The single element set of just e
+    >>> Singleton(IntVal(1))
+    singleton(1)
+    """
+    s = _py2expr(s)
+    ctx = s.ctx
+    return SetRef(ctx.solver.mkTerm(kinds.Singleton, s.ast), ctx)
+
+
+def SetDifference(a, b):
+    """The set difference of a and b
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> b = Const('b', SetSort(IntSort()))
+    >>> SetDifference(a, b)
+    setminus(a, b)
+    """
+    ctx = _ctx_from_ast_arg_list([a, b])
+    return SetRef(ctx.solver.mkTerm(kinds.Setminus, a.ast, b.ast), ctx)
+
+
+def SetMinus(a, b):
+    """The set difference of a and b
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> b = Const('b', SetSort(IntSort()))
+    >>> SetMinus(a, b)
+    setminus(a, b)
+    """
+    return SetDifference(a, b)
+
+
+def IsMember(e, s):
+    """Check if e is a member of set s
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> IsMember(1, a)
+    member(1, a)
+    """
+    ctx = _ctx_from_ast_arg_list([s, e])
+    arg = s.domain().cast(e)
+    return BoolRef(ctx.solver.mkTerm(kinds.Member, arg.ast, s.ast), ctx)
+
+
+def IsSubset(a, b):
+    """Check if a is a subset of b
+    >>> a = Const('a', SetSort(IntSort()))
+    >>> b = Const('b', SetSort(IntSort()))
+    >>> IsSubset(a, b)
+    subset(a, b)
+    """
+    ctx = _ctx_from_ast_arg_list([a, b])
+    return BoolRef(ctx.solver.mkTerm(kinds.Subset, a.ast, b.ast), ctx)
+
+
 #########################################
 #
 # Solver
