@@ -735,6 +735,80 @@ def _to_expr_ref(a, ctx, r=None):
     return ExprRef(ast, ctx, r)
 
 
+def _coerce_expr_merge(s, a):
+    """ Return a sort common to the sort `s` and the term `a`'s sort
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_expr_merge(None, a)
+    Int
+    >>> _coerce_expr_merge(RealSort(), a)
+    Real
+    >>> _coerce_expr_merge(IntSort(), b)
+    Real
+    """
+    if is_expr(a):
+        s1 = a.sort()
+        if s is None:
+            return s1
+        if s1.eq(s):
+            return s
+        elif s.subsort(s1):
+            return s1
+        elif s1.subsort(s):
+            return s
+        else:
+            if debugging():
+                _assert(s1.ctx == s.ctx, "context mismatch")
+                _assert(False, "sort mismatch")
+    else:
+        return s
+
+
+def _coerce_exprs(a, b, ctx=None):
+    """ Return a sort common to that of `a` and `b`.
+
+    Used in binary term-maker functions.
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_exprs(a, b)
+    Real
+    """
+    if not is_expr(a) and not is_expr(b):
+        a = _py2expr(a, ctx)
+        b = _py2expr(b, ctx)
+    s = None
+    s = _coerce_expr_merge(s, a)
+    s = _coerce_expr_merge(s, b)
+    a = s.cast(a)
+    b = s.cast(b)
+    return (a, b)
+
+
+def _coerce_expr_list(alist, ctx=None):
+    """ Return a sort common to all items in the list.
+
+    Used in n-ary term-maker functions.
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_expr_list([a, b])
+    Real
+    """
+    assert len(alist) > 0
+    has_expr = False
+    for a in alist:
+        if is_expr(a):
+            has_expr = True
+            break
+    if not has_expr:
+        alist = [_py2expr(a, ctx) for a in alist]
+    s = ft.reduce(_coerce_expr_merge, alist, None)
+    assert s is not None
+    return [s.cast(a) for a in alist]
+
+
 def is_expr(a):
     """Return `True` if `a` is an SMT expression.
 
@@ -837,6 +911,24 @@ def is_app_of(a, k):
     return is_expr(a) and a.ast.getKind() == k
 
 
+def If(a, b, c, ctx=None):
+    """Create an SMT if-then-else expression.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> max = If(x > y, x, y)
+    >>> max
+    If(x > y, x, y)
+    """
+    ctx = _get_ctx(_ctx_from_ast_arg_list([a, b, c], ctx))
+    s = BoolSort(ctx)
+    a = s.cast(a)
+    b, c = _coerce_exprs(b, c, ctx)
+    if debugging():
+        _assert(a.ctx == b.ctx, "Context mismatch")
+    return _to_expr_ref(ctx.solver.mkTerm(kinds.Ite, a.ast, b.ast, c.ast), ctx)
+
+
 def Const(name, sort):
     """Create a constant of the given sort.
 
@@ -881,6 +973,35 @@ def FreshConst(sort, prefix="c"):
 
 class BoolSortRef(SortRef):
     """Boolean sort."""
+
+    def cast(self, val):
+        """Try to cast `val` as a Boolean.
+
+        >>> x = BoolSort().cast(True)
+        >>> x
+        True
+        >>> is_expr(x)
+        True
+        >>> is_expr(True)
+        False
+        >>> x.sort()
+        Bool
+        """
+        if isinstance(val, bool):
+            return BoolVal(val, self.ctx)
+        if debugging():
+            if not is_expr(val):
+                _assert(
+                    is_expr(val),
+                    "True, False or SMT Boolean expression expected. Received %s of type %s"
+                    % (val, type(val)),
+                )
+            if not self.eq(val.sort()):
+                _assert(
+                    self.eq(val.sort()),
+                    "Value cannot be converted into an SMT Boolean value",
+                )
+        return val
 
     def subsort(self, other):
         return isinstance(other, ArithSortRef)
@@ -1156,6 +1277,46 @@ class ArithSortRef(SortRef):
     def subsort(self, other):
         """Return `True` if `self` is a subsort of `other`."""
         return self.is_int() and isinstance(other, ArithSortRef) and other.is_real()
+
+    def cast(self, val):
+        """Try to cast `val` as an Integer or Real.
+
+        >>> IntSort().cast(10)
+        10
+        >>> is_int(IntSort().cast(10))
+        True
+        >>> is_int(10)
+        False
+        >>> RealSort().cast(10)
+        10
+        >>> is_real(RealSort().cast(10))
+        True
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            val_s = val.sort()
+            if self.eq(val_s):
+                return val
+            if val_s.is_int() and self.is_real():
+                return ToReal(val)
+            if val_s.is_bool() and self.is_int():
+                return If(val, 1, 0)
+            if val_s.is_bool() and self.is_real():
+                return ToReal(If(val, 1, 0))
+            if debugging():
+                _assert(False, "SMT Integer/Real expression expected")
+        else:
+            if self.is_int():
+                return IntVal(val, self.ctx)
+            if self.is_real():
+                return RealVal(val, self.ctx)
+            if debugging():
+                _assert(
+                    False,
+                    "int, long, float, string (numeral), or SMT Integer/Real expression expected. Got %s"
+                    % self,
+                )
 
 
 def is_arith_sort(s):
@@ -1640,6 +1801,21 @@ class RatNumRef(ArithRef):
         Fraction(1, 5)
         """
         return self.ast.toPythonObj()
+
+
+def _py2expr(a, ctx=None):
+    if isinstance(a, bool):
+        return BoolVal(a, ctx)
+    if _is_int(a):
+        return IntVal(a, ctx)
+    if isinstance(a, float):
+        return RealVal(a, ctx)
+    if is_expr(a):
+        return a
+    if debugging():
+        _assert(False, "Python bool, int, long or float expected")
+
+
 def _to_int_str(val):
     if isinstance(val, float):
         return str(int(val))
@@ -1913,6 +2089,26 @@ class BitVecSortRef(SortRef):
         32
         """
         return self.ast.getBVSize()
+
+    def subsort(self, other):
+        return is_bv_sort(other) and self.size() < other.size()
+
+    def cast(self, val):
+        """Try to cast `val` as a Bit-Vector.
+
+        >>> b = BitVecSort(32)
+        >>> b.cast(10)
+        10
+        >>> b.cast(10).sexpr()
+        '#b00000000000000000000000000001010'
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            # Idea: use sign_extend if sort of val is a bitvector of smaller size
+            return val
+        else:
+            return BitVecVal(val, self)
 
 
 def is_bv_sort(s):
