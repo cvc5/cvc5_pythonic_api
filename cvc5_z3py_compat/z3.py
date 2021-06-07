@@ -736,6 +736,17 @@ def _to_expr_ref(a, ctx, r=None):
 
 
 def _coerce_expr_merge(s, a):
+    """ Return a sort common to the sort `s` and the term `a`'s sort
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_expr_merge(None, a)
+    Int
+    >>> _coerce_expr_merge(RealSort(), a)
+    Real
+    >>> _coerce_expr_merge(IntSort(), b)
+    Real
+    """
     if is_expr(a):
         s1 = a.sort()
         if s is None:
@@ -755,6 +766,13 @@ def _coerce_expr_merge(s, a):
 
 
 def _coerce_exprs(a, b, ctx=None):
+    """ Return a sort common to that of `a` and `b`.
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_exprs(a, b)
+    Real
+    """
     if not is_expr(a) and not is_expr(b):
         a = _py2expr(a, ctx)
         b = _py2expr(b, ctx)
@@ -766,14 +784,15 @@ def _coerce_exprs(a, b, ctx=None):
     return (a, b)
 
 
-def _reduce(f, li, a):
-    r = a
-    for e in li:
-        r = f(r, e)
-    return r
-
-
 def _coerce_expr_list(alist, ctx=None):
+    """ Return a sort common to all items in the list.
+
+    >>> a = Int('a')
+    >>> b = Real('b')
+    >>> _coerce_expr_list([a, b])
+    Real
+    """
+    assert len(alist) > 0
     has_expr = False
     for a in alist:
         if is_expr(a):
@@ -781,7 +800,8 @@ def _coerce_expr_list(alist, ctx=None):
             break
     if not has_expr:
         alist = [_py2expr(a, ctx) for a in alist]
-    s = _reduce(_coerce_expr_merge, alist, None)
+    s = ft.reduce(_coerce_expr_merge, alist, None)
+    assert s is not None
     return [s.cast(a) for a in alist]
 
 
