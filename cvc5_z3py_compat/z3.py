@@ -768,6 +768,8 @@ def _coerce_expr_merge(s, a):
 def _coerce_exprs(a, b, ctx=None):
     """ Return a sort common to that of `a` and `b`.
 
+    Used in binary term-maker functions.
+
     >>> a = Int('a')
     >>> b = Real('b')
     >>> _coerce_exprs(a, b)
@@ -786,6 +788,8 @@ def _coerce_exprs(a, b, ctx=None):
 
 def _coerce_expr_list(alist, ctx=None):
     """ Return a sort common to all items in the list.
+
+    Used in n-ary term-maker functions.
 
     >>> a = Int('a')
     >>> b = Real('b')
