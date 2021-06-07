@@ -2224,6 +2224,43 @@ def is_bv_value(a):
     return is_bv(a) and _is_numeral(a.ctx, a.as_ast())
 
 
+def BV2Int(a, is_signed=False):
+    """Return the SMT expression BV2Int(a).
+
+    >>> b = BitVec('b', 3)
+    >>> BV2Int(b).sort()
+    Int
+    >>> x = Int('x')
+    >>> x > BV2Int(b)
+    x > BV2Int(b)
+    >>> x > BV2Int(b, is_signed=False)
+    x > BV2Int(b)
+    >>> x > BV2Int(b, is_signed=True)
+    x > If(b < 0, BV2Int(b) - 8, BV2Int(b))
+    >>> solve(x > BV2Int(b), b == 1, x < 3)
+    [b = 1, x = 2]
+    """
+    if debugging():
+        _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
+    ctx = a.ctx
+    if is_signed:
+        w = a.sort().size()
+        nat = BV2Int(a)
+        return If(a < 0, nat - (2 ** w), nat)
+    else:
+        # investigate problem with bv2int
+        return ArithRef(ctx.solver.mkTerm(kinds.BVToNat, a.ast), ctx)
+
+
+def Int2BV(a, num_bits):
+    """Return the SMT expression Int2BV(a, num_bits).
+    It is a bit-vector of width num_bits and represents the
+    modulo of a by 2^num_bits
+    """
+    ctx = a.ctx
+    return BitVecRef(ctx.solver.mkTerm(ctx.mkOp(kinds.IntToBV, num_bits), a.ast), ctx)
+
+
 def BitVecSort(sz, ctx=None):
     """Return an SMT bit-vector sort of the given size. If `ctx=None`, then the global context is used.
 
@@ -2301,6 +2338,363 @@ def BitVecs(names, bv, ctx=None):
         names = names.split(" ")
     return [BitVec(name, bv, ctx) for name in names]
 
+
+def Concat(*args):
+    """Create an SMT bit-vector concatenation expression.
+
+    >>> v = BitVecVal(1, 4)
+    >>> Concat(v, v+1, v)
+    Concat(1, 1 + 1, 1)
+    >>> evaluate(Concat(v, v+1, v))
+    289
+    >>> print("%.3x" % simplify(Concat(v, v+1, v)).as_long())
+    121
+    """
+    args = _get_args(args)
+    sz = len(args)
+    if debugging():
+        _assert(sz >= 2, "At least two arguments expected.")
+
+    ctx = None
+    for a in args:
+        if is_expr(a):
+            ctx = a.ctx
+            break
+    if debugging():
+        _assert(
+            all([is_bv(a) for a in args]),
+            "All arguments must be SMT bit-vector expressions.",
+        )
+    return BitVecRef(ctx.solver.mkTerm(kinds.BVConcat, *[a.ast for a in args]))
+
+
+def Extract(high, low, a):
+    """Create an SMT bit-vector extraction expression, or create a string extraction expression.
+
+    >>> x = BitVec('x', 8)
+    >>> Extract(6, 2, x)
+    Extract(6, 2, x)
+    >>> Extract(6, 2, x).sort()
+    BitVec(5)
+    """
+    if debugging():
+        _assert(
+            low <= high,
+            "First argument must be greater than or equal to second argument",
+        )
+        _assert(
+            _is_int(high) and high >= 0 and _is_int(low) and low >= 0,
+            "First and second arguments must be non negative integers",
+        )
+        _assert(is_bv(a), "Third argument must be an SMT bit-vector expression")
+    return BitVecRef(
+        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(kinds.BVExtract, high, low), a.ast), a.ctx
+    )
+
+
+def _check_bv_args(a, b):
+    if debugging():
+        _assert(
+            is_bv(a) or is_bv(b),
+            "First or second argument must be an SMT bit-vector expression",
+        )
+
+
+def ULE(a, b):
+    """Create the SMT expression (unsigned) `other <= self`.
+
+    Use the operator <= for signed less than or equal to.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> ULE(x, y)
+    ULE(x, y)
+    >>> (x <= y).sexpr()
+    '(bvsle x y)'
+    >>> ULE(x, y).sexpr()
+    '(bvule x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(kinds.BVUle, a.ast, b.ast), a.ctx)
+
+
+def ULT(a, b):
+    """Create the SMT expression (unsigned) `other < self`.
+
+    Use the operator < for signed less than.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> ULT(x, y)
+    ULT(x, y)
+    >>> (x < y).sexpr()
+    '(bvslt x y)'
+    >>> ULT(x, y).sexpr()
+    '(bvult x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(kinds.BVUlt, a.ast, b.ast), a.ctx)
+
+
+def UGE(a, b):
+    """Create the SMT expression (unsigned) `other >= self`.
+
+    Use the operator >= for signed greater than or equal to.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> UGE(x, y)
+    UGE(x, y)
+    >>> (x >= y).sexpr()
+    '(bvsge x y)'
+    >>> UGE(x, y).sexpr()
+    '(bvuge x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(kinds.BVUge, a.ast, b.ast), a.ctx)
+
+
+def UGT(a, b):
+    """Create the SMT expression (unsigned) `other > self`.
+
+    Use the operator > for signed greater than.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> UGT(x, y)
+    UGT(x, y)
+    >>> (x > y).sexpr()
+    '(bvsgt x y)'
+    >>> UGT(x, y).sexpr()
+    '(bvugt x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(kinds.BVUgt, a.ast, b.ast), a.ctx)
+
+
+def UDiv(a, b):
+    """Create the SMT expression (unsigned) division `self / other`.
+
+    Use the operator / for signed division.
+
+    >>> x = BitVec('x', 32)
+    >>> y = BitVec('y', 32)
+    >>> UDiv(x, y)
+    UDiv(x, y)
+    >>> UDiv(x, y).sort()
+    BitVec(32)
+    >>> (x / y).sexpr()
+    '(bvsdiv x y)'
+    >>> UDiv(x, y).sexpr()
+    '(bvudiv x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVUdiv, a.ast, b.ast), a.ctx)
+
+
+def URem(a, b):
+    """Create the SMT expression (unsigned) remainder `self % other`.
+
+    Use the operator % for signed modulus, and SRem() for signed remainder.
+
+    >>> x = BitVec('x', 32)
+    >>> y = BitVec('y', 32)
+    >>> URem(x, y)
+    URem(x, y)
+    >>> URem(x, y).sort()
+    BitVec(32)
+    >>> (x % y).sexpr()
+    '(bvsmod x y)'
+    >>> URem(x, y).sexpr()
+    '(bvurem x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVUrem, a.ast, b.ast), a.ctx)
+
+
+def SRem(a, b):
+    """Create the SMT expression signed remainder.
+
+    Use the operator % for signed modulus, and URem() for unsigned remainder.
+
+    >>> x = BitVec('x', 32)
+    >>> y = BitVec('y', 32)
+    >>> SRem(x, y)
+    SRem(x, y)
+    >>> SRem(x, y).sort()
+    BitVec(32)
+    >>> (x % y).sexpr()
+    '(bvsmod x y)'
+    >>> SRem(x, y).sexpr()
+    '(bvsrem x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVSrem, a.ast, b.ast), a.ctx)
+
+
+def LShR(a, b):
+    """Create the SMT expression logical right shift.
+
+    Use the operator >> for the arithmetical right shift.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> LShR(x, y)
+    LShR(x, y)
+    >>> (x >> y).sexpr()
+    '(bvashr x y)'
+    >>> LShR(x, y).sexpr()
+    '(bvlshr x y)'
+    >>> BitVecVal(4, 3)
+    4
+    >>> BitVecVal(4, 3).as_signed_long()
+    -4
+    >>> simplify(BitVecVal(4, 3) >> 1).as_signed_long()
+    -2
+    >>> simplify(BitVecVal(4, 3) >> 1)
+    6
+    >>> simplify(LShR(BitVecVal(4, 3), 1))
+    2
+    >>> simplify(BitVecVal(2, 3) >> 1)
+    1
+    >>> simplify(LShR(BitVecVal(2, 3), 1))
+    1
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVLshr, a.ast, b.ast), a.ctx)
+
+
+def RotateLeft(a, b):
+    """Return an expression representing `a` rotated to the left `b` times.
+
+    >>> a, b = BitVecs('a b', 16)
+    >>> RotateLeft(a, 10)
+    RotateLeft(a, 10)
+    >>> simplify(RotateLeft(a, 0))
+    a
+    >>> simplify(RotateLeft(a, 16))
+    a
+    """
+    s = a.ctx.solver
+    return BitVecRef(s.mkTerm(s.mkOp(kinds.BVRotateLeft, b), a.ast), a.ctx)
+
+
+def RotateRight(a, b):
+    """Return an expression representing `a` rotated to the right `b` times.
+
+    >>> a, b = BitVecs('a b', 16)
+    >>> RotateRight(a, 10)
+    RotateRight(a, 10)
+    >>> simplify(RotateRight(a, 0))
+    a
+    >>> simplify(RotateRight(a, 16))
+    a
+    """
+    s = a.ctx.solver
+    return BitVecRef(s.mkTerm(s.mkOp(kinds.BVRotateRight, b), a.ast), a.ctx)
+
+
+def SignExt(n, a):
+    """Return a bit-vector expression with `n` extra sign-bits.
+
+    >>> x = BitVec('x', 16)
+    >>> n = SignExt(8, x)
+    >>> n.size()
+    24
+    >>> n
+    SignExt(8, x)
+    >>> n.sort()
+    BitVec(24)
+    >>> v0 = BitVecVal(2, 2)
+    >>> v0
+    2
+    >>> v0.size()
+    2
+    >>> v  = simplify(SignExt(6, v0))
+    >>> v
+    254
+    >>> v.size()
+    8
+    >>> print("%.x" % v.as_long())
+    fe
+    """
+    if debugging():
+        _assert(_is_int(n), "First argument must be an integer")
+        _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
+    s = a.ctx.solver
+    return BitVecRef(s.mkTerm(s.mkOp(kinds.BVSignExtend, n), a.ast), a.ctx)
+
+
+def ZeroExt(n, a):
+    """Return a bit-vector expression with `n` extra zero-bits.
+
+    >>> x = BitVec('x', 16)
+    >>> n = ZeroExt(8, x)
+    >>> n.size()
+    24
+    >>> n
+    ZeroExt(8, x)
+    >>> n.sort()
+    BitVec(24)
+    >>> v0 = BitVecVal(2, 2)
+    >>> v0
+    2
+    >>> v0.size()
+    2
+    >>> v  = simplify(ZeroExt(6, v0))
+    >>> v
+    2
+    >>> v.size()
+    8
+    """
+    if debugging():
+        _assert(_is_int(n), "First argument must be an integer")
+        _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
+    s = a.ctx.solver
+    return BitVecRef(s.mkTerm(s.mkOp(kinds.BVZeroExtend, n), a.ast), a.ctx)
+
+
+def RepeatBitVec(n, a):
+    """Return an expression representing `n` copies of `a`.
+
+    >>> x = BitVec('x', 8)
+    >>> n = RepeatBitVec(4, x)
+    >>> n
+    RepeatBitVec(4, x)
+    >>> n.size()
+    32
+    >>> v0 = BitVecVal(10, 4)
+    >>> print("%.x" % v0.as_long())
+    a
+    >>> v = simplify(RepeatBitVec(4, v0))
+    >>> v.size()
+    16
+    >>> print("%.x" % v.as_long())
+    aaaa
+    """
+    if debugging():
+        _assert(_is_int(n), "First argument must be an integer")
+        _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
+    return BitVecRef(
+        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(kinds.BVRepeat, n), a.ast), a.ctx
+    )
+
+
+def BVRedAnd(a):
+    """Return the reduction-and expression of `a`."""
+    if debugging():
+        _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVRedand, a.ast), a.ctx)
+
+
+def BVRedOr(a):
+    """Return the reduction-or expression of `a`."""
+    if debugging():
+        _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
+    return BitVecRef(a.ctx.solver.mkTerm(kinds.BVRedor, a.ast), a.ctx)
 
 #########################################
 #
