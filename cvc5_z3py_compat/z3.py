@@ -929,6 +929,27 @@ def If(a, b, c, ctx=None):
     return _to_expr_ref(ctx.solver.mkTerm(kinds.Ite, a.ast, b.ast, c.ast), ctx)
 
 
+def Distinct(*args):
+    """Create an SMT distinct expression.
+
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> Distinct(x, y)
+    x != y
+    >>> z = Int('z')
+    >>> Distinct(x, y, z)
+    Distinct(x, y, z)
+    """
+    args = _get_args(args)
+    ctx = _ctx_from_ast_arg_list(args)
+    if debugging():
+        _assert(
+            ctx is not None, "At least one of the arguments must be an SMT expression"
+        )
+    args = _coerce_expr_list(args, ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.Distinct, *[a.ast for a in args]), ctx)
+
+
 def Const(name, sort):
     """Create a constant of the given sort.
 
@@ -1234,6 +1255,118 @@ def FreshBool(prefix="b", ctx=None):
     sort = BoolSort(ctx)
     name = ctx.next_fresh(sort, prefix)
     return Bool(name, ctx)
+
+
+def Implies(a, b, ctx=None):
+    """Create an SMT implies expression.
+
+    >>> p, q = Bools('p q')
+    >>> Implies(p, q)
+    Implies(p, q)
+    """
+    ctx = _get_ctx(_ctx_from_ast_arg_list([a, b], ctx))
+    s = BoolSort(ctx)
+    a = s.cast(a)
+    b = s.cast(b)
+    return BoolRef(ctx.solver.mkTerm(kinds.Implies, a.as_ast(), b.as_ast()), ctx)
+
+
+def Xor(a, b, ctx=None):
+    """Create an SMT Xor expression.
+
+    >>> p, q = Bools('p q')
+    >>> Xor(p, q)
+    Xor(p, q)
+    """
+    ctx = _get_ctx(_ctx_from_ast_arg_list([a, b], ctx))
+    s = BoolSort(ctx)
+    a = s.cast(a)
+    b = s.cast(b)
+    return BoolRef(ctx.solver.mkTerm(kinds.Xor, a.as_ast(), b.as_ast()), ctx)
+
+
+def Not(a, ctx=None):
+    """Create an SMT not expression or probe.
+
+    >>> p = Bool('p')
+    >>> Not(Not(p))
+    Not(Not(p))
+    """
+    ctx = _get_ctx(_ctx_from_ast_arg_list([a], ctx))
+    s = BoolSort(ctx)
+    a = s.cast(a)
+    return BoolRef(ctx.solver.mkTerm(kinds.Not, a.as_ast()), ctx)
+
+
+def mk_not(a):
+    if is_not(a):
+        return a.arg(0)
+    else:
+        return Not(a)
+
+
+def And(*args):
+    """Create an SMT and-expression or and-probe.
+
+    >>> p, q, r = Bools('p q r')
+    >>> And(p, q, r)
+    And(p, q, r)
+    >>> P = BoolVector('p', 5)
+    >>> And(P)
+    And(p__0, p__1, p__2, p__3, p__4)
+    """
+    last_arg = None
+    if len(args) > 0:
+        last_arg = args[len(args) - 1]
+    if isinstance(last_arg, Context):
+        ctx = args[len(args) - 1]
+        args = args[: len(args) - 1]
+    elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
+        ctx = args[0][0]
+        args = [a for a in args[0]]
+    else:
+        ctx = None
+    args = _get_args(args)
+    ctx = _get_ctx(_ctx_from_ast_arg_list(args, ctx))
+    if debugging():
+        _assert(
+            ctx is not None,
+            "At least one of the arguments must be an SMT expression or probe",
+        )
+    args = _coerce_expr_list(args, ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.And, *[a.ast for a in args]), ctx)
+
+
+def Or(*args):
+    """Create an SMT or-expression or or-probe.
+
+    >>> p, q, r = Bools('p q r')
+    >>> Or(p, q, r)
+    Or(p, q, r)
+    >>> P = BoolVector('p', 5)
+    >>> Or(P)
+    Or(p__0, p__1, p__2, p__3, p__4)
+    """
+    last_arg = None
+    if len(args) > 0:
+        last_arg = args[len(args) - 1]
+    if isinstance(last_arg, Context):
+        ctx = args[len(args) - 1]
+        args = args[: len(args) - 1]
+    elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
+        ctx = args[0][0]
+        args = [a for a in args[0]]
+    else:
+        ctx = None
+    args = _get_args(args)
+    ctx = _get_ctx(_ctx_from_ast_arg_list(args, ctx))
+    if debugging():
+        _assert(
+            ctx is not None,
+            "At least one of the arguments must be an SMT expression or probe",
+        )
+    args = _coerce_expr_list(args, ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.Or, *[a.ast for a in args]), ctx)
 
 
 #########################################
