@@ -2982,6 +2982,56 @@ def SimpleSolver(ctx=None, logFile=None):
 #########################################
 
 
+def Sum(*args):
+    """Create the sum of the SMT expressions.
+
+    >>> a, b, c = Ints('a b c')
+    >>> Sum(a, b, c)
+    a + b + c
+    >>> Sum([a, b, c])
+    a + b + c
+    >>> A = IntVector('a', 5)
+    >>> Sum(A)
+    a__0 + a__1 + a__2 + a__3 + a__4
+    """
+    args = _get_args(args)
+    if len(args) == 0:
+        return 0
+    ctx = _ctx_from_ast_arg_list(args)
+    if ctx is None:
+        return ft.reduce(lambda a, b: a + b, args, 0)
+    args = _coerce_expr_list(args, ctx)
+    if is_bv(args[0]):
+        return ft.reduce(lambda a, b: a + b, args, 0)
+    else:
+        return ArithRef(ctx.solver.mkTerm(kinds.Plus, *[a.ast for a in args]), ctx)
+
+
+def Product(*args):
+    """Create the product of the SMT expressions.
+
+    >>> a, b, c = Ints('a b c')
+    >>> Product(a, b, c)
+    a*b*c
+    >>> Product([a, b, c])
+    a*b*c
+    >>> A = IntVector('a', 5)
+    >>> Product(A)
+    a__0*a__1*a__2*a__3*a__4
+    """
+    args = _get_args(args)
+    if len(args) == 0:
+        return 1
+    ctx = _ctx_from_ast_arg_list(args)
+    if ctx is None:
+        return ft.reduce(lambda a, b: a * b, args)
+    args = _coerce_expr_list(args, ctx)
+    if is_bv(args[0]):
+        return ft.reduce(lambda a, b: a * b, args)
+    else:
+        return ArithRef(ctx.solver.mkTerm(kinds.Mult, *[a.ast for a in args]), ctx)
+
+
 def substitute(t, *m):
     """Apply substitution m on t, m is a list of pairs of the form (from, to).
     Every occurrence in t of from is replaced with to.
