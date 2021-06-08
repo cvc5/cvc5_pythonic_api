@@ -2455,6 +2455,83 @@ def Array(name, dom, rng):
     return ArrayRef(e, ctx)
 
 
+def Update(a, i, v):
+    """Return an SMT store array expression.
+
+    >>> a    = Array('a', IntSort(), IntSort())
+    >>> i, v = Ints('i v')
+    >>> s    = Update(a, i, v)
+    >>> s.sort()
+    Array(Int, Int)
+    >>> prove(s[i] == v)
+    proved
+    >>> j    = Int('j')
+    >>> prove(Implies(i != j, s[j] == a[j]))
+    proved
+    """
+    if debugging():
+        _assert(is_array(a), "First argument must be an SMT array expression")
+    i = a.sort().domain().cast(i)
+    v = a.sort().range().cast(v)
+    ctx = a.ctx
+    return _to_expr_ref(ctx.solver.mkTerm(kinds.Store, a.ast, i.ast, v.ast), ctx)
+
+
+def Store(a, i, v):
+    """Return an SMT store array expression.
+
+    >>> a    = Array('a', IntSort(), IntSort())
+    >>> i, v = Ints('i v')
+    >>> s    = Store(a, i, v)
+    >>> s.sort()
+    Array(Int, Int)
+    >>> prove(s[i] == v)
+    proved
+    >>> j    = Int('j')
+    >>> prove(Implies(i != j, s[j] == a[j]))
+    proved
+    """
+    return Update(a, i, v)
+
+
+def Select(a, i):
+    """Return an SMT select array expression.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> i = Int('i')
+    >>> Select(a, i)
+    a[i]
+    >>> eq(Select(a, i), a[i])
+    True
+    """
+    if debugging():
+        _assert(is_array(a), "First argument must be an SMT array expression")
+    return a[i]
+
+
+def K(dom, v):
+    """Return an SMT constant array expression.
+
+    >>> a = K(IntSort(), 10)
+    >>> a
+    K(Int, 10)
+    >>> a.sort()
+    Array(Int, Int)
+    >>> i = Int('i')
+    >>> a[i]
+    K(Int, 10)[i]
+    >>> simplify(a[i])
+    10
+    """
+    if debugging():
+        _assert(is_sort(dom), "SMT sort expected")
+    ctx = dom.ctx
+    if not is_expr(v):
+        v = _py2expr(v, ctx)
+    sort = ArraySort(dom, v.sort())
+    return ArrayRef(ctx.solver.mkConstArray(sort.ast, v.ast), ctx)
+
+
 def is_select(a):
     """Return `True` if `a` is an SMT array select application.
 
