@@ -947,7 +947,7 @@ def Distinct(*args):
             ctx is not None, "At least one of the arguments must be an SMT expression"
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(kinds.Distinct, *[a.ast for a in args]), ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.Distinct, [a.ast for a in args]), ctx)
 
 
 def Const(name, sort):
@@ -1334,7 +1334,7 @@ def And(*args):
             "At least one of the arguments must be an SMT expression or probe",
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(kinds.And, *[a.ast for a in args]), ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.And, [a.ast for a in args]), ctx)
 
 
 def Or(*args):
@@ -1366,7 +1366,7 @@ def Or(*args):
             "At least one of the arguments must be an SMT expression or probe",
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(kinds.Or, *[a.ast for a in args]), ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.Or, [a.ast for a in args]), ctx)
 
 
 #########################################
