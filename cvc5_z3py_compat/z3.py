@@ -3004,7 +3004,7 @@ def Sum(*args):
     if is_bv(args[0]):
         return ft.reduce(lambda a, b: a + b, args, 0)
     else:
-        return ArithRef(ctx.solver.mkTerm(kinds.Plus, *[a.ast for a in args]), ctx)
+        return ArithRef(ctx.solver.mkTerm(kinds.Plus, [a.ast for a in args]), ctx)
 
 
 def Product(*args):
@@ -3029,7 +3029,7 @@ def Product(*args):
     if is_bv(args[0]):
         return ft.reduce(lambda a, b: a * b, args)
     else:
-        return ArithRef(ctx.solver.mkTerm(kinds.Mult, *[a.ast for a in args]), ctx)
+        return ArithRef(ctx.solver.mkTerm(kinds.Mult, [a.ast for a in args]), ctx)
 
 
 def substitute(t, *m):
