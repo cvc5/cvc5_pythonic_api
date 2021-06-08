@@ -2248,7 +2248,6 @@ def BV2Int(a, is_signed=False):
         nat = BV2Int(a)
         return If(a < 0, nat - (2 ** w), nat)
     else:
-        # investigate problem with bv2int
         return ArithRef(ctx.solver.mkTerm(kinds.BVToNat, a.ast), ctx)
 
 
@@ -2567,6 +2566,13 @@ def LShR(a, b):
     return BitVecRef(a.ctx.solver.mkTerm(kinds.BVLshr, a.ast, b.ast), a.ctx)
 
 
+def _check_rotate_args(a, b):
+    if debugging():
+        _assert(isinstance(b, int), "Can only rotate by an integer")
+        _assert(b >= 0, "Can't rotate by a negative amount")
+        _assert(is_bv(a), "Can only rotate a bit-vector")
+
+
 def RotateLeft(a, b):
     """Return an expression representing `a` rotated to the left `b` times.
 
@@ -2579,6 +2585,7 @@ def RotateLeft(a, b):
     a
     """
     s = a.ctx.solver
+    _check_rotate_args(a, b)
     return BitVecRef(s.mkTerm(s.mkOp(kinds.BVRotateLeft, b), a.ast), a.ctx)
 
 
@@ -2594,6 +2601,7 @@ def RotateRight(a, b):
     a
     """
     s = a.ctx.solver
+    _check_rotate_args(a, b)
     return BitVecRef(s.mkTerm(s.mkOp(kinds.BVRotateRight, b), a.ast), a.ctx)
 
 
