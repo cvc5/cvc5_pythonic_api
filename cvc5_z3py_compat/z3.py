@@ -2589,7 +2589,7 @@ def SetUnion(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(kinds.Union, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.Union, [a.ast for a in args]), ctx)
 
 
 def SetIntersect(*args):
@@ -2601,7 +2601,7 @@ def SetIntersect(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(kinds.Intersection, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.Intersection, [a.ast for a in args]), ctx)
 
 
 def SetAdd(s, e):
