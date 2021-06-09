@@ -2898,6 +2898,44 @@ class ArrayRef(ExprRef):
         # safe b/c will always yield an ArraySortRef
         return self.sort().range()  # type: ignore
 
+    def __getitem__(self, arg):
+        """Return the SMT expression `self[arg]`.
+
+        >>> a = Array('a', IntSort(), BoolSort())
+        >>> i = Int('i')
+        >>> a[i]
+        a[i]
+        >>> a[i].sexpr()
+        '(select a i)'
+        """
+        arg = self.domain().cast(arg)
+        return _to_expr_ref(
+            self.ctx.solver.mkTerm(kinds.Select, self.ast, arg.ast), self.ctx
+        )
+
+    def arg(self, idx):
+        """Get the "argument" (base element) of this constant array.
+
+        >>> b = K(IntSort(), 1)
+        >>> b.arg(0)
+        1
+        """
+        if debugging():
+            _assert(is_app(self), "SMT application expected")
+            _assert(idx < 1, "Invalid argument index")
+        return self.default()
+
+    def default(self):
+        """Get the constant element of this (constant) array
+        >>> b = K(IntSort(), 1)
+        >>> b.default()
+        1
+        """
+        if debugging():
+            _assert(is_app(self), "SMT application expected")
+            _assert(is_K(self), "SMT constant array expected")
+        return _to_expr_ref(self.ast.getConstArrayBase(), self.ctx)
+
 
 def is_array_sort(a):
     instance_check(a, SortRef)
@@ -3154,6 +3192,23 @@ class SetRef(ExprRef):
         """
         # safe b/c will always yield a SetSortRef
         return self.sort().range()  # type: ignore
+
+    def __getitem__(self, arg):
+        """Return the SMT expression `self[arg]`.
+        Included for compatibility with arrays.
+
+        >>> a = Set('a', IntSort())
+        >>> i = Int('i')
+        >>> a[i]
+        member(i, a)
+        """
+        arg = self.domain().cast(arg)
+        return _to_expr_ref(
+            self.ctx.solver.mkTerm(kinds.Member, arg.ast, self.ast), self.ctx
+        )
+
+    def default(self):
+        return BoolRef(self.ctx.solver.mkFalse(), self.ctx)
 
 
 def SetSort(s):
