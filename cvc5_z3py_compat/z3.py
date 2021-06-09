@@ -195,6 +195,21 @@ class ExprRef(object):
             self.ctx = None
             self.ast = None
 
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __bool__(self):
+        if is_true(self):
+            return True
+        elif is_false(self):
+            return False
+        elif is_eq(self) and self.num_args() == 2:
+            return self.arg(0).eq(self.arg(1))
+        else:
+            raise SMTException(
+                "Symbolic expressions cannot be cast to concrete Boolean values."
+            )
+
     def sexpr(self):
         """Return a string representing the AST node in s-expression notation.
 
@@ -248,9 +263,45 @@ class ExprRef(object):
         """
         return _sort(self.ctx, self.ast)
 
+    def __eq__(self, other):
+        """Return an SMT expression that represents the constraint `self == other`.
+
+        If `other` is `None`, then this method simply returns `False`.
+
+        >>> a = Int('a')
+        >>> b = Int('b')
+        >>> a == b
+        a == b
+        >>> a is None
+        False
+        """
+        if other is None:
+            return False
+        a, b = _coerce_exprs(self, other)
+        c = self.ctx
+        return BoolRef(c.solver.mkTerm(kinds.Equal, a.as_ast(), b.as_ast()), c)
+
     def __hash__(self):
         """Hash code."""
         return self.ast.__hash__()
+
+    def __ne__(self, other):
+        """Return an SMT expression that represents the constraint `self != other`.
+
+        If `other` is `None`, then this method simply returns `True`.
+
+        >>> a = Int('a')
+        >>> b = Int('b')
+        >>> a != b
+        a != b
+        >>> a is not None
+        True
+        """
+        if other is None:
+            return True
+        a, b = _coerce_exprs(self, other)
+        c = self.ctx
+        return BoolRef(c.solver.mkTerm(kinds.Distinct, a.as_ast(), b.as_ast()), c)
 
     def params(self):
         return self.decl().params()
