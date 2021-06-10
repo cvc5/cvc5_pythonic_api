@@ -2332,6 +2332,393 @@ class BitVecRef(ExprRef):
         # safe b/c will always yield a BitVecSortRef
         return self.sort().size()  # type: ignore
 
+    def __add__(self, other):
+        """Create the SMT expression `self + other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x + y
+        x + y
+        >>> (x + y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAdd, a.ast, b.ast), self.ctx)
+
+    def __radd__(self, other):
+        """Create the SMT expression `other + self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 + x
+        10 + x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAdd, b.ast, a.ast), self.ctx)
+
+    def __mul__(self, other):
+        """Create the SMT expression `self * other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x * y
+        x*y
+        >>> (x * y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVMult, a.ast, b.ast), self.ctx)
+
+    def __rmul__(self, other):
+        """Create the SMT expression `other * self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 * x
+        10*x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVMult, b.ast, a.ast), self.ctx)
+
+    def __sub__(self, other):
+        """Create the SMT expression `self - other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x - y
+        x - y
+        >>> (x - y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSub, a.ast, b.ast), self.ctx)
+
+    def __rsub__(self, other):
+        """Create the SMT expression `other - self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 - x
+        10 - x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSub, b.ast, a.ast), self.ctx)
+
+    def __or__(self, other):
+        """Create the SMT expression bitwise-or `self | other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x | y
+        x | y
+        >>> (x | y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVOr, a.ast, b.ast), self.ctx)
+
+    def __ror__(self, other):
+        """Create the SMT expression bitwise-or `other | self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 | x
+        10 | x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVOr, b.ast, a.ast), self.ctx)
+
+    def __and__(self, other):
+        """Create the SMT expression bitwise-and `self & other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x & y
+        x & y
+        >>> (x & y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAnd, a.ast, b.ast), self.ctx)
+
+    def __rand__(self, other):
+        """Create the SMT expression bitwise-or `other & self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 & x
+        10 & x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAnd, b.ast, a.ast), self.ctx)
+
+    def __xor__(self, other):
+        """Create the SMT expression bitwise-xor `self ^ other`.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x ^ y
+        x ^ y
+        >>> (x ^ y).sort()
+        BitVec(32)
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVXor, a.ast, b.ast), self.ctx)
+
+    def __rxor__(self, other):
+        """Create the SMT expression bitwise-xor `other ^ self`.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 ^ x
+        10 ^ x
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVXor, b.ast, a.ast), self.ctx)
+
+    def __pos__(self):
+        """Return `self`.
+
+        >>> x = BitVec('x', 32)
+        >>> +x
+        x
+        """
+        return self
+
+    def __neg__(self):
+        """Return an expression representing `-self`.
+
+        >>> x = BitVec('x', 32)
+        >>> -x
+        -x
+        >>> solve([-(-x) != x])
+        no solution
+        """
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVNeg, self.ast), self.ctx)
+
+    def __invert__(self):
+        """Create the SMT expression bitwise-not `~self`.
+
+        >>> x = BitVec('x', 32)
+        >>> ~x
+        ~x
+        >>> solve([~(~x) != x])
+        no solution
+        """
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVNot, self.ast), self.ctx)
+
+    def __div__(self, other):
+        """Create the SMT expression (signed) division `self / other`.
+
+        Use the function UDiv() for unsigned division.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x / y
+        x/y
+        >>> (x / y).sort()
+        BitVec(32)
+        >>> (x / y).sexpr()
+        '(bvsdiv x y)'
+        >>> UDiv(x, y).sexpr()
+        '(bvudiv x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSdiv, a.ast, b.ast), self.ctx)
+
+    def __truediv__(self, other):
+        """Create the SMT expression (signed) division `self / other`."""
+        return self.__div__(other)
+
+    def __rdiv__(self, other):
+        """Create the SMT expression (signed) division `other / self`.
+
+        Use the function UDiv() for unsigned division.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 / x
+        10/x
+        >>> (10 / x).sexpr()
+        '(bvsdiv #b00000000000000000000000000001010 x)'
+        >>> UDiv(10, x).sexpr()
+        '(bvudiv #b00000000000000000000000000001010 x)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSdiv, b.ast, a.ast), self.ctx)
+
+    def __rtruediv__(self, other):
+        """Create the SMT expression (signed) division `other / self`."""
+        return self.__rdiv__(other)
+
+    def __mod__(self, other):
+        """Create the SMT expression (signed) mod `self % other`.
+
+        Use the function URem() for unsigned remainder, and SRem() for signed remainder.
+
+        >>> x = BitVec('x', 32)
+        >>> y = BitVec('y', 32)
+        >>> x % y
+        x%y
+        >>> (x % y).sort()
+        BitVec(32)
+        >>> (x % y).sexpr()
+        '(bvsmod x y)'
+        >>> URem(x, y).sexpr()
+        '(bvurem x y)'
+        >>> SRem(x, y).sexpr()
+        '(bvsrem x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSmod, a.ast, b.ast), self.ctx)
+
+    def __rmod__(self, other):
+        """Create the SMT expression (signed) mod `other % self`.
+
+        Use the function URem() for unsigned remainder, and SRem() for signed remainder.
+
+        >>> x = BitVec('x', 32)
+        >>> 10 % x
+        10%x
+        >>> (10 % x).sexpr()
+        '(bvsmod #b00000000000000000000000000001010 x)'
+        >>> URem(10, x).sexpr()
+        '(bvurem #b00000000000000000000000000001010 x)'
+        >>> SRem(10, x).sexpr()
+        '(bvsrem #b00000000000000000000000000001010 x)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVSmod, b.ast, a.ast), self.ctx)
+
+    def __le__(self, other):
+        """Create the SMT expression (signed) `other <= self`.
+
+        Use the function ULE() for unsigned less than or equal to.
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x <= y
+        x <= y
+        >>> (x <= y).sexpr()
+        '(bvsle x y)'
+        >>> ULE(x, y).sexpr()
+        '(bvule x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(self.ctx.solver.mkTerm(kinds.BVSle, a.ast, b.ast), self.ctx)
+
+    def __lt__(self, other):
+        """Create the SMT expression (signed) `other < self`.
+
+        Use the function ULT() for unsigned less than.
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x < y
+        x < y
+        >>> (x < y).sexpr()
+        '(bvslt x y)'
+        >>> ULT(x, y).sexpr()
+        '(bvult x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(self.ctx.solver.mkTerm(kinds.BVSlt, a.ast, b.ast), self.ctx)
+
+    def __gt__(self, other):
+        """Create the SMT expression (signed) `other > self`.
+
+        Use the function UGT() for unsigned greater than.
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x > y
+        x > y
+        >>> (x > y).sexpr()
+        '(bvsgt x y)'
+        >>> UGT(x, y).sexpr()
+        '(bvugt x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(self.ctx.solver.mkTerm(kinds.BVSgt, a.ast, b.ast), self.ctx)
+
+    def __ge__(self, other):
+        """Create the SMT expression (signed) `other >= self`.
+
+        Use the function UGE() for unsigned greater than or equal to.
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x >= y
+        x >= y
+        >>> (x >= y).sexpr()
+        '(bvsge x y)'
+        >>> UGE(x, y).sexpr()
+        '(bvuge x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(self.ctx.solver.mkTerm(kinds.BVSge, a.ast, b.ast), self.ctx)
+
+    def __rshift__(self, other):
+        """Create the SMT expression (arithmetical) right shift `self >> other`
+
+        Use the function LShR() for the right logical shift
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x >> y
+        x >> y
+        >>> (x >> y).sexpr()
+        '(bvashr x y)'
+        >>> LShR(x, y).sexpr()
+        '(bvlshr x y)'
+        >>> BitVecVal(4, 3)
+        4
+        >>> BitVecVal(4, 3).as_signed_long()
+        -4
+        >>> evaluate(BitVecVal(4, 3) >> 1).as_signed_long()
+        -2
+        >>> evaluate(BitVecVal(4, 3) >> 1)
+        6
+        >>> evaluate(LShR(BitVecVal(4, 3), 1))
+        2
+        >>> evaluate(BitVecVal(2, 3) >> 1)
+        1
+        >>> evaluate(LShR(BitVecVal(2, 3), 1))
+        1
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAshr, a.ast, b.ast), self.ctx)
+
+    def __lshift__(self, other):
+        """Create the SMT expression left shift `self << other`
+
+        >>> x, y = BitVecs('x y', 32)
+        >>> x << y
+        x << y
+        >>> (x << y).sexpr()
+        '(bvshl x y)'
+        >>> evaluate(BitVecVal(2, 3) << 1)
+        4
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVShl, a.ast, b.ast), self.ctx)
+
+    def __rrshift__(self, other):
+        """Create the SMT expression (arithmetical) right shift `other` >> `self`.
+
+        Use the function LShR() for the right logical shift
+
+        >>> x = BitVec('x', 32)
+        >>> 10 >> x
+        10 >> x
+        >>> (10 >> x).sexpr()
+        '(bvashr #b00000000000000000000000000001010 x)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVAshr, b.ast, a.ast), self.ctx)
+
+    def __rlshift__(self, other):
+        """Create the SMT expression left shift `other << self`.
+
+        Use the function LShR() for the right logical shift
+
+        >>> x = BitVec('x', 32)
+        >>> 10 << x
+        10 << x
+        >>> (10 << x).sexpr()
+        '(bvshl #b00000000000000000000000000001010 x)'
+        """
+        a, b = _coerce_exprs(self, other)
+        return BitVecRef(self.ctx.solver.mkTerm(kinds.BVShl, b.ast, a.ast), self.ctx)
+
 
 class BitVecNumRef(BitVecRef):
     """Bit-vector values."""
