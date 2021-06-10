@@ -3857,6 +3857,33 @@ def solve_using(s, *args, **kwargs):
         print(s.model())
 
 
+def prove(claim, **keywords):
+    """Try to prove the given claim.
+
+    This is a simple function for creating demonstrations.  It tries to prove
+    `claim` by showing the negation is unsatisfiable.
+
+    >>> p, q = Bools('p q')
+    >>> prove(Not(And(p, q)) == Or(Not(p), Not(q)))
+    proved
+    """
+    if debugging():
+        _assert(is_bool(claim), "SMT Boolean expression expected")
+    s = Solver()
+    s.add(Not(claim))
+    if keywords.get("show", False):
+        print(s)
+    r = s.check()
+    if r == unsat:
+        print("proved")
+    elif r == unknown:
+        print("failed to prove")
+        print(s.model())
+    else:
+        print("counterexample")
+        print(s.model())
+
+
 class ModelRef:
     """Model/Solution of a satisfiability problem (aka system of constraints)."""
 
