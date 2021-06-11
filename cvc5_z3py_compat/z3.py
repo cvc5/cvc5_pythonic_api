@@ -1091,6 +1091,17 @@ class BoolRef(ExprRef):
     def sort(self):
         return _sort(self.ctx, self.ast)
 
+    def __rmul__(self, other):
+        return self * other
+
+    def __mul__(self, other):
+        """Create the SMT expression `self * other`."""
+        if other == 1:
+            return self
+        if other == 0:
+            return 0
+        return If(self, other, 0)
+
 
 def is_bool(a):
     """Return `True` if `a` is an SMT Boolean expression.
