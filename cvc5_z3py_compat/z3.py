@@ -398,6 +398,20 @@ class ExprRef(object):
             else:
                 return []
 
+    def is_int(self):
+        """Return `True` if `self` is of the sort Integer.
+
+        >>> x = Int('x')
+        >>> x.is_int()
+        True
+        >>> (x + 1).is_int()
+        True
+        >>> x = Real('x')
+        >>> x.is_int()
+        False
+        """
+        return False
+
 
 def is_ast(a):
     """Return `True` for expressions and sorts.
@@ -569,6 +583,9 @@ class SortRef(object):
     def __hash__(self):
         """Hash code."""
         return self.ast.__hash__()
+
+    def is_int(self):
+        return False
 
 
 def _sort(ctx, a):
@@ -1079,6 +1096,15 @@ class BoolSortRef(SortRef):
         return isinstance(other, ArithSortRef)
 
     def is_int(self):
+        """Return `True` if `self` is of the sort Integer.
+
+        >>> x = IntSort()
+        >>> x.is_int()
+        True
+        >>> x = RealSort()
+        >>> x.is_int()
+        False
+        """
         return True
 
     def is_bool(self):
