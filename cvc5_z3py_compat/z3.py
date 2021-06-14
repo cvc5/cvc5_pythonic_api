@@ -704,6 +704,40 @@ class FuncDeclRef(ExprRef):
         """
         return _to_sort_ref(self.ast.getSort().getFunctionCodomainSort(), self.ctx)
 
+    def __call__(self, *args):
+        """Create an SMT application expression using the function `self`,
+        and the given arguments.
+
+        The arguments must be SMT expressions. This method assumes that
+        the sorts of the elements in `args` match the sorts of the
+        domain. Limited coercion is supported.  For example, if
+        args[0] is a Python integer, and the function expects a SMT
+        integer, then the argument is automatically converted into a
+        SMT integer.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> x = Int('x')
+        >>> y = Real('y')
+        >>> f(x, y)
+        f(x, y)
+        >>> f(x, x)
+        f(x, ToReal(x))
+        """
+        args = _get_args(args)
+        num = len(args)
+        if debugging():
+            _assert(
+                num == self.arity(),
+                "Incorrect number of arguments to %s" % self,
+            )
+        _args = []
+        for i in range(num):
+            tmp = self.domain(i).cast(args[i])
+            _args.append(tmp.as_ast())
+        return _to_expr_ref(
+            self.ctx.solver.mkTerm(kinds.ApplyUf, self.ast, *_args), self.ctx
+        )
+
 
 def is_func_decl(a):
     """Return `True` if `a` is an SMT function declaration.
