@@ -2998,13 +2998,9 @@ def Sum(*args):
     if len(args) == 0:
         return 0
     ctx = _ctx_from_ast_arg_list(args)
-    if ctx is None:
-        return ft.reduce(lambda a, b: a + b, args, 0)
-    args = _coerce_expr_list(args, ctx)
-    if is_bv(args[0]):
-        return ft.reduce(lambda a, b: a + b, args, 0)
-    else:
-        return ArithRef(ctx.solver.mkTerm(kinds.Plus, [a.ast for a in args]), ctx)
+    if ctx is not None:
+        args = _coerce_expr_list(args, ctx)
+    return ft.reduce(lambda a, b: a + b, args)
 
 
 def Product(*args):
