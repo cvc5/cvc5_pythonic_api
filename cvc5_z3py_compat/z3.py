@@ -3023,13 +3023,9 @@ def Product(*args):
     if len(args) == 0:
         return 1
     ctx = _ctx_from_ast_arg_list(args)
-    if ctx is None:
-        return ft.reduce(lambda a, b: a * b, args)
-    args = _coerce_expr_list(args, ctx)
-    if is_bv(args[0]):
-        return ft.reduce(lambda a, b: a * b, args)
-    else:
-        return ArithRef(ctx.solver.mkTerm(kinds.Mult, [a.ast for a in args]), ctx)
+    if ctx is not None:
+        args = _coerce_expr_list(args, ctx)
+    return ft.reduce(lambda a, b: a * b, args)
 
 
 def substitute(t, *m):
