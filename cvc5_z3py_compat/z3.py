@@ -1630,6 +1630,30 @@ class ArithRef(ExprRef):
         # safe b/c will always yield an ArithSortRef
         return self.sort().is_real()  # type: ignore
 
+    def __pow__(self, other):
+        """Create the SMT expression `self**other` (** is the power operator).
+
+        >>> x = Real('x')
+        >>> x**3
+        x**3
+        >>> (x**3).sort()
+        Real
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Pow, a.ast, b.ast), self.ctx)
+
+    def __rpow__(self, other):
+        """Create the SMT expression `other**self` (** is the power operator).
+
+        >>> x = Real('x')
+        >>> 2**x
+        2**x
+        >>> (2**x).sort()
+        Real
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Pow, b.ast, a.ast), self.ctx)
+
 
 def is_arith(a):
     """Return `True` if `a` is an arithmetical expression.
@@ -2128,6 +2152,7 @@ def RatVal(a, b, ctx=None):
     >>> RatVal(3,5).sort()
     Real
     """
+    ctx = _get_ctx(ctx)
     if debugging():
         _assert(
             _is_int(a) or isinstance(a, str),
@@ -2137,7 +2162,7 @@ def RatVal(a, b, ctx=None):
             _is_int(b) or isinstance(b, str),
             "Second argument cannot be converted into an integer",
         )
-    return RatNumRef(ctx.solver.mkReal(str(a), str(b)), ctx)
+    return RatNumRef(ctx.solver.mkReal(a, b), ctx)
 
 
 def ToReal(a):
@@ -2325,6 +2350,48 @@ def FreshReal(prefix="b", ctx=None):
     name = ctx.next_fresh(sort, prefix)
     return Real(name, ctx)
 
+
+def IsInt(a):
+    """Return the SMT predicate IsInt(a).
+
+    >>> x = Real('x')
+    >>> IsInt(x + "1/2")
+    IsInt(x + 1/2)
+    >>> solve(IsInt(x + "1/2"), x > 0, x < 1)
+    [x = 1/2]
+    >>> solve(IsInt(x + "1/2"), x > 0, x < 1, x != "1/2")
+    no solution
+    """
+    if debugging():
+        _assert(a.is_real(), "SMT real expression expected.")
+    ctx = a.ctx
+    return BoolRef(ctx.solver.mkTerm(kinds.IsInteger, a.ast), ctx)
+
+
+def Sqrt(a, ctx=None):
+    """Return an SMT expression which represents the square root of a.
+
+    >>> x = Real('x')
+    >>> Sqrt(x)
+    x**(1/2)
+    """
+    if not is_expr(a):
+        ctx = _get_ctx(ctx)
+        a = RealVal(a, ctx)
+    return a ** "1/2"
+
+
+def Cbrt(a, ctx=None):
+    """Return an SMT expression which represents the cubic root of a.
+
+    >>> x = Real('x')
+    >>> Cbrt(x)
+    x**(1/3)
+    """
+    if not is_expr(a):
+        ctx = _get_ctx(ctx)
+        a = RealVal(a, ctx)
+    return a ** "1/3"
 
 #########################################
 #
@@ -4216,6 +4283,48 @@ def SimpleSolver(ctx=None, logFile=None):
 # Utils
 #
 #########################################
+
+
+def Sum(*args):
+    """Create the sum of the SMT expressions.
+
+    >>> a, b, c = Ints('a b c')
+    >>> Sum(a, b, c)
+    a + b + c
+    >>> Sum([a, b, c])
+    a + b + c
+    >>> A = IntVector('a', 5)
+    >>> Sum(A)
+    a__0 + a__1 + a__2 + a__3 + a__4
+    """
+    args = _get_args(args)
+    if len(args) == 0:
+        return 0
+    ctx = _ctx_from_ast_arg_list(args)
+    if ctx is not None:
+        args = _coerce_expr_list(args, ctx)
+    return ft.reduce(lambda a, b: a + b, args)
+
+
+def Product(*args):
+    """Create the product of the SMT expressions.
+
+    >>> a, b, c = Ints('a b c')
+    >>> Product(a, b, c)
+    a*b*c
+    >>> Product([a, b, c])
+    a*b*c
+    >>> A = IntVector('a', 5)
+    >>> Product(A)
+    a__0*a__1*a__2*a__3*a__4
+    """
+    args = _get_args(args)
+    if len(args) == 0:
+        return 1
+    ctx = _ctx_from_ast_arg_list(args)
+    if ctx is not None:
+        args = _coerce_expr_list(args, ctx)
+    return ft.reduce(lambda a, b: a * b, args)
 
 
 def substitute(t, *m):
