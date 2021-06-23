@@ -1630,6 +1630,77 @@ class ArithRef(ExprRef):
         # safe b/c will always yield an ArithSortRef
         return self.sort().is_real()  # type: ignore
 
+    def __add__(self, other):
+        """Create the SMT expression `self + other`.
+
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> x + y
+        x + y
+        >>> (x + y).sort()
+        Int
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Plus, a.ast, b.ast), self.ctx)
+
+    def __radd__(self, other):
+        """Create the SMT expression `other + self`.
+
+        >>> x = Int('x')
+        >>> 10 + x
+        10 + x
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Plus, b.ast, a.ast), self.ctx)
+
+    def __mul__(self, other):
+        """Create the SMT expression `self * other`.
+
+        >>> x = Real('x')
+        >>> y = Real('y')
+        >>> x * y
+        x*y
+        >>> (x * y).sort()
+        Real
+        """
+        if isinstance(other, BoolRef):
+            return If(other, self, 0)
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Mult, a.ast, b.ast), self.ctx)
+
+    def __rmul__(self, other):
+        """Create the SMT expression `other * self`.
+
+        >>> x = Real('x')
+        >>> 10 * x
+        10*x
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Mult, b.ast, a.ast), self.ctx)
+
+    def __sub__(self, other):
+        """Create the SMT expression `self - other`.
+
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> x - y
+        x - y
+        >>> (x - y).sort()
+        Int
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Minus, a.ast, b.ast), self.ctx)
+
+    def __rsub__(self, other):
+        """Create the SMT expression `other - self`.
+
+        >>> x = Int('x')
+        >>> 10 - x
+        10 - x
+        """
+        a, b = _coerce_exprs(self, other)
+        return ArithRef(a.ctx.solver.mkTerm(kinds.Minus, b.ast, a.ast), self.ctx)
+
     def __pow__(self, other):
         """Create the SMT expression `self**other` (** is the power operator).
 
@@ -1653,6 +1724,157 @@ class ArithRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return ArithRef(a.ctx.solver.mkTerm(kinds.Pow, b.ast, a.ast), self.ctx)
+
+    def __div__(self, other):
+        """Create the SMT expression `other/self`.
+
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> x/y
+        x/y
+        >>> (x/y).sort()
+        Int
+        >>> (x/y).sexpr()
+        '(div x y)'
+        >>> x = Real('x')
+        >>> y = Real('y')
+        >>> x/y
+        x/y
+        >>> (x/y).sort()
+        Real
+        >>> (x/y).sexpr()
+        '(/ x y)'
+        """
+        a, b = _coerce_exprs(self, other)
+        if a.sort() == IntSort(self.ctx):
+            k = kinds.IntsDivision
+        else:
+            k = kinds.Division
+        return ArithRef(a.ctx.solver.mkTerm(k, a.ast, b.ast), self.ctx)
+
+    def __truediv__(self, other):
+        """Create the SMT expression `other/self`."""
+        return self.__div__(other)
+
+    def __rdiv__(self, other):
+        """Create the SMT expression `other/self`.
+
+        >>> x = Int('x')
+        >>> 10/x
+        10/x
+        >>> (10/x).sexpr()
+        '(div 10 x)'
+        >>> x = Real('x')
+        >>> 10/x
+        10/x
+        >>> (10/x).sexpr()
+        '(/ 10.0 x)'
+        """
+        a, b = _coerce_exprs(self, other)
+        if a.sort() == IntSort(self.ctx):
+            k = kinds.IntsDivision
+        else:
+            k = kinds.Division
+        return ArithRef(a.ctx.solver.mkTerm(k, b.ast, a.ast), self.ctx)
+
+    def __rtruediv__(self, other):
+        """Create the SMT expression `other/self`."""
+        return self.__rdiv__(other)
+
+    def __mod__(self, other):
+        """Create the SMT expression `other%self`.
+
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> x % y
+        x%y
+        """
+        a, b = _coerce_exprs(self, other)
+        if debugging():
+            _assert(a.sort().is_int(), "SMT integer expression expected")
+        return ArithRef(a.ctx.solver.mkTerm(kinds.IntsModulus, a.ast, b.ast), self.ctx)
+
+    def __rmod__(self, other):
+        """Create the SMT expression `other%self`.
+
+        >>> x = Int('x')
+        >>> 10 % x
+        10%x
+        """
+        a, b = _coerce_exprs(self, other)
+        if debugging():
+            _assert(a.sort().is_int(), "SMT integer expression expected")
+        return ArithRef(a.ctx.solver.mkTerm(kinds.IntsModulus, b.ast, a.ast), self.ctx)
+
+    def __neg__(self):
+        """Return an expression representing `-self`.
+
+        >>> x = Int('x')
+        >>> -x
+        -x
+        """
+        return ArithRef(self.ctx.solver.mkTerm(kinds.Uminus, self.ast), self.ctx)
+
+    def __pos__(self):
+        """Return `self`.
+
+        >>> x = Int('x')
+        >>> +x
+        x
+        """
+        return self
+
+    def __le__(self, other):
+        """Create the SMT expression `other <= self`.
+
+        >>> x, y = Ints('x y')
+        >>> x <= y
+        x <= y
+        >>> y = Real('y')
+        >>> x <= y
+        ToReal(x) <= y
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(a.ctx.solver.mkTerm(kinds.Leq, a.ast, b.ast), self.ctx)
+
+    def __lt__(self, other):
+        """Create the SMT expression `other < self`.
+
+        >>> x, y = Ints('x y')
+        >>> x < y
+        x < y
+        >>> y = Real('y')
+        >>> x < y
+        ToReal(x) < y
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(a.ctx.solver.mkTerm(kinds.Lt, a.ast, b.ast), self.ctx)
+
+    def __gt__(self, other):
+        """Create the SMT expression `other > self`.
+
+        >>> x, y = Ints('x y')
+        >>> x > y
+        x > y
+        >>> y = Real('y')
+        >>> x > y
+        ToReal(x) > y
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(a.ctx.solver.mkTerm(kinds.Gt, a.ast, b.ast), self.ctx)
+
+    def __ge__(self, other):
+        """Create the SMT expression `other >= self`.
+
+        >>> x, y = Ints('x y')
+        >>> x >= y
+        x >= y
+        >>> y = Real('y')
+        >>> x >= y
+        ToReal(x) >= y
+        """
+        a, b = _coerce_exprs(self, other)
+        return BoolRef(a.ctx.solver.mkTerm(kinds.Geq, a.ast, b.ast), self.ctx)
 
 
 def is_arith(a):
