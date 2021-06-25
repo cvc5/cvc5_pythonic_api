@@ -1158,8 +1158,8 @@ class BoolRef(ExprRef):
         """Create the SMT expression `self * other`.
 
         >>> x = Real("x")
-        >>> BoolVal(true) * x
-        If(BoolVal(true), x, 0)
+        >>> BoolVal(True) * x
+        If(BoolVal(True), x, 0)
         """
         if other == 1:
             return self
@@ -1667,8 +1667,8 @@ class ArithRef(ExprRef):
         x*y
         >>> (x * y).sort()
         Real
-        >>> x * BoolVal(true)
-        If(BoolVal(true), x, 0)
+        >>> x * BoolVal(True)
+        If(BoolVal(True), x, 0)
         """
         if isinstance(other, BoolRef):
             return other.__mul__(self)
