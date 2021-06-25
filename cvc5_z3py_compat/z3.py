@@ -1155,7 +1155,12 @@ class BoolRef(ExprRef):
         return self * other
 
     def __mul__(self, other):
-        """Create the SMT expression `self * other`."""
+        """Create the SMT expression `self * other`.
+
+        >>> x = Real("x")
+        >>> BoolVal(true) * x
+        If(BoolVal(true), x, 0)
+        """
         if other == 1:
             return self
         if other == 0:
@@ -1662,9 +1667,11 @@ class ArithRef(ExprRef):
         x*y
         >>> (x * y).sort()
         Real
+        >>> x * BoolVal(true)
+        If(BoolVal(true), x, 0)
         """
         if isinstance(other, BoolRef):
-            return If(other, self, 0)
+            return other.__mul__(self)
         a, b = _coerce_exprs(self, other)
         return ArithRef(a.ctx.solver.mkTerm(kinds.Mult, a.ast, b.ast), self.ctx)
 
