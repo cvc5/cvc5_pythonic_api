@@ -1159,7 +1159,7 @@ class BoolRef(ExprRef):
 
         >>> x = Real("x")
         >>> BoolVal(True) * x
-        If(BoolVal(True), x, 0)
+        If(True, x, 0)
         """
         if other == 1:
             return self
@@ -1668,7 +1668,7 @@ class ArithRef(ExprRef):
         >>> (x * y).sort()
         Real
         >>> x * BoolVal(True)
-        If(BoolVal(True), x, 0)
+        If(True, x, 0)
         """
         if isinstance(other, BoolRef):
             return other.__mul__(self)
