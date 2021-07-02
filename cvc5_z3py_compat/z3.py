@@ -19,18 +19,46 @@ http://rise4fun.com/Z3Py/tutorial/guide
 Please send feedback, comments and/or corrections on the Issue tracker for
 https://github.com/cvc5/cvc5.git. Your comments are very valuable.
 
-TODO: example
+Small example:
 
+>>> x = Int('x')
+>>> y = Int('y')
+>>> s = Solver()
+>>> s.add(x > 0)
+>>> s.add(x < 2)
+>>> s.add(y == x + 1)
+>>> s.check()
+sat
+>>> m = s.model()
+>>> m[x]
+1
+>>> m[y]
+2
+
+SMT exceptions:
+
+>>> try:
+...   x = BitVec('x', 32)
+...   y = Bool('y')
+...   # the expression x + y is type incorrect
+...   n = x + y
+... except SMTException as ex:
+...   print("failed: %s" % ex)
+failed: sort mismatch
+
+
+TODO:
+    * multiple solvers
+    * FP
+    * DT
+    * quantifiers & variables
 """
-
 from .z3printer import *
 from fractions import Fraction
 from decimal import Decimal
 import decimal
 import sys
 import io
-import math
-import copy
 import functools as ft
 import operator as op
 
@@ -46,18 +74,12 @@ def debugging():
 
 
 def _is_int(v):
-    """Python 2/3 agnostic int testing"""
-    if sys.version < "3":
-        return isinstance(v, (int, long))  # type: ignore
-    else:
-        return isinstance(v, int)
+    """int testing"""
+    return isinstance(v, int)
 
 
-def unimplemented(msg=None):
-    if msg is None:
-        raise Exception("Unimplemented")
-    else:
-        raise Exception("Unimplemented: {}".format(msg))
+def unimplemented(msg):
+    raise SMTException("Unimplemented: {}".format(msg))
 
 
 class SMTException(Exception):
@@ -79,13 +101,9 @@ def _assert(cond, msg):
 # list of arguments.
 # Use this when function takes a single list of arguments
 def _get_args(args):
-    try:
-        if len(args) == 1 and isinstance(args[0], (list, tuple)):
-            return list(args[0])
-        else:
-            return list(args)
-    except TypeError:
-        # len is not necessarily defined when args is not a sequence
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        return list(args[0])
+    else:
         return list(args)
 
 
@@ -147,15 +165,16 @@ def main_ctx():
     >>> x = Real('x')
     >>> x.ctx == main_ctx()
     True
-    >>> c = Context()
-    >>> c == main_ctx()
-    False
-    >>> x2 = Real('x', c)
-    >>> x2.ctx == c
-    True
-    >>> eq(x, x2)
-    False
     """
+# Pending multiple solvers
+#    >>> c = Context()
+#    >>> c == main_ctx()
+#    False
+#    >>> x2 = Real('x', c)
+#    >>> x2.ctx == c
+#    True
+#    >>> eq(x, x2)
+#    False
     global _main_ctx
     if _main_ctx is None:
         _main_ctx = Context()
@@ -170,6 +189,14 @@ def _get_ctx(ctx):
 
 
 def get_ctx(ctx):
+    """
+    Returns `ctx` if it is not `None`, and the default context otherwise.
+
+    >>> get_ctx(None) is main_ctx()
+    True
+    >>> get_ctx(main_ctx()) is main_ctx()
+    True
+    """
     return _get_ctx(ctx)
 
 
@@ -196,9 +223,32 @@ class ExprRef(object):
             self.ast = None
 
     def __nonzero__(self):
+        """ Convert this expersion to a python boolean. See __bool__.
+
+        >>> (BoolVal(False) == BoolVal(False)).__nonzero__()
+        True
+        """
         return self.__bool__()
 
     def __bool__(self):
+        """ Convert this expression to a python boolean.
+
+        Produces
+        * the appropriate value for a BoolVal.
+        * whether structural equality holds for an EQ-node
+
+        >>> bool(BoolVal(True))
+        True
+        >>> bool(BoolVal(False))
+        False
+        >>> bool(BoolVal(False) == BoolVal(False))
+        True
+        >>> try:
+        ...   bool(Int('y'))
+        ... except SMTException as ex:
+        ...   print("failed: %s" % ex)
+        failed: Symbolic expressions cannot be cast to concrete Boolean values.
+        """
         if is_true(self):
             return True
         elif is_false(self):
@@ -225,7 +275,12 @@ class ExprRef(object):
 
     def get_id(self):
         """Return unique identifier for object.
-        It can be used for hash-tables and maps."""
+        It can be used for hash-tables and maps.
+
+        >>> BoolVal(True).get_id() == BoolVal(True).get_id()
+        True
+
+        """
         return self.ast.getId()
 
     def eq(self, other):
@@ -274,6 +329,8 @@ class ExprRef(object):
         a == b
         >>> a is None
         False
+        >>> a == None
+        False
         """
         if other is None:
             return False
@@ -296,15 +353,14 @@ class ExprRef(object):
         a != b
         >>> a is not None
         True
+        >>> a != None
+        True
         """
         if other is None:
             return True
         a, b = _coerce_exprs(self, other)
         c = self.ctx
         return BoolRef(c.solver.mkTerm(kinds.Distinct, a.as_ast(), b.as_ast()), c)
-
-    def params(self):
-        return self.decl().params()
 
     def decl(self):
         """Return the SMT function declaration associated with an SMT application.
@@ -314,11 +370,16 @@ class ExprRef(object):
         >>> t = f(a)
         >>> eq(t.decl(), f)
         True
+        >>> try:
+        ...   Int('y').decl()
+        ... except SMTException as ex:
+        ...   print("failed: %s" % ex)
+        failed: Declarations for non-function applications
         """
         if is_app_of(self, kinds.ApplyUf):
             return _to_expr_ref(list(self.ast)[0], self.ctx)  # type: ignore
         else:
-            unimplemented("Declarations for non-function applications")
+            raise SMTException("Declarations for non-function applications")
 
     def kind(self):
         """Return the kinds of this term
@@ -409,6 +470,8 @@ class ExprRef(object):
         >>> x = Real('x')
         >>> x.is_int()
         False
+        >>> Set('x', IntSort()).is_int()
+        False
         """
         return False
 
@@ -467,10 +530,6 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
     return ctx
 
 
-def _ctx_from_ast_args(*args):
-    return _ctx_from_ast_arg_list(args)
-
-
 #########################################
 #
 # Sorts
@@ -499,9 +558,8 @@ class SortRef(object):
     def sexpr(self):
         """Return a string representing the AST node in s-expression notation.
 
-        >>> x = Int('x')
-        >>> ((x + 1)*x).sexpr()
-        '(* (+ x 1) x)'
+        >>> IntSort().sexpr()
+        'Int'
         """
         return str(self.ast)
 
@@ -527,10 +585,10 @@ class SortRef(object):
     def hash(self):
         """Return a hashcode for the `self`.
 
-        >>> n1 = Int('x') + 1
-        >>> n2 = Int('x') + 1
+        >>> n1 = IntSort()
+        >>> n2 = RealSort()
         >>> n1.hash() == n2.hash()
-        True
+        False
         """
         return self.as_ast().__hash__()
 
@@ -539,6 +597,10 @@ class SortRef(object):
 
         >>> IntSort().subsort(RealSort())
         True
+        >>> BoolSort().subsort(RealSort())
+        True
+        >>> SetSort(BitVecSort(2)).subsort(SetSort(IntSort()))
+        False
         """
         # subclasses override
         return False
@@ -585,12 +647,19 @@ class SortRef(object):
         return self.ast.__hash__()
 
     def is_int(self):
+        """
+        Subclasses override
+
+        >>> SetSort(IntSort()).is_int()
+        False
+        """
+        return False
+
+    def is_bool(self):
         return False
 
 
 def _sort(ctx, a):
-    if isinstance(a, ExprRef):
-        a = a.ast
     instance_check(a, pc.Term)
     return _to_sort_ref(a.getSort(), ctx)
 
@@ -637,10 +706,8 @@ def instance_check(item, instance):
 def _to_sort_ref(s, ctx):
     """Construct the correct SortRef subclass for `s`
 
-    s may be a base Sort or a SortRef.
+    s must be a base Sort.
     """
-    if isinstance(s, SortRef):
-        s = s.ast
     if debugging():
         instance_check(s, pc.Sort)
     if s.isBoolean():
@@ -772,7 +839,12 @@ def Function(name, *sig):
 
 
 def FreshFunction(*sig):
-    """Create a new fresh SMT uninterpreted function with the given sorts."""
+    """Create a new fresh SMT uninterpreted function with the given sorts.
+    >>> f = FreshFunction(IntSort(), IntSort())
+    >>> x = Int('x')
+    >>> solve([f(x) != f(x)])
+    no solution
+    """
     sig = _get_args(sig)
     if debugging():
         _assert(len(sig) > 0, "At least two arguments expected")
@@ -784,10 +856,6 @@ def FreshFunction(*sig):
     sort = ctx.solver.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
     name = ctx.next_fresh(sort, "freshfn")
     return Function(name, *sig)
-
-
-def _to_func_decl_ref(a, ctx):
-    return FuncDeclRef(a, ctx)
 
 
 #########################################
@@ -803,6 +871,9 @@ def _to_expr_ref(a, ctx, r=None):
     a may be a base Term or a ExprRef.
 
     Based on the underlying sort of a.
+
+    >>> _to_expr_ref(BoolVal(True), main_ctx())
+    True
     """
     if isinstance(a, ExprRef):
         ast = a.ast
@@ -875,7 +946,16 @@ def _coerce_exprs(a, b, ctx=None):
     >>> a = Int('a')
     >>> b = Real('b')
     >>> _coerce_exprs(a, b)
-    Real
+    (ToReal(a), b)
+    >>> _coerce_exprs(True, False)
+    (True, False)
+    >>> _coerce_exprs(1.1, 4)
+    (11/10, ToReal(4))
+    >>> try:
+    ...  _coerce_exprs(1.1, {})
+    ... except SMTException as e:
+    ...  print("failed: %s" % e)
+    failed: Python bool, int, long or float expected
     """
     if not is_expr(a) and not is_expr(b):
         a = _py2expr(a, ctx)
@@ -896,7 +976,9 @@ def _coerce_expr_list(alist, ctx=None):
     >>> a = Int('a')
     >>> b = Real('b')
     >>> _coerce_expr_list([a, b])
-    Real
+    [ToReal(a), b]
+    >>> _coerce_expr_list([True, False])
+    [True, False]
     """
     assert len(alist) > 0
     has_expr = False
@@ -993,6 +1075,8 @@ def is_var(a):
     False
     >>> is_const(x)
     True
+    >>> is_var(BoolSort())
+    False
     """
     if not is_expr(a):
         return False
@@ -1021,6 +1105,8 @@ def If(a, b, c, ctx=None):
     >>> max = If(x > y, x, y)
     >>> max
     If(x > y, x, y)
+    >>> If(True, 1, 0, main_ctx())
+    If(True, 1, 0)
     """
     ctx = _get_ctx(_ctx_from_ast_arg_list([a, b, c], ctx))
     s = BoolSort(ctx)
@@ -1081,7 +1167,13 @@ def Consts(names, sort):
 
 
 def FreshConst(sort, prefix="c"):
-    """Create a fresh constant of a specified sort"""
+    """Create a fresh constant of a specified sort
+
+    >>> x = FreshConst(BoolSort(), prefix="test")
+    >>> y = FreshConst(BoolSort(), prefix="test")
+    >>> x.eq(y)
+    False
+    """
     ctx = sort.ctx
     name = ctx.next_fresh(sort, prefix)
     return Const(name, sort)
@@ -1109,6 +1201,16 @@ class BoolSortRef(SortRef):
         False
         >>> x.sort()
         Bool
+        >>> try:
+        ...   BoolSort().cast(Int('y'))
+        ... except SMTException as ex:
+        ...   print("failed")
+        failed
+        >>> try:
+        ...   BoolSort().cast(1)
+        ... except SMTException as ex:
+        ...   print("failed")
+        failed
         """
         if isinstance(val, bool):
             return BoolVal(val, self.ctx)
@@ -1138,10 +1240,19 @@ class BoolSortRef(SortRef):
         >>> x = RealSort()
         >>> x.is_int()
         False
+        >>> x = BoolSort()
+        >>> x.is_int()
+        True
         """
         return True
 
     def is_bool(self):
+        """Return `True` if `self` is of the sort Boolean.
+
+        >>> x = BoolSort()
+        >>> x.is_bool()
+        True
+        """
         return True
 
 
@@ -1152,6 +1263,11 @@ class BoolRef(ExprRef):
         return _sort(self.ctx, self.ast)
 
     def __rmul__(self, other):
+        """
+        >>> x = Real("x")
+        >>> x * BoolVal(True)
+        If(True, x, 0)
+        """
         return self * other
 
     def __mul__(self, other):
@@ -1426,6 +1542,15 @@ def Not(a, ctx=None):
 
 
 def mk_not(a):
+    """ Negate a boolean expression.
+    Strips a negation if one is already present
+
+    >>> x = Bool('x')
+    >>> mk_not(x)
+    Not(x)
+    >>> mk_not(mk_not(x))
+    x
+    """
     if is_not(a):
         return a.arg(0)
     else:
@@ -1437,6 +1562,8 @@ def And(*args):
 
     >>> p, q, r = Bools('p q r')
     >>> And(p, q, r)
+    And(p, q, r)
+    >>> And(p, q, r, main_ctx())
     And(p, q, r)
     >>> P = BoolVector('p', 5)
     >>> And(P)
@@ -1469,6 +1596,8 @@ def Or(*args):
 
     >>> p, q, r = Bools('p q r')
     >>> Or(p, q, r)
+    Or(p, q, r)
+    >>> Or(p, q, r, main_ctx())
     Or(p, q, r)
     >>> P = BoolVector('p', 5)
     >>> Or(P)
@@ -1551,6 +1680,15 @@ class ArithSortRef(SortRef):
         10
         >>> is_real(RealSort().cast(10))
         True
+        >>> IntSort().cast(Bool('x'))
+        If(x, 1, 0)
+        >>> RealSort().cast(Bool('x'))
+        ToReal(If(x, 1, 0))
+        >>> try:
+        ...   IntSort().cast(RealVal("1.1"))
+        ... except SMTException as ex:
+        ...   print("failed")
+        failed
         """
         if is_expr(val):
             if debugging():
@@ -1558,12 +1696,12 @@ class ArithSortRef(SortRef):
             val_s = val.sort()
             if self.eq(val_s):
                 return val
-            if val_s.is_int() and self.is_real():
-                return ToReal(val)
             if val_s.is_bool() and self.is_int():
                 return If(val, 1, 0)
             if val_s.is_bool() and self.is_real():
                 return ToReal(If(val, 1, 0))
+            if val_s.is_int() and self.is_real():
+                return ToReal(val)
             if debugging():
                 _assert(False, "SMT Integer/Real expression expected")
         else:
@@ -1716,6 +1854,8 @@ class ArithRef(ExprRef):
         x**3
         >>> (x**3).sort()
         Real
+        >>> solve([x ** 2 == x, x > 0])
+        [x = 1]
         """
         a, b = _coerce_exprs(self, other)
         return ArithRef(a.ctx.solver.mkTerm(kinds.Pow, a.ast, b.ast), self.ctx)
@@ -2268,9 +2408,24 @@ class RatNumRef(ArithRef):
         return True
 
     def is_int_value(self):
-        return self.denominator().is_int() and self.denominator_as_long() == 1
+        """ Is this arithmetic value an integer?
+        >>> RealVal("2/1").is_int_value()
+        True
+        >>> RealVal("2/3").is_int_value()
+        False
+        """
+        return self.denominator_as_long() == 1
 
     def as_long(self):
+        """ Is this arithmetic value an integer?
+        >>> RealVal("2/1").as_long()
+        2
+        >>> try:
+        ...  RealVal("2/3").as_long()
+        ... except SMTException as e:
+        ...  print("failed: %s" % e)
+        failed: Expected integer fraction
+        """
         _assert(self.is_int_value(), "Expected integer fraction")
         return self.numerator_as_long()
 
@@ -2600,9 +2755,13 @@ def IsInt(a):
 def Sqrt(a, ctx=None):
     """Return an SMT expression which represents the square root of a.
 
+    Can also operate on python builtins of arithemtic type.
+
     >>> x = Real('x')
     >>> Sqrt(x)
     x**(1/2)
+    >>> Sqrt(4)
+    4**(1/2)
     """
     if not is_expr(a):
         ctx = _get_ctx(ctx)
@@ -2613,9 +2772,13 @@ def Sqrt(a, ctx=None):
 def Cbrt(a, ctx=None):
     """Return an SMT expression which represents the cubic root of a.
 
+    Can also operate on python builtins of arithemtic type.
+
     >>> x = Real('x')
     >>> Cbrt(x)
     x**(1/3)
+    >>> Cbrt(4)
+    4**(1/3)
     """
     if not is_expr(a):
         ctx = _get_ctx(ctx)
@@ -3099,8 +3262,7 @@ class BitVecNumRef(BitVecRef):
         >>> print("0x%.8x" % v.as_long())
         0x0badc0de
         """
-        _assert(self.ast.isBitVectorValue())
-        return self.ast.getBitVectorValue()
+        return int(self.as_binary_string(), 2)
 
     def as_signed_long(self):
         """Return an SMT bit-vector numeral as a Python long (bignum) numeral.
@@ -3129,8 +3291,7 @@ class BitVecNumRef(BitVecRef):
         return str(self.as_long())
 
     def as_binary_string(self):
-        v = self.as_long()
-        return "{{:0{}b}}".format(self.size()).format(v)
+        return self.ast.getBitVectorValue()
 
 
 def is_bv(a):
@@ -3193,9 +3354,15 @@ def Int2BV(a, num_bits):
     """Return the SMT expression Int2BV(a, num_bits).
     It is a bit-vector of width num_bits and represents the
     modulo of a by 2^num_bits
+
+    >>> x = Int('x')
+    >>> bv_x = Int2BV(x, 2)
+    >>> bv_x_plus_4 = Int2BV(x + 4, 2)
+    >>> solve([bv_x != bv_x_plus_4])
+    no solution
     """
     ctx = a.ctx
-    return BitVecRef(ctx.solver.mkTerm(ctx.mkOp(kinds.IntToBV, num_bits), a.ast), ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(kinds.IntToBV, num_bits), a.ast), ctx)
 
 
 def BitVecSort(sz, ctx=None):
@@ -3266,7 +3433,7 @@ def BitVecs(names, bv, ctx=None):
     >>> x.sort()
     BitVec(16)
     >>> Sum(x, y, z)
-    0 + x + y + z
+    x + y + z
     >>> Product(x, y, z)
     x*y*z
     """
@@ -3630,14 +3797,24 @@ def RepeatBitVec(n, a):
 
 
 def BVRedAnd(a):
-    """Return the reduction-and expression of `a`."""
+    """Return the reduction-and expression of `a`.
+
+    >>> x = BitVec('x', 4)
+    >>> solve([BVRedAnd(x), BVRedOr(~x)])
+    no solution
+    """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
     return BitVecRef(a.ctx.solver.mkTerm(kinds.BVRedand, a.ast), a.ctx)
 
 
 def BVRedOr(a):
-    """Return the reduction-or expression of `a`."""
+    """Return the reduction-or expression of `a`.
+
+    >>> x = BitVec('x', 4)
+    >>> solve([BVRedAnd(x), BVRedOr(~x)])
+    no solution
+    """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
     return BitVecRef(a.ctx.solver.mkTerm(kinds.BVRedor, a.ast), a.ctx)
@@ -3743,6 +3920,13 @@ class ArrayRef(ExprRef):
 
 
 def is_array_sort(a):
+    """ Is this an array sort?
+
+    >>> is_array_sort(ArraySort(BoolSort(), BoolSort()))
+    True
+    >>> is_array_sort(BoolSort())
+    False
+    """
     instance_check(a, SortRef)
     return a.ast.isArray()
 
@@ -3800,6 +3984,11 @@ def ArraySort(*sig):
     >>> AA = ArraySort(IntSort(), A)
     >>> AA
     Array(Int, Array(Int, Bool))
+    >>> try:
+    ...  ArraySort(IntSort(), IntSort(), BoolSort())
+    ... except SMTException as e:
+    ...  print("failed: %s" % e)
+    failed: Unimplemented: multi-domain array
     """
     sig = _get_args(sig)
     if debugging():
@@ -4013,6 +4202,15 @@ class SetRef(ExprRef):
         )
 
     def default(self):
+        """
+        Always returns false.
+
+        Included for compatibility with Arrays.
+
+        >>> Set('a', IntSort()).default()
+        False
+
+        """
         return BoolRef(self.ctx.solver.mkFalse(), self.ctx)
 
 
@@ -4081,6 +4279,8 @@ def SetAdd(s, e):
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetAdd(a, 1)
     insert(a, 1)
+    >>> SetAdd(a, 1).arg(0)
+    a
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     e = _py2expr(e, ctx)
@@ -4179,9 +4379,6 @@ class CheckSatResult(object):
         instance_check(r, pc.Result)
         self.r = r
 
-    def __deepcopy__(self, memo={}):
-        return CheckSatResult(self.r)
-
     def __eq__(self, other):
         return repr(self) == repr(other)
 
@@ -4201,18 +4398,18 @@ class CheckSatResultLiteral(CheckSatResult):
     """Represents the literal result of a satisfiability check: sat, unsat,
     unknown.
 
+
     >>> s = Solver()
     >>> s.check()
     sat
     >>> s.check() == CheckSatResultLiteral("sat")
     True
+    >>> s.check() != CheckSatResultLiteral("sat")
+    False
     """
 
     def __init__(self, string):
         self.string = string
-
-    def __deepcopy__(self, memo={}):
-        return CheckSatResultLiteral(self.string)
 
     def __repr__(self):
         return self.string
@@ -4359,6 +4556,15 @@ class Solver(object):
         self.assert_exprs(*args)
 
     def __iadd__(self, fml):
+        """Assert constraints into the solver.
+
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s += x > 0
+        >>> s += x < 2
+        >>> s
+        [x > 0, x < 2]
+        """
         self.add(fml)
         return self
 
@@ -4525,6 +4731,8 @@ def Sum(*args):
     >>> A = IntVector('a', 5)
     >>> Sum(A)
     a__0 + a__1 + a__2 + a__3 + a__4
+    >>> Sum()
+    0
     """
     args = _get_args(args)
     if len(args) == 0:
@@ -4546,6 +4754,8 @@ def Product(*args):
     >>> A = IntVector('a', 5)
     >>> Product(A)
     a__0*a__1*a__2*a__3*a__4
+    >>> Product()
+    1
     """
     args = _get_args(args)
     if len(args) == 0:
@@ -4600,27 +4810,14 @@ def solve(*args, **kwargs):
     >>> a = Int('a')
     >>> solve(a > 0, a < 2)
     [a = 1]
+    >>> solve(a > 0, a < 2, show=True)
+    Problem:
+    [a > 0, a < 2]
+    Solution:
+    [a = 1]
     """
     s = Solver()
-    s.set(**kwargs)
-    s.add(*args)
-    if kwargs.get("show", False):
-        print("Problem:")
-        print(s)
-    r = s.check()
-    if r == unsat:
-        print("no solution")
-    elif r == unknown:
-        print("failed to solve")
-        try:
-            print(s.model())
-        except SMTException:
-            return
-    else:
-        if kwargs.get("show", False):
-            print("Solution:")
-        m = s.model()
-        print(m)
+    solve_using(s, *args, **kwargs)
 
 
 def solve_using(s, *args, **kwargs):
@@ -4630,12 +4827,26 @@ def solve_using(s, *args, **kwargs):
     It is similar to `solve`, but it uses the given solver `s`.
     It configures solver `s` using the options in `kwargs`,
     adds the constraints in `args`, and invokes check.
+
+    >>> a = Int('a')
+    >>> s = Solver()
+    >>> solve_using(s, a > 0, a < 2)
+    [a = 1]
+    >>> solve_using(s, a != 1, show=True)
+    Problem:
+    [a > 0, a < 2, a != 1]
+    no solution
     """
     if debugging():
         _assert(isinstance(s, Solver), "Solver object expected")
+    show = False
+    if "show" in kwargs:
+        if kwargs["show"]:
+            show = True
+        del kwargs["show"]
     s.set(**kwargs)
     s.add(*args)
-    if kwargs.get("show", False):
+    if show:
         print("Problem:")
         print(s)
     r = s.check()
@@ -4648,7 +4859,7 @@ def solve_using(s, *args, **kwargs):
         except SMTException:
             return
     else:
-        if kwargs.get("show", False):
+        if show:
             print("Solution:")
         print(s.model())
 
@@ -4662,6 +4873,13 @@ def prove(claim, **keywords):
     >>> p, q = Bools('p q')
     >>> prove(Not(And(p, q)) == Or(Not(p), Not(q)))
     proved
+    >>> prove(p == True)
+    counterexample
+    [p = False]
+    >>> prove(p == True, show=True)
+    [Not(p == True)]
+    counterexample
+    [p = False]
     """
     if debugging():
         _assert(is_bool(claim), "SMT Boolean expression expected")
