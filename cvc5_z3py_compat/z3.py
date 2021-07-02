@@ -223,7 +223,7 @@ class ExprRef(object):
             self.ast = None
 
     def __nonzero__(self):
-        """ Convert this expersion to a python boolean. See __bool__.
+        """ Convert this expression to a python boolean. See __bool__.
 
         >>> (BoolVal(False) == BoolVal(False)).__nonzero__()
         True
