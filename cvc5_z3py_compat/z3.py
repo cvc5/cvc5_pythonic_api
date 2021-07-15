@@ -222,6 +222,12 @@ class ExprRef(object):
             self.ctx = None
             self.ast = None
 
+    def __str__(self):
+        return obj_to_string(self)
+
+    def __repr__(self):
+        return obj_to_string(self)
+
     def __nonzero__(self):
         """ Convert this expression to a python boolean. See __bool__.
 
@@ -552,6 +558,24 @@ class SortRef(object):
         if self.ast is not None:
             self.ast = None
 
+    def __str__(self):
+        """
+        A pretty-printed representation of this sort.
+
+        >>> str(IntSort())
+        'Int'
+        """
+        return obj_to_string(self)
+
+    def __repr__(self):
+        """
+        A pretty-printed representation of this sort.
+
+        >>> repr(IntSort())
+        'Int'
+        """
+        return obj_to_string(self)
+
     def __eq__(self, other):
         return self.ast == other.ast
 
@@ -738,6 +762,17 @@ class FuncDeclRef(ExprRef):
     the sort (i.e., type) of each of its arguments. Note that, in SMT,
     a constant is a function with 0 arguments.
     """
+
+    def name(self):
+        """Return the name of the function declaration `self`.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> f.name()
+        'f'
+        >>> isinstance(f.name(), str)
+        True
+        """
+        return str(self)
 
     def arity(self):
         """Return the number of arguments of a function declaration.
@@ -2547,6 +2582,21 @@ def RatVal(a, b, ctx=None):
             "Second argument cannot be converted into an integer",
         )
     return RatNumRef(ctx.solver.mkReal(a, b), ctx)
+
+
+def Q(a, b, ctx=None):
+    """Return an SMT rational a/b.
+
+    If `ctx=None`, then the global context is used.
+
+    >>> Q(3,5)
+    3/5
+    >>> Q(3,5).sort()
+    Real
+    >>> Q(4,8)
+    1/2
+    """
+    return RatVal(a, b)
 
 
 def ToReal(a):
