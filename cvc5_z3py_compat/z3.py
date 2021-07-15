@@ -2498,11 +2498,7 @@ class RatNumRef(ArithRef):
         >>> v.as_fraction()
         Fraction(1, 5)
         """
-        toks = str(self.ast).strip('()').split()
-        if len(toks) == 1:
-            return Fraction(toks[0])
-        else:
-            return Fraction(int(toks[1]), int(toks[2]))
+        return self.ast.toPythonObj()
 
 
 def _py2expr(a, ctx=None):
@@ -2597,8 +2593,10 @@ def Q(a, b, ctx=None):
     3/5
     >>> Q(3,5).sort()
     Real
+    >>> Q(4,8)
+    1/2
     """
-    return simplify(RatVal(a, b))
+    return RatVal(a, b)
 
 
 def ToReal(a):
