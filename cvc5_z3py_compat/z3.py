@@ -3458,7 +3458,7 @@ def BitVecVal(val, bv, ctx=None):
     else:
         size = bv
         ctx = _get_ctx(ctx)
-    string = "{{:0{}b}}".format(size).format(val)
+    string = "{}{{:0{}b}}".format("-" if val < 0 else "", size).format(abs(val))
     return BitVecNumRef(ctx.solver.mkBitVector(string), ctx)
 
 
@@ -5359,6 +5359,153 @@ class FPRef(ExprRef):
         """
         return self.sort().sbits()
 
+    def as_string(self):
+        """Return a SMT floating point expression as a Python string."""
+        return str(self.ast)
+
+    def __le__(self, other):
+        return fpLEQ(self, other, self.ctx)
+
+    def __lt__(self, other):
+        return fpLT(self, other, self.ctx)
+
+    def __ge__(self, other):
+        return fpGEQ(self, other, self.ctx)
+
+    def __gt__(self, other):
+        return fpGT(self, other, self.ctx)
+
+    def __add__(self, other):
+        """Create the SMT expression `self + other`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x + y
+        x + y
+        >>> (x + y).sort()
+        FPSort(8, 24)
+        """
+        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
+        return fpAdd(_dflt_rm(), a, b, self.ctx)
+
+    def __radd__(self, other):
+        """Create the SMT expression `other + self`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> 10 + x
+        1.25*(2**3) + x
+        """
+        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
+        return fpAdd(_dflt_rm(), a, b, self.ctx)
+
+    def __sub__(self, other):
+        """Create the SMT expression `self - other`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x - y
+        x - y
+        >>> (x - y).sort()
+        FPSort(8, 24)
+        """
+        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
+        return fpSub(_dflt_rm(), a, b, self.ctx)
+
+    def __rsub__(self, other):
+        """Create the SMT expression `other - self`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> 10 - x
+        1.25*(2**3) - x
+        """
+        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
+        return fpSub(_dflt_rm(), a, b, self.ctx)
+
+    def __mul__(self, other):
+        """Create the SMT expression `self * other`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x * y
+        x * y
+        >>> (x * y).sort()
+        FPSort(8, 24)
+        >>> 10 * y
+        1.25*(2**3) * y
+        """
+        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
+        return fpMul(_dflt_rm(), a, b, self.ctx)
+
+    def __rmul__(self, other):
+        """Create the SMT expression `other * self`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x * y
+        x * y
+        >>> x * 10
+        x * 1.25*(2**3)
+        """
+        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
+        return fpMul(_dflt_rm(), a, b, self.ctx)
+
+    def __pos__(self):
+        """Create the SMT expression `+self`."""
+        return self
+
+    def __neg__(self):
+        """Create the SMT expression `-self`.
+
+        >>> x = FP('x', Float32())
+        >>> -x
+        -x
+        """
+        return fpNeg(self)
+
+    def __div__(self, other):
+        """Create the SMT expression `self / other`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x / y
+        x / y
+        >>> (x / y).sort()
+        FPSort(8, 24)
+        >>> 10 / y
+        1.25*(2**3) / y
+        """
+        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
+        return fpDiv(_dflt_rm(), a, b, self.ctx)
+
+    def __rdiv__(self, other):
+        """Create the SMT expression `other / self`.
+
+        >>> x = FP('x', FPSort(8, 24))
+        >>> y = FP('y', FPSort(8, 24))
+        >>> x / y
+        x / y
+        >>> x / 10
+        x / 1.25*(2**3)
+        """
+        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
+        return fpDiv(_dflt_rm(), a, b, self.ctx)
+
+    def __truediv__(self, other):
+        """Create the SMT expression division `self / other`."""
+        return self.__div__(other)
+
+    def __rtruediv__(self, other):
+        """Create the SMT expression division `other / self`."""
+        return self.__rdiv__(other)
+
+    def __mod__(self, other):
+        """Create the SMT expression mod `self % other`."""
+        return fpRem(self, other)
+
+    def __rmod__(self, other):
+        """Create the SMT expression mod `other % self`."""
+        return fpRem(other, self)
+
 
 class FPRMRef(ExprRef):
     """Floating-point rounding mode expressions"""
@@ -5548,12 +5695,25 @@ class FPNumRef(FPRef):
         """Indicates whether the numeral is negative."""
         return self.sign()
 
+    def as_string(self):
+        """
+        The string representation of the numeral.
+
+        >>> x = FPVal(20, FPSort(8, 24))
+        >>> print(x.as_string())
+        1.25*(2**4)
+        """
+        return str(self)
+        #return ("FPVal(%s, %s)" % (s, self.sort()))
+
 
 def is_fp(a):
     """Return `True` if `a` is a SMT floating-point expression.
 
     >>> b = FP('b', FPSort(8, 24))
     >>> is_fp(b)
+    True
+    >>> is_fp(b + 1.0)
     True
     >>> is_fp(Int('x'))
     False
@@ -5794,9 +5954,596 @@ def FPs(names, fpsort, ctx=None):
     24
     >>> x.ebits()
     8
+    >>> fpMul(RNE(), fpAdd(RNE(), x, y), z)
+    fpMul(RNE(), fpAdd(RNE(), x, y), z)
     """
     ctx = _get_ctx(ctx)
     if isinstance(names, str):
         names = names.split(" ")
     return [FP(name, fpsort, ctx) for name in names]
 
+
+def fpAbs(a, ctx=None):
+    """Create a SMT floating-point absolute value expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FPVal(1.0, s)
+    >>> fpAbs(x)
+    fpAbs(1)
+    >>> y = FPVal(-20.0, s)
+    >>> y
+    -1.25*(2**4)
+    >>> fpAbs(y)
+    fpAbs(-1.25*(2**4))
+    >>> fpAbs(-1.25*(2**4))
+    fpAbs(-1.25*(2**4))
+    >>> fpAbs(x).sort()
+    FPSort(8, 24)
+    """
+    ctx = _get_ctx(ctx)
+    [a] = _coerce_fp_expr_list([a], ctx)
+    return FPRef(ctx.solver.mkTerm(kinds.FPAbs, a.ast), ctx)
+
+
+def fpNeg(a, ctx=None):
+    """Create a SMT floating-point addition expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> fpNeg(x)
+    -x
+    >>> fpNeg(x).sort()
+    FPSort(8, 24)
+    """
+    ctx = _get_ctx(ctx)
+    [a] = _coerce_fp_expr_list([a], ctx)
+    return FPRef(ctx.solver.mkTerm(kinds.FPNeg, a.ast), ctx)
+
+
+def _mk_fp_unary(kind, rm, a, ctx):
+    ctx = _get_ctx(ctx)
+    [a] = _coerce_fp_expr_list([a], ctx)
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_fp(a), "Second argument must be a SMT floating-point expression")
+    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast()), ctx)
+
+
+def _mk_fp_unary_pred(kind, a, ctx):
+    ctx = _get_ctx(ctx)
+    [a] = _coerce_fp_expr_list([a], ctx)
+    if debugging():
+        _assert(is_fp(a), "First argument must be a SMT floating-point expression")
+    return BoolRef(ctx.solver.mkTerm(kind,  a.as_ast()), ctx)
+
+
+def _mk_fp_bin(kind, rm, a, b, ctx):
+    ctx = _get_ctx(ctx)
+    [a, b] = _coerce_fp_expr_list([a, b], ctx)
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_fp(a) or is_fp(b), "Second or third argument must be a SMT floating-point expression")
+    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast()), ctx)
+
+
+def _mk_fp_bin_norm(kind, a, b, ctx):
+    ctx = _get_ctx(ctx)
+    [a, b] = _coerce_fp_expr_list([a, b], ctx)
+    if debugging():
+        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+    return FPRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
+
+
+def _mk_fp_bin_pred(kind, a, b, ctx):
+    ctx = _get_ctx(ctx)
+    [a, b] = _coerce_fp_expr_list([a, b], ctx)
+    if debugging():
+        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+    return BoolRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
+
+
+def _mk_fp_tern(kind, rm, a, b, c, ctx):
+    ctx = _get_ctx(ctx)
+    [a, b, c] = _coerce_fp_expr_list([a, b, c], ctx)
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_fp(a) or is_fp(b) or is_fp(
+            c), "Second, third or fourth argument must be a SMT floating-point expression")
+    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast(), c.as_ast()), ctx)
+
+
+def fpAdd(rm, a, b, ctx=None):
+    """Create a SMT floating-point addition expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpAdd(rm, x, y)
+    fpAdd(RNE(), x, y)
+    >>> fpAdd(RTZ(), x, y) # default rounding mode is RTZ
+    x + y
+    >>> fpAdd(rm, x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin(kinds.FPAdd, rm, a, b, ctx)
+
+
+def fpSub(rm, a, b, ctx=None):
+    """Create a SMT floating-point subtraction expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpSub(rm, x, y)
+    fpSub(RNE(), x, y)
+    >>> fpSub(rm, x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin(kinds.FPSub, rm, a, b, ctx)
+
+
+def fpMul(rm, a, b, ctx=None):
+    """Create a SMT floating-point multiplication expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpMul(rm, x, y)
+    fpMul(RNE(), x, y)
+    >>> fpMul(rm, x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin(kinds.FPMult, rm, a, b, ctx)
+
+
+def fpDiv(rm, a, b, ctx=None):
+    """Create a SMT floating-point division expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpDiv(rm, x, y)
+    fpDiv(RNE(), x, y)
+    >>> fpDiv(rm, x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin(kinds.FPDiv, rm, a, b, ctx)
+
+
+def fpRem(a, b, ctx=None):
+    """Create a SMT floating-point remainder expression.
+
+    >>> s = FPSort(8, 24)
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpRem(x, y)
+    fpRem(x, y)
+    >>> fpRem(x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin_norm(kinds.FPRem, a, b, ctx)
+
+
+def fpMin(a, b, ctx=None):
+    """Create a SMT floating-point minimum expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpMin(x, y)
+    fpMin(x, y)
+    >>> fpMin(x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin_norm(kinds.FPMin, a, b, ctx)
+
+
+def fpMax(a, b, ctx=None):
+    """Create a SMT floating-point maximum expression.
+
+    >>> s = FPSort(8, 24)
+    >>> rm = RNE()
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpMax(x, y)
+    fpMax(x, y)
+    >>> fpMax(x, y).sort()
+    FPSort(8, 24)
+    """
+    return _mk_fp_bin_norm(kinds.FPMax, a, b, ctx)
+
+
+def fpFMA(rm, a, b, c, ctx=None):
+    """Create a SMT floating-point fused multiply-add expression.
+    """
+    return _mk_fp_tern(kinds.FPFma, rm, a, b, c, ctx)
+
+
+def fpSqrt(rm, a, ctx=None):
+    """Create a SMT floating-point square root expression.
+    """
+    return _mk_fp_unary(kinds.FPSqrt, rm, a, ctx)
+
+
+def fpRoundToIntegral(rm, a, ctx=None):
+    """Create a SMT floating-point roundToIntegral expression.
+    """
+    return _mk_fp_unary(kinds.FPRti, rm, a, ctx)
+
+
+def fpIsNaN(a, ctx=None):
+    """Create a SMT floating-point isNaN expression.
+
+    >>> s = FPSort(8, 24)
+    >>> x = FP('x', s)
+    >>> y = FP('y', s)
+    >>> fpIsNaN(x)
+    fpIsNaN(x)
+    """
+    return _mk_fp_unary_pred(kinds.FPIsNan, a, ctx)
+
+
+def fpIsInf(a, ctx=None):
+    """Create a SMT floating-point isInfinite expression.
+
+    >>> s = FPSort(8, 24)
+    >>> x = FP('x', s)
+    >>> fpIsInf(x)
+    fpIsInf(x)
+    """
+    return _mk_fp_unary_pred(kinds.FPIsInf, a, ctx)
+
+
+def fpIsZero(a, ctx=None):
+    """Create a SMT floating-point isZero expression.
+    """
+    return _mk_fp_unary_pred(kinds.FPIsZ, a, ctx)
+
+
+def fpIsNormal(a, ctx=None):
+    """Create a SMT floating-point isNormal expression.
+    """
+    return _mk_fp_unary_pred(kinds.FPIsN, a, ctx)
+
+
+def fpIsSubnormal(a, ctx=None):
+    """Create a SMT floating-point isSubnormal expression.
+    """
+    return _mk_fp_unary_pred(kinds.FPIsSn, a, ctx)
+
+
+def fpIsNegative(a, ctx=None):
+    """Create a SMT floating-point isNegative expression.
+    """
+    return _mk_fp_unary_pred(kinds.FPIsNeg, a, ctx)
+
+
+def fpIsPositive(a, ctx=None):
+    """Create a SMT floating-point isPositive expression.
+    """
+    return _mk_fp_unary_pred(kinds.FPIsPos, a, ctx)
+
+
+def _check_fp_args(a, b):
+    if debugging():
+        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+
+
+def fpLT(a, b, ctx=None):
+    """Create the SMT floating-point expression `other < self`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpLT(x, y)
+    x < y
+    >>> (x < y).sexpr()
+    '(fp.lt x y)'
+    """
+    return _mk_fp_bin_pred(kinds.FPLt, a, b, ctx)
+
+
+def fpLEQ(a, b, ctx=None):
+    """Create the SMT floating-point expression `other <= self`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpLEQ(x, y)
+    x <= y
+    >>> (x <= y).sexpr()
+    '(fp.leq x y)'
+    """
+    return _mk_fp_bin_pred(kinds.FPLeq, a, b, ctx)
+
+
+def fpGT(a, b, ctx=None):
+    """Create the SMT floating-point expression `other > self`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpGT(x, y)
+    x > y
+    >>> (x > y).sexpr()
+    '(fp.gt x y)'
+    """
+    return _mk_fp_bin_pred(kinds.FPGt, a, b, ctx)
+
+
+def fpGEQ(a, b, ctx=None):
+    """Create the SMT floating-point expression `other >= self`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpGEQ(x, y)
+    x >= y
+    >>> (x >= y).sexpr()
+    '(fp.geq x y)'
+    """
+    return _mk_fp_bin_pred(kinds.FPGeq, a, b, ctx)
+
+
+def fpEQ(a, b, ctx=None):
+    """Create the SMT floating-point expression `fpEQ(other, self)`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpEQ(x, y)
+    fpEQ(x, y)
+    >>> fpEQ(x, y).sexpr()
+    '(fp.eq x y)'
+    """
+    return _mk_fp_bin_pred(kinds.FPEq, a, b, ctx)
+
+
+def fpNEQ(a, b, ctx=None):
+    """Create the SMT floating-point expression `Not(fpEQ(other, self))`.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpNEQ(x, y)
+    Not(fpEQ(x, y))
+    >>> (x != y).sexpr()
+    '(distinct x y)'
+    """
+    return Not(fpEQ(a, b, ctx))
+
+
+def fpFP(sgn, exp, sig, ctx=None):
+    """Create the SMT floating-point value `fpFP(sgn, sig, exp)` from the three bit-vectors sgn, sig, and exp.
+
+    >>> s = FPSort(8, 24)
+    >>> x = fpFP(BitVecVal(1, 1), BitVecVal(2**7-1, 8), BitVecVal(2**22, 23))
+    >>> print(x)
+    fpToFP(Concat(1, 127, 4194304))
+    >>> xv = FPVal(-1.5, s)
+    >>> print(xv)
+    -1.5
+    >>> slvr = Solver()
+    >>> slvr.add(fpEQ(x, xv))
+    >>> slvr.check()
+    sat
+    >>> xv = FPVal(+1.5, s)
+    >>> print(xv)
+    1.5
+    >>> slvr = Solver()
+    >>> slvr.add(fpEQ(x, xv))
+    >>> slvr.check()
+    unsat
+    """
+    _assert(is_bv(sgn) and is_bv(exp) and is_bv(sig), "sort mismatch")
+    _assert(sgn.sort().size() == 1, "sort mismatch")
+    ctx = _get_ctx(ctx)
+    _assert(ctx == sgn.ctx == exp.ctx == sig.ctx, "context mismatch")
+    bv = BitVecRef(ctx.solver.mkTerm(kinds.BVConcat, sgn.ast, exp.ast, sig.ast), ctx)
+    sort = FPSort(exp.size(), sig.size()+1)
+    return fpBVToFP(bv, sort)
+
+
+def fpToFP(a1, a2=None, a3=None, ctx=None):
+    """Create a SMT floating-point conversion expression from other term sorts
+    to floating-point.
+
+    # From a bit-vector term in IEEE 754-2008 format:
+    # >>> x = FPVal(1.0, Float32())
+    # >>> x_bv = fpToIEEEBV(x)
+    # >>> simplify(fpToFP(x_bv, Float32()))
+    # 1
+
+    From a floating-point term with different precision:
+    >>> x = FPVal(1.0, Float32())
+    >>> x_db = fpToFP(RNE(), x, Float64())
+    >>> x_db.sort()
+    FPSort(11, 53)
+
+    From a real term:
+    >>> x_r = RealVal(1.5)
+    >>> simplify(fpToFP(RNE(), x_r, Float32()))
+    1.5
+
+    From a signed bit-vector term:
+    >>> x_signed = BitVecVal(-5, BitVecSort(32))
+    >>> simplify(fpToFP(RNE(), x_signed, Float32()))
+    -1.25*(2**2)
+    """
+    ctx = _get_ctx(ctx)
+    if is_bv(a1) and is_fp_sort(a2):
+        return fpBVToFP(a1, a2, ctx)
+    elif is_fprm(a1) and is_fp(a2) and is_fp_sort(a3):
+        return fpFPToFP(a1, a2, a3, ctx)
+    elif is_fprm(a1) and is_real(a2) and is_fp_sort(a3):
+        return fpRealToFP(a1, a2, a3, ctx)
+    elif is_fprm(a1) and is_bv(a2) and is_fp_sort(a3):
+        return fpSignedToFP(a1, a2, a3, ctx)
+    else:
+        raise Z3Exception("Unsupported combination of arguments for conversion to floating-point term.")
+
+
+def fpBVToFP(v, sort, ctx=None):
+    """Create a SMT floating-point conversion expression that represents the
+    conversion from a bit-vector term to a floating-point term.
+
+    >>> x_bv = BitVecVal(0x3F800000, 32)
+    >>> x_fp = fpBVToFP(x_bv, Float32())
+    >>> x_fp
+    fpToFP(1065353216)
+    >>> simplify(x_fp)
+    1
+    """
+    _assert(is_bv(v), "First argument must be a SMT bit-vector expression")
+    _assert(is_fp_sort(sort), "Second argument must be a SMT floating-point sort.")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpIeeeBV, sort.ebits(), sort.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, v.ast), ctx)
+
+
+def fpFPToFP(rm, v, sort, ctx=None):
+    """Create a SMT floating-point conversion expression that represents the
+    conversion from a floating-point term to a floating-point term of different precision.
+
+    >>> x_sgl = FPVal(1.0, Float32())
+    >>> x_dbl = fpFPToFP(RNE(), x_sgl, Float64())
+    >>> x_dbl
+    fpToFP(RNE(), 1)
+    >>> simplify(x_dbl)
+    1
+    >>> x_dbl.sort()
+    FPSort(11, 53)
+    """
+    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
+    _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpFP, sort.ebits(), sort.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+
+
+def fpRealToFP(rm, v, sort, ctx=None):
+    """Create a SMT floating-point conversion expression that represents the
+    conversion from a real term to a floating-point term.
+
+    >>> x_r = RealVal(1.5)
+    >>> x_fp = fpRealToFP(RNE(), x_r, Float32())
+    >>> x_fp
+    fpToFP(RNE(), 3/2)
+    >>> simplify(x_fp)
+    1.5
+    """
+    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(is_real(v), "Second argument must be a SMT expression or real sort.")
+    _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpReal, sort.ebits(), sort.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+
+
+def fpSignedToFP(rm, v, sort, ctx=None):
+    """Create a SMT floating-point conversion expression that represents the
+    conversion from a signed bit-vector term (encoding an integer) to a floating-point term.
+
+    >>> x_signed = BitVecVal(-5, BitVecSort(32))
+    >>> x_fp = fpSignedToFP(RNE(), x_signed, Float32())
+    >>> x_fp
+    fpToFP(RNE(), 4294967291)
+    >>> simplify(x_fp)
+    -1.25*(2**2)
+    """
+    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
+    _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpSignedBV, sort.ebits(), sort.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+
+
+def fpUnsignedToFP(rm, v, sort, ctx=None):
+    """Create a SMT floating-point conversion expression that represents the
+    conversion from an unsigned bit-vector term (encoding an integer) to a floating-point term.
+
+    >>> x_signed = BitVecVal(-5, BitVecSort(32))
+    >>> x_fp = fpUnsignedToFP(RNE(), x_signed, Float32())
+    >>> x_fp
+    fpToFP(RNE(), 4294967291)
+    >>> simplify(x_fp)
+    1*(2**32)
+    """
+    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
+    _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpUnsignedBV, sort.ebits(), sort.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+
+
+def fpToFPUnsigned(rm, x, s, ctx=None):
+    """Create a SMT floating-point conversion expression, from unsigned bit-vector to floating-point expression."""
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_bv(x), "Second argument must be a SMT bit-vector expression")
+        _assert(is_fp_sort(s), "Third argument must be SMT floating-point sort")
+    ctx = _get_ctx(ctx)
+    to_fp_op = ctx.solver.mkOp(kinds.FPToFpUnsignedBV, s.ebits(), s.sbits())
+    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, x.ast), ctx)
+
+
+def fpToSBV(rm, x, s, ctx=None):
+    """Create a SMT floating-point conversion expression, from floating-point expression to signed bit-vector.
+
+    >>> x = FP('x', FPSort(8, 24))
+    >>> y = fpToSBV(RTZ(), x, BitVecSort(32))
+    >>> print(is_fp(x))
+    True
+    >>> print(is_bv(y))
+    True
+    >>> print(is_fp(y))
+    False
+    >>> print(is_bv(x))
+    False
+    """
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
+        _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
+    ctx = _get_ctx(ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(kinds.FPToSbv, s.size()), rm.ast, x.ast), ctx)
+
+
+def fpToUBV(rm, x, s, ctx=None):
+    """Create a SMT floating-point conversion expression, from floating-point expression to unsigned bit-vector.
+
+    >>> x = FP('x', FPSort(8, 24))
+    >>> y = fpToUBV(RTZ(), x, BitVecSort(32))
+    >>> print(is_fp(x))
+    True
+    >>> print(is_bv(y))
+    True
+    >>> print(is_fp(y))
+    False
+    >>> print(is_bv(x))
+    False
+    """
+    if debugging():
+        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
+        _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
+    ctx = _get_ctx(ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(kinds.FPToUbv, s.size()), rm.ast, x.ast), ctx)
+
+
+def fpToReal(x, ctx=None):
+    """Create a SMT floating-point conversion expression, from floating-point expression to real.
+
+    >>> x = FP('x', FPSort(8, 24))
+    >>> y = fpToReal(x)
+    >>> print(is_fp(x))
+    True
+    >>> print(is_real(y))
+    True
+    >>> print(is_fp(y))
+    False
+    >>> print(is_real(x))
+    False
+    """
+    if debugging():
+        _assert(is_fp(x), "First argument must be a SMT floating-point expression")
+    ctx = _get_ctx(ctx)
+    return ArithRef(ctx.solver.mkTerm(kinds.FPToReal, x.ast), ctx)
