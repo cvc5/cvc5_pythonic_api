@@ -56,8 +56,10 @@ TODO:
 from .z3printer import *
 from fractions import Fraction
 from decimal import Decimal
+import ctypes
 import decimal
 import sys
+import math
 import io
 import functools as ft
 import operator as op
@@ -744,6 +746,10 @@ def _to_sort_ref(s, ctx):
         return ArraySortRef(s, ctx)
     elif s.isSet():
         return SetSortRef(s, ctx)
+    elif s.isFloatingPoint():
+        return FPSortRef(s, ctx)
+    elif s.isRoundingMode():
+        return FPRMSortRef(s, ctx)
     return SortRef(s, ctx)
 
 
@@ -936,6 +942,13 @@ def _to_expr_ref(a, ctx, r=None):
             return BitVecNumRef(ast, ctx, r)
         else:
             return BitVecRef(ast, ctx, r)
+    if sort.isFloatingPoint():
+        if ast.getKind() == kinds.ConstFP:
+            return FPNumRef(a, ctx)
+        else:
+            return FPRef(a, ctx)
+    if sort.isRoundingMode():
+        return FPRMRef(a, ctx)
     if sort.isArray():
         return ArrayRef(ast, ctx, r)
     if sort.isSet():
@@ -2119,7 +2132,7 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [kinds.ConstRational, kinds.ConstBV, kinds.ConstBoolean]
+    return term.getKind() in [kinds.ConstRational, kinds.ConstBV, kinds.ConstBoolean, kinds.ConstRoundingmode, kinds.ConstFP]
 
 
 def is_int_value(a):
@@ -5115,3 +5128,675 @@ def simplify(a):
         _assert(is_expr(a), "SMT expression expected")
     instance_check(a, ExprRef)
     return _to_expr_ref(a.ctx.solver.simplify(a.ast), a.ctx)
+
+
+
+#########################################
+#
+# Floating-Point Arithmetic
+#
+#########################################
+
+
+# Global default rounding mode
+_dflt_rounding_mode = pc.RoundTowardZero
+_dflt_fpsort_ebits = 11
+_dflt_fpsort_sbits = 53
+
+
+def get_default_rounding_mode(ctx=None):
+    """Retrieves the global default rounding mode."""
+    if _dflt_rounding_mode == pc.RoundTowardZero:
+        return RTZ(ctx)
+    elif _dflt_rounding_mode == pc.RoundTowardNegative:
+        return RTN(ctx)
+    elif _dflt_rounding_mode == pc.RoundTowardPositive:
+        return RTP(ctx)
+    elif _dflt_rounding_mode == pc.RoundNearestTiesToEven:
+        return RNE(ctx)
+    elif _dflt_rounding_mode == pc.RoundNearestTiesToAway:
+        return RNA(ctx)
+
+
+_ROUNDING_MODES = frozenset({
+    pc.RoundTowardZero,
+    pc.RoundTowardNegative,
+    pc.RoundTowardPositive,
+    pc.RoundNearestTiesToEven,
+    pc.RoundNearestTiesToAway
+})
+
+
+def set_default_rounding_mode(rm, ctx=None):
+    global _dflt_rounding_mode
+    if is_fprm_value(rm):
+        _dflt_rounding_mode = rm.decl().kind()
+    else:
+        _assert(_dflt_rounding_mode in _ROUNDING_MODES, "illegal rounding mode")
+        _dflt_rounding_mode = rm
+
+
+def get_default_fp_sort(ctx=None):
+    return FPSort(_dflt_fpsort_ebits, _dflt_fpsort_sbits, ctx)
+
+
+def set_default_fp_sort(ebits, sbits, ctx=None):
+    global _dflt_fpsort_ebits
+    global _dflt_fpsort_sbits
+    _dflt_fpsort_ebits = ebits
+    _dflt_fpsort_sbits = sbits
+
+
+def _dflt_rm(ctx=None):
+    return get_default_rounding_mode(ctx)
+
+
+def _dflt_fps(ctx=None):
+    return get_default_fp_sort(ctx)
+
+
+def _coerce_fp_expr_list(alist, ctx):
+    first_fp_sort = None
+    for a in alist:
+        if is_fp(a):
+            if first_fp_sort is None:
+                first_fp_sort = a.sort()
+            elif first_fp_sort == a.sort():
+                pass  # OK, same as before
+            else:
+                # we saw at least 2 different float sorts; something will
+                # throw a sort mismatch later, for now assume None.
+                first_fp_sort = None
+                break
+
+    r = []
+    for i in range(len(alist)):
+        a = alist[i]
+        is_repr = isinstance(a, str) and "2**(" in a and a.endswith(")")
+        if is_repr or _is_int(a) or isinstance(a, (float, bool)):
+            r.append(FPVal(a, None, first_fp_sort, ctx))
+        else:
+            r.append(a)
+    return _coerce_expr_list(r, ctx)
+
+
+# FP Sorts
+
+class FPSortRef(SortRef):
+    """Floating-point sort."""
+
+    def ebits(self):
+        """Retrieves the number of bits reserved for the exponent in the FloatingPoint sort `self`.
+        >>> b = FPSort(8, 24)
+        >>> b.ebits()
+        8
+        """
+        return self.ast.getFPExponentSize()
+
+    def sbits(self):
+        """Retrieves the number of bits reserved for the significand in the FloatingPoint sort `self`.
+        >>> b = FPSort(8, 24)
+        >>> b.sbits()
+        24
+        """
+        return self.ast.getFPSignificandSize()
+
+    def cast(self, val):
+        """Try to cast `val` as a floating-point expression.
+        >>> b = FPSort(8, 24)
+        >>> b.cast(1.0)
+        1
+        >>> b.cast(1.0).sexpr()
+        '(fp #b0 #b01111111 #b00000000000000000000000)'
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            return val
+        else:
+            return FPVal(val, None, self, self.ctx)
+
+
+def Float16(ctx=None):
+    """Floating-point 16-bit (half) sort."""
+    ctx = _get_ctx(ctx)
+    return FPSortRef(ctx.solver.mkFloatingPointSort(5, 11), ctx)
+
+
+def FloatHalf(ctx=None):
+    """Floating-point 16-bit (half) sort."""
+    return Float16(ctx)
+
+
+def Float32(ctx=None):
+    """Floating-point 32-bit (single) sort."""
+    ctx = _get_ctx(ctx)
+    return FPSortRef(ctx.solver.mkFloatingPointSort(8, 24), ctx)
+
+
+def FloatSingle(ctx=None):
+    """Floating-point 32-bit (single) sort."""
+    return Float32(ctx)
+
+
+def Float64(ctx=None):
+    """Floating-point 64-bit (double) sort."""
+    ctx = _get_ctx(ctx)
+    return FPSortRef(ctx.solver.mkFloatingPointSort(11, 53), ctx)
+
+
+def FloatDouble(ctx=None):
+    """Floating-point 64-bit (double) sort."""
+    return Float64(ctx)
+
+
+def Float128(ctx=None):
+    """Floating-point 128-bit (quadruple) sort."""
+    ctx = _get_ctx(ctx)
+    return FPSortRef(ctx.solver.mkFloatingPointSort(15, 113), ctx)
+
+
+def FloatQuadruple(ctx=None):
+    """Floating-point 128-bit (quadruple) sort."""
+    return Float128(ctx)
+
+
+class FPRMSortRef(SortRef):
+    """"Floating-point rounding mode sort."""
+
+
+def is_fp_sort(s):
+    """Return True if `s` is a SMT floating-point sort.
+
+    >>> is_fp_sort(FPSort(8, 24))
+    True
+    >>> is_fp_sort(IntSort())
+    False
+    """
+    return isinstance(s, FPSortRef)
+
+
+def is_fprm_sort(s):
+    """Return True if `s` is a SMT floating-point rounding mode sort.
+
+    >>> is_fprm_sort(FPSort(8, 24))
+    False
+    >>> is_fprm_sort(RNE().sort())
+    True
+    """
+    return isinstance(s, FPRMSortRef)
+
+# FP Expressions
+
+
+class FPRef(ExprRef):
+    """Floating-point expressions."""
+
+    def sort(self):
+        """Return the sort of the floating-point expression `self`.
+
+        >>> x = FP('1.0', FPSort(8, 24))
+        >>> x.sort()
+        FPSort(8, 24)
+        >>> x.sort() == FPSort(8, 24)
+        True
+        """
+        return FPSortRef(self.ast.getSort(), self.ctx)
+
+    def ebits(self):
+        """Retrieves the number of bits reserved for the exponent in the FloatingPoint expression `self`.
+        >>> b = FPSort(8, 24)
+        >>> b.ebits()
+        8
+        """
+        return self.sort().ebits()
+
+    def sbits(self):
+        """Retrieves the number of bits reserved for the exponent in the FloatingPoint expression `self`.
+        >>> b = FPSort(8, 24)
+        >>> b.sbits()
+        24
+        """
+        return self.sort().sbits()
+
+
+class FPRMRef(ExprRef):
+    """Floating-point rounding mode expressions"""
+
+    def as_string(self):
+        """Return a SMT floating point expression as a Python string."""
+        return str(self.ast)
+
+
+def RoundNearestTiesToEven(ctx=None):
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundNearestTiesToEven), ctx)
+
+
+def RNE(ctx=None):
+    return RoundNearestTiesToEven(ctx)
+
+
+def RoundNearestTiesToAway(ctx=None):
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundNearestTiesToAway), ctx)
+
+
+def RNA(ctx=None):
+    return RoundNearestTiesToAway(ctx)
+
+
+def RoundTowardPositive(ctx=None):
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardPositive), ctx)
+
+
+def RTP(ctx=None):
+    return RoundTowardPositive(ctx)
+
+
+def RoundTowardNegative(ctx=None):
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardNegative), ctx)
+
+
+def RTN(ctx=None):
+    return RoundTowardNegative(ctx)
+
+
+def RoundTowardZero(ctx=None):
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardZero), ctx)
+
+
+def RTZ(ctx=None):
+    return RoundTowardZero(ctx)
+
+
+def is_fprm(a):
+    """Return `True` if `a` is a SMT floating-point rounding mode expression.
+
+    >>> rm = RNE()
+    >>> is_fprm(rm)
+    True
+    >>> rm = 1.0
+    >>> is_fprm(rm)
+    False
+    """
+    return isinstance(a, FPRMRef)
+
+
+def is_fprm_value(a):
+    """Return `True` if `a` is a SMT floating-point rounding mode numeral value."""
+    return is_fprm(a) and _is_numeral(a.ctx, a.ast)
+
+# FP Numerals
+
+
+def _fp_ieee_val_sign_py_bool(term):
+    sbits, ebits, bv = term.getFloatingPointValue()
+    bit = bv.getBitVectorValue()[0]
+    if bit == '0':
+        return False
+    if bit == '1':
+        return True
+    _assert(False, "Bad sign bit: " + str(bit))
+
+
+def _fp_ieee_val_significand_bv_py_str(term):
+    ebits, sbits, bv = term.getFloatingPointValue()
+    return '1.' + bv.getBitVectorValue()[1+ebits:]
+
+
+def _fp_ieee_val_exponent_bv_py_str(term):
+    ebits, sbits, bv = term.getFloatingPointValue()
+    return bv.getBitVectorValue()[1:1+ebits]
+
+
+def _fp_ieee_val_significand_py_uint(term):
+    return int(_fp_ieee_val_significand_bv_py_str(term)[2:], 2)
+
+
+def _fp_ieee_val_significand_py_float(term):
+    ebits, sbits, bv = term.getFloatingPointValue()
+    uint = _fp_ieee_val_significand_py_uint(term)
+    return 1.0 + float(uint) / 2.0 ** (sbits - 1)
+
+
+def _fp_ieee_val_exponent_py_int(term):
+    ebits, sbits, bv = term.getFloatingPointValue()
+    return int(_fp_ieee_val_exponent_bv_py_str(term), 2) - 2 ** (ebits - 1) + 1
+
+
+class FPNumRef(FPRef):
+    def sign(self):
+        """The sign of the numeral.
+
+        >>> x = FPVal(+1.0, FPSort(8, 24))
+        >>> x.sign()
+        False
+        >>> x = FPVal(-1.0, FPSort(8, 24))
+        >>> x.sign()
+        True
+        """
+        return _fp_ieee_val_sign_py_bool(self.ast)
+
+    def significand(self):
+        """The significand of the numeral, as a double
+
+        >>> x = FPVal(2.5, FPSort(8, 24))
+        >>> x.significand()
+        1.25
+        """
+        return _fp_ieee_val_significand_py_float(self.ast)
+
+    def significand_as_long(self):
+        """The significand of the numeral as a long.
+
+        This is missing the 1
+
+
+        >>> x = FPVal(2.5, FPSort(8, 24))
+        >>> x.significand_as_long()
+        2097152
+        """
+        return _fp_ieee_val_significand_py_uint(self.ast)
+
+    def exponent(self, biased=True):
+        """The exponent of the numeral.
+
+        >>> x = FPVal(2.5, FPSort(8, 24))
+        >>> x.exponent()
+        1
+        """
+        return self.exponent_as_long()
+
+    def exponent_as_long(self):
+        """The exponent of the numeral as a long.
+
+        >>> x = FPVal(2.5, FPSort(8, 24))
+        >>> x.exponent_as_long()
+        1
+        """
+        return _fp_ieee_val_exponent_py_int(self.ast)
+
+    def isNaN(self):
+        """Indicates whether the numeral is a NaN."""
+        return self.ast.isFloatingPointNaN()
+
+    def isInf(self):
+        """Indicates whether the numeral is +oo or -oo."""
+        return self.ast.isFloatingPointNegInf() or self.ast.isFloatingPointPosInf()
+
+    def isZero(self):
+        """Indicates whether the numeral is +zero or -zero."""
+        return self.ast.isFloatingPointNegZero() or self.ast.isFloatingPointPosZero()
+
+    def isNormal(self):
+        """Indicates whether the numeral is normal."""
+        unimplemented("FP numeral: isNormal")
+
+    def isSubnormal(self):
+        """Indicates whether the numeral is subnormal."""
+        unimplemented("FP numeral: isSubnormal")
+
+    def isPositive(self):
+        """Indicates whether the numeral is positive."""
+        return not self.sign()
+
+    def isNegative(self):
+        """Indicates whether the numeral is negative."""
+        return self.sign()
+
+
+def is_fp(a):
+    """Return `True` if `a` is a SMT floating-point expression.
+
+    >>> b = FP('b', FPSort(8, 24))
+    >>> is_fp(b)
+    True
+    >>> is_fp(Int('x'))
+    False
+    """
+    return isinstance(a, FPRef)
+
+
+def is_fp_value(a):
+    """Return `True` if `a` is a SMT floating-point numeral value.
+
+    >>> b = FP('b', FPSort(8, 24))
+    >>> is_fp_value(b)
+    False
+    >>> b = FPVal(1.0, FPSort(8, 24))
+    >>> b
+    1
+    >>> is_fp_value(b)
+    True
+    """
+    return is_fp(a) and _is_numeral(a.ctx, a.ast)
+
+
+def FPSort(ebits, sbits, ctx=None):
+    """Return a SMT floating-point sort of the given sizes. If `ctx=None`, then the global context is used.
+
+    >>> Single = FPSort(8, 24)
+    >>> Double = FPSort(11, 53)
+    >>> Single
+    FPSort(8, 24)
+    >>> x = Const('x', Single)
+    >>> eq(x, FP('x', FPSort(8, 24)))
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return FPSortRef(ctx.solver.mkFloatingPointSort(ebits, sbits), ctx)
+
+
+def _to_float_str(val, exp=0):
+    if isinstance(val, float):
+        if math.isnan(val):
+            res = "NaN"
+        elif val == 0.0:
+            sone = math.copysign(1.0, val)
+            if sone < 0.0:
+                return "-0.0"
+            else:
+                return "+0.0"
+        elif val == float("+inf"):
+            res = "+oo"
+        elif val == float("-inf"):
+            res = "-oo"
+        else:
+            v = val.as_integer_ratio()
+            num = v[0]
+            den = v[1]
+            rvs = str(num) + "/" + str(den)
+            res = rvs + "p" + _to_int_str(exp)
+    elif isinstance(val, bool):
+        if val:
+            res = "1.0"
+        else:
+            res = "0.0"
+    elif _is_int(val):
+        res = str(val)
+    elif isinstance(val, str):
+        inx = val.find("*(2**")
+        if inx == -1:
+            res = val
+        elif val[-1] == ")":
+            res = val[0:inx]
+            exp = str(int(val[inx + 5:-1]) + int(exp))
+        else:
+            _assert(False, "String does not have floating-point numeral form.")
+    elif debugging():
+        _assert(False, "Python value cannot be used to create floating-point numerals.")
+    if exp == 0:
+        return res
+    else:
+        return res + "p" + exp
+
+
+def fpNaN(s):
+    """Create a SMT floating-point NaN term.
+
+    >>> s = FPSort(8, 24)
+    >>> set_fpa_pretty(True)
+    >>> fpNaN(s)
+    NaN
+    >>> pb = get_fpa_pretty()
+    >>> set_fpa_pretty(False)
+    >>> fpNaN(s)
+    fpNaN(FPSort(8, 24))
+    >>> set_fpa_pretty(pb)
+    """
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    return FPNumRef(s.ctx.solver.mkNaN(s.ebits(), s.sbits()), s.ctx)
+
+
+def fpPlusInfinity(s):
+    """Create a SMT floating-point +oo term.
+
+    >>> s = FPSort(8, 24)
+    >>> pb = get_fpa_pretty()
+    >>> set_fpa_pretty(True)
+    >>> fpPlusInfinity(s)
+    +oo
+    >>> set_fpa_pretty(False)
+    >>> fpPlusInfinity(s)
+    fpPlusInfinity(FPSort(8, 24))
+    >>> set_fpa_pretty(pb)
+    """
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    return FPNumRef(s.ctx.solver.mkPosInf(s.ebits(), s.sbits()), s.ctx)
+
+
+def fpMinusInfinity(s):
+    """Create a SMT floating-point -oo term."""
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    return FPNumRef(s.ctx.solver.mkNegInf(s.ebits(), s.sbits()), s.ctx)
+
+
+def fpInfinity(s, negative):
+    """Create a SMT floating-point +oo or -oo term."""
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    _assert(isinstance(negative, bool), "expected Boolean flag")
+    return fpMinusInfinity(s) if negative else fpPlusInfinity(s)
+
+
+def fpPlusZero(s):
+    """Create a SMT floating-point +0.0 term."""
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    return FPNumRef(s.ctx.solver.mkPosZero(s.ebits(), s.sbits()), s.ctx)
+
+
+def fpMinusZero(s):
+    """Create a SMT floating-point -0.0 term."""
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    return FPNumRef(s.ctx.solver.mkNegZero(s.ebits(), s.sbits()), s.ctx)
+
+
+def fpZero(s, negative):
+    """Create a SMT floating-point +0.0 or -0.0 term."""
+    _assert(isinstance(s, FPSortRef), "sort mismatch")
+    _assert(isinstance(negative, bool), "expected Boolean flag")
+    return fpMinusZero(s) if negative else fpPlusZero(s)
+
+
+def FPVal(val, exp=None, fps=None, ctx=None):
+    """Return a floating-point value of value `val` and sort `fps`.
+    If `ctx=None`, then the global context is used.
+
+    >>> v = FPVal(20.0, FPSort(8, 24))
+    >>> v
+    1.25*(2**4)
+    >>> print("0x%.8x" % v.exponent_as_long())
+    0x00000004
+    >>> v = FPVal(2.25, FPSort(8, 24))
+    >>> v
+    1.125*(2**1)
+    >>> v = FPVal(-2.25, FPSort(8, 24))
+    >>> v
+    -1.125*(2**1)
+    >>> FPVal(-0.0, FPSort(8, 24))
+    -0.0
+    >>> FPVal(0.0, FPSort(8, 24))
+    +0.0
+    >>> FPVal(+0.0, FPSort(8, 24))
+    +0.0
+    """
+    ctx = _get_ctx(ctx)
+    if is_fp_sort(exp):
+        fps = exp
+        exp = None
+    elif fps is None:
+        fps = _dflt_fps(ctx)
+    _assert(is_fp_sort(fps), "sort mismatch")
+    if exp is None:
+        exp = 0
+    if math.isnan(val):
+        return fpNaN(fps)
+    elif str(val) == "-0.0":
+        return fpMinusZero(fps)
+    elif val == 0.0 or val == +0.0:
+        return fpPlusZero(fps)
+    elif val == float("+inf"):
+        return fpPlusInfinity(fps)
+    elif val == float("-inf"):
+        return fpMinusInfinity(fps)
+    else:
+        # In (sign, exp, significand) order
+        bv_str = bin(ctypes.c_uint64.from_buffer(ctypes.c_double(val)).value)[2:]
+        bv_str = "0" * (64 - len(bv_str)) + bv_str
+        dub = Float64(ctx)
+        bv = ctx.solver.mkBitVector(bv_str)
+        fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
+        fp_to_fp_op = ctx.solver.mkOp(kinds.FPToFpFP, fps.ebits(), fps.sbits())
+        fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
+        presimp = FPNumRef(fp, ctx)
+        post = simplify(presimp)
+        return post
+
+
+def FP(name, fpsort, ctx=None):
+    """Return a floating-point constant named `name`.
+    `fpsort` is the floating-point sort.
+    If `ctx=None`, then the global context is used.
+
+    >>> x  = FP('x', FPSort(8, 24))
+    >>> is_fp(x)
+    True
+    >>> x.ebits()
+    8
+    >>> x.sort()
+    FPSort(8, 24)
+    >>> word = FPSort(8, 24)
+    >>> x2 = FP('x', word)
+    >>> eq(x, x2)
+    True
+    """
+    if isinstance(fpsort, FPSortRef) and ctx is None:
+        ctx = fpsort.ctx
+    else:
+        ctx = _get_ctx(ctx)
+    if debugging():
+        _assert(isinstance(fpsort, SortRef), "SMT sort expected")
+    ctx = fpsort.ctx
+    e = ctx.get_var(name, fpsort)
+    return FPRef(e, ctx)
+
+
+def FPs(names, fpsort, ctx=None):
+    """Return an array of floating-point constants.
+
+    >>> x, y, z = FPs('x y z', FPSort(8, 24))
+    >>> x.sort()
+    FPSort(8, 24)
+    >>> x.sbits()
+    24
+    >>> x.ebits()
+    8
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [FP(name, fpsort, ctx) for name in names]
+

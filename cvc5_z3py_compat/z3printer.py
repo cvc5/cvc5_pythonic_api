@@ -194,13 +194,65 @@ _z3_precedence = {
     kinds.BVUgt: 8,
 }
 
+_z3_fpa_rm_strings = {
+    "roundNearestTiesToEven": "RoundNearestTiesToEven()",
+    "roundNearestTiesToAway": "RoundNearestTiesToAway()",
+    "roundTowardPositive": "RoundTowardPositive()",
+    "roundTowardNegative": "RoundTowardNegative()",
+    "roundTowardZero": "RoundTowardZero()",
+}
+_z3_fpa_rm_short_strings = {
+    "roundNearestTiesToEven": "RNE()",
+    "roundNearestTiesToAway": "RNA()",
+    "roundTowardPositive": "RTP()",
+    "roundTowardNegative": "RTN()",
+    "roundTowardZero": "RTZ()",
+}
+
 # FPA operators
-_z3_op_to_fpa_normal_str = {}
+_z3_op_to_fpa_normal_str = {
+    kinds.FPAdd: "fpAdd",
+    kinds.FPSub: "fpSub",
+    kinds.FPNeg: "fpNeg",
+    kinds.FPMult: "fpMul",
+    kinds.FPDiv: "fpDiv",
+    kinds.FPRem: "fpRem",
+    kinds.FPAbs: "fpAbs",
+    kinds.FPMin: "fpMin",
+    kinds.FPMax: "fpMax",
+    kinds.FPFma: "fpFMA",
+    kinds.FPSqrt: "fpSqrt",
+    kinds.FPRti: "fpRoundToIntegral",
 
-_z3_op_to_fpa_pretty_str = {}
+    kinds.FPEq: "fpEQ",
+    kinds.FPLt: "fpLT",
+    kinds.FPGt: "fpGT",
+    kinds.FPLeq: "fpLEQ",
+    kinds.FPGeq: "fpGEQ",
 
-_z3_fpa_infix = []
+    kinds.FPToFpGeneric: "fpFP",
+    kinds.FPToFpFP: "fpToFP",
+    kinds.FPToFpUnsignedBV: "fpToFP",
+    kinds.FPToFpSignedBV: "fpToFP",
+    kinds.FPToFpReal: "fpToFP",
+    kinds.FPToFpIeeeBV: "fpToFP",
+    kinds.FPToUbv: "fpToUBV",
+    kinds.FPToSbv: "fpToSBV",
+    kinds.FPToReal: "fpToReal",
+}
 
+_z3_op_to_fpa_pretty_str = {
+    kinds.FPAdd: "+", kinds.FPSub: "-", kinds.FPMult: "*", kinds.FPDiv: "/",
+    kinds.FPRem: "%", kinds.FPNeg: "-",
+
+    kinds.FPEq: "fpEQ", kinds.FPLt: "<", kinds.FPGt: ">", kinds.FPLeq: "<=",
+    kinds.FPGeq: ">="
+}
+
+_z3_fpa_infix = [
+    kinds.FPAdd, kinds.FPSub, kinds.FPMult, kinds.FPDiv, kinds.FPRem,
+    kinds.FPLt, kinds.FPGt, kinds.FPLeq, kinds.FPGeq
+]
 
 def _is_assoc(k):
     return (
@@ -295,7 +347,7 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k == kinds.Constant:
+        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode]:
             return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
             f = a
@@ -644,8 +696,8 @@ class Formatter:
             return seq1("BitVec", (to_format(s.size()),))
         elif isinstance(s, cvc.SetSortRef):
             return seq1("Set", (self.pp_sort(s.domain()), ))
-        # elif isinstance(s, cvc.FPSortRef):
-        #     return seq1("FPSort", (to_format(s.ebits()), to_format(s.sbits())))
+        elif isinstance(s, cvc.FPSortRef):
+            return seq1("FPSort", (to_format(s.ebits()), to_format(s.sbits())))
         # elif isinstance(s, cvc.ReSortRef):
         #     return seq1("ReSort", (self.pp_sort(s.basis()),))
         # elif isinstance(s, cvc.SeqSortRef):
@@ -692,10 +744,132 @@ class Formatter:
 
     def pp_fprm_value(self, a):
         _assert(cvc.is_fprm_value(a), "expected FPRMNumRef")
-        if self.fpa_pretty and (a.kind() in _z3_op_to_fpa_pretty_str):
-            return to_format(_z3_op_to_fpa_pretty_str.get(a.kind()))
+        ast_str = str(a.ast)
+        if self.fpa_pretty:
+            return to_format(_z3_fpa_rm_short_strings.get(ast_str))
         else:
-            return to_format(_z3_op_to_fpa_normal_str.get(a.kind()))
+            return to_format(_z3_fpa_rm_strings.get(ast_str))
+
+    def pp_fp_value(self, a):
+        _assert(isinstance(a, cvc.FPNumRef), "type mismatch")
+        if not self.fpa_pretty:
+            r = []
+            if (a.isNaN()):
+                r.append(to_format("fpNaN"))
+                r.append(to_format("("))
+                r.append(to_format(a.sort()))
+                r.append(to_format(")"))
+                return compose(r)
+            elif (a.isInf()):
+                if (a.isNegative()):
+                    r.append(to_format("fpMinusInfinity"))
+                else:
+                    r.append(to_format("fpPlusInfinity"))
+                r.append(to_format("("))
+                r.append(to_format(a.sort()))
+                r.append(to_format(")"))
+                return compose(r)
+
+            elif (a.isZero()):
+                if (a.isNegative()):
+                    return to_format("-zero")
+                else:
+                    return to_format("+zero")
+            else:
+                _assert(cvc.is_fp_value(a), "expecting FP num ast")
+                r = []
+                sgnb = a.sign()
+                exp = a.exponent_as_long()
+                sig = a.significand()
+                if int(sig) == sig:
+                    sig = int(sig)
+                r.append(to_format("FPVal("))
+                if sgnb and sgn.value != 0:
+                    r.append(to_format("-"))
+                r.append(to_format(sig))
+                r.append(to_format("*(2**"))
+                r.append(to_format(exp))
+                r.append(to_format(", "))
+                r.append(to_format(a.sort()))
+                r.append(to_format("))"))
+                return compose(r)
+        else:
+            if (a.isNaN()):
+                return to_format("NaN")
+            elif (a.isInf()):
+                if (a.isNegative()):
+                    return to_format("-oo")
+                else:
+                    return to_format("+oo")
+            elif (a.isZero()):
+                if (a.isNegative()):
+                    return to_format("-0.0")
+                else:
+                    return to_format("+0.0")
+            else:
+                _assert(cvc.is_fp_value(a), "expecting FP num ast")
+                r = []
+                sgnb = a.sign()
+                exp = a.exponent_as_long()
+                sig = a.significand()
+                if int(sig) == sig:
+                    sig = int(sig)
+                if sgnb:
+                    r.append(to_format("-"))
+                r.append(to_format(sig))
+                if (str(exp) != "0"):
+                    r.append(to_format("*(2**"))
+                    r.append(to_format(exp))
+                    r.append(to_format(")"))
+                return compose(r)
+
+    def pp_fp(self, a, d, xs):
+        _assert(isinstance(a, cvc.FPRef), "type mismatch")
+        k = a.kind()
+        op = "?"
+        if (self.fpa_pretty and k in _z3_op_to_fpa_pretty_str):
+            op = _z3_op_to_fpa_pretty_str[k]
+        elif k in _z3_op_to_fpa_normal_str:
+            op = _z3_op_to_fpa_normal_str[k]
+        elif k in _z3_op_to_str:
+            op = _z3_op_to_str[k]
+
+        n = a.num_args()
+
+        if self.fpa_pretty:
+            if self.is_infix(k) and n >= 3:
+                rm = a.arg(0)
+                if cvc.is_fprm_value(rm) and cvc.get_default_rounding_mode(a.ctx).eq(rm):
+                    arg1 = to_format(self.pp_expr(a.arg(1), d + 1, xs))
+                    arg2 = to_format(self.pp_expr(a.arg(2), d + 1, xs))
+                    r = []
+                    r.append(arg1)
+                    r.append(to_format(" "))
+                    r.append(to_format(op))
+                    r.append(to_format(" "))
+                    r.append(arg2)
+                    return compose(r)
+            elif k == kinds.FPNeg:
+                return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
+
+        if k in _z3_op_to_fpa_normal_str:
+            op = _z3_op_to_fpa_normal_str[k]
+
+        r = []
+        r.append(to_format(op))
+        if not cvc.is_const(a):
+            r.append(to_format("("))
+            first = True
+            for c in a.children():
+                if first:
+                    first = False
+                else:
+                    r.append(to_format(", "))
+                r.append(self.pp_expr(c, d + 1, xs))
+            r.append(to_format(")"))
+            return compose(r)
+        else:
+            return to_format(a.as_string())
 
     def pp_prefix(self, a, d, xs):
         r = []
@@ -908,12 +1082,12 @@ class Formatter:
         #     return self.pp_algebraic(a)
         elif cvc.is_bv_value(a):
             return self.pp_bv(a)
-        # elif cvc.is_fprm_value(a):
-        #     return self.pp_fprm_value(a)
-        # elif cvc.is_fp_value(a):
-        #     return self.pp_fp_value(a)
-        # elif cvc.is_fp(a):
-        #     return self.pp_fp(a, d, xs)
+        elif cvc.is_fprm_value(a):
+            return self.pp_fprm_value(a)
+        elif cvc.is_fp_value(a):
+            return self.pp_fp_value(a)
+        elif cvc.is_fp(a):
+            return self.pp_fp(a, d, xs)
         # elif cvc.is_string_value(a):
         #     return self.pp_string(a)
         elif cvc.is_const(a):
