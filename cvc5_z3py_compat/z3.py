@@ -5146,7 +5146,6 @@ _dflt_fpsort_sbits = 53
 
 def get_default_rounding_mode(ctx=None):
     """Retrieves the global default rounding mode."""
-    global _dflt_rounding_mode
     if _dflt_rounding_mode == pc.RoundTowardZero:
         return RTZ(ctx)
     elif _dflt_rounding_mode == pc.RoundTowardNegative:
@@ -5800,5 +5799,4 @@ def FPs(names, fpsort, ctx=None):
     if isinstance(names, str):
         names = names.split(" ")
     return [FP(name, fpsort, ctx) for name in names]
-
 
