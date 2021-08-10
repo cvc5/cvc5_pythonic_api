@@ -5385,8 +5385,7 @@ class FPRef(ExprRef):
         >>> (x + y).sort()
         FPSort(8, 24)
         """
-        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
-        return fpAdd(_dflt_rm(), a, b, self.ctx)
+        return fpAdd(_dflt_rm(), self, other, self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -5395,8 +5394,7 @@ class FPRef(ExprRef):
         >>> 10 + x
         1.25*(2**3) + x
         """
-        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
-        return fpAdd(_dflt_rm(), a, b, self.ctx)
+        return fpAdd(_dflt_rm(), other, self, self.ctx)
 
     def __sub__(self, other):
         """Create the SMT expression `self - other`.
@@ -5408,8 +5406,7 @@ class FPRef(ExprRef):
         >>> (x - y).sort()
         FPSort(8, 24)
         """
-        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
-        return fpSub(_dflt_rm(), a, b, self.ctx)
+        return fpSub(_dflt_rm(), self, other, self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -5418,8 +5415,7 @@ class FPRef(ExprRef):
         >>> 10 - x
         1.25*(2**3) - x
         """
-        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
-        return fpSub(_dflt_rm(), a, b, self.ctx)
+        return fpSub(_dflt_rm(), other, self, self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -5433,8 +5429,7 @@ class FPRef(ExprRef):
         >>> 10 * y
         1.25*(2**3) * y
         """
-        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
-        return fpMul(_dflt_rm(), a, b, self.ctx)
+        return fpMul(_dflt_rm(), self, other, self.ctx)
 
     def __rmul__(self, other):
         """Create the SMT expression `other * self`.
@@ -5446,8 +5441,7 @@ class FPRef(ExprRef):
         >>> x * 10
         x * 1.25*(2**3)
         """
-        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
-        return fpMul(_dflt_rm(), a, b, self.ctx)
+        return fpMul(_dflt_rm(), other, self, self.ctx)
 
     def __pos__(self):
         """Create the SMT expression `+self`."""
@@ -5474,8 +5468,7 @@ class FPRef(ExprRef):
         >>> 10 / y
         1.25*(2**3) / y
         """
-        [a, b] = _coerce_fp_expr_list([self, other], self.ctx)
-        return fpDiv(_dflt_rm(), a, b, self.ctx)
+        return fpDiv(_dflt_rm(), self, other, self.ctx)
 
     def __rdiv__(self, other):
         """Create the SMT expression `other / self`.
@@ -5487,8 +5480,7 @@ class FPRef(ExprRef):
         >>> x / 10
         x / 1.25*(2**3)
         """
-        [a, b] = _coerce_fp_expr_list([other, self], self.ctx)
-        return fpDiv(_dflt_rm(), a, b, self.ctx)
+        return fpDiv(_dflt_rm(), other, self, self.ctx)
 
     def __truediv__(self, other):
         """Create the SMT expression division `self / other`."""
