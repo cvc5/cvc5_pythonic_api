@@ -3458,8 +3458,9 @@ def BitVecVal(val, bv, ctx=None):
     else:
         size = bv
         ctx = _get_ctx(ctx)
-    string = "{}{{:0{}b}}".format("-" if val < 0 else "", size).format(abs(val))
-    return BitVecNumRef(ctx.solver.mkBitVector(string), ctx)
+    modulus = 2 ** size
+    val = (val + modulus) % modulus
+    return BitVecNumRef(ctx.solver.mkBitVector(size, str(val), 10), ctx)
 
 
 def BitVec(name, bv, ctx=None):
