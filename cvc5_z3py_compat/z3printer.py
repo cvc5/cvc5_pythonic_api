@@ -349,6 +349,9 @@ def _op_name(a):
     if n is None:
         if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode]:
             return str(a.ast)
+        if k == kinds.InternalKind:
+            # Hack to handle DT selectors and constructors
+            return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
             f = a
         else:
@@ -537,12 +540,13 @@ def seq(args, sep=",", space=True):
     if not space:
         nl.space = ""
     r = []
-    r.append(args[0])
     num = len(args)
-    for i in range(num - 1):
-        r.append(to_format(sep))
-        r.append(nl)
-        r.append(args[i + 1])
+    if num > 0:
+        r.append(args[0])
+        for i in range(num - 1):
+            r.append(to_format(sep))
+            r.append(nl)
+            r.append(args[i + 1])
     return compose(r)
 
 
@@ -1112,7 +1116,8 @@ class Formatter:
             #     return self.pp_map(a, d, xs)
             elif k == kinds.ConstArray:
                 return self.pp_K(a, d, xs)
-            elif k == kinds.Constant:
+            # Slight hack to handle DT fns here.
+            elif k in [kinds.Constant, kinds.InternalKind]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
@@ -1130,6 +1135,8 @@ class Formatter:
                 return self.pp_unary(a, d, xs)
             elif k == kinds.ApplyUf:
                 return self.pp_uf_apply(a, d, xs)
+            elif k in [kinds.ApplyConstructor, kinds.ApplySelector, kinds.ApplyTester]:
+                return self.pp_dt_apply(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
 
@@ -1144,6 +1151,21 @@ class Formatter:
                 r.append(self.pp_ellipses())
                 break
         return seq1(self.pp_name(first), r)
+
+    def pp_dt_apply(self, a, d, xs):
+        r = []
+        sz = 0
+        cs = a.children()
+        for child in cs[1:]:
+            r.append(self.pp_expr(child, d + 1, xs))
+            sz = sz + 1
+            if sz > self.max_args:
+                r.append(self.pp_ellipses())
+                break
+        if len(r) > 0:
+            return seq1(self.pp_name(cs[0]), r)
+        else:
+            return self.pp_name(cs[0])
 
     def pp_var(self, a, d, xs):
         idx = cvc.get_var_index(a)
