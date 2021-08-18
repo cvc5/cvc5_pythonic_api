@@ -3445,12 +3445,17 @@ def BitVecSort(sz, ctx=None):
 
 def BitVecVal(val, bv, ctx=None):
     """Return a bit-vector value with the given number of bits. If `ctx=None`, then the global context is used.
+    The second argument can be a number of bits (integer) or a bit-vector sort.
 
     >>> v = BitVecVal(10, 32)
     >>> v
     10
     >>> print("0x%.8x" % v.as_long())
     0x0000000a
+    >>> s = BitVecSort(3)
+    >>> u = BitVecVal(10, s)
+    >>> u
+    2
     """
     if is_bv_sort(bv):
         ctx = bv.ctx
@@ -3458,8 +3463,9 @@ def BitVecVal(val, bv, ctx=None):
     else:
         size = bv
         ctx = _get_ctx(ctx)
-    string = "{}{{:0{}b}}".format("-" if val < 0 else "", size).format(abs(val))
-    return BitVecNumRef(ctx.solver.mkBitVector(string), ctx)
+    modulus = 2 ** size
+    val = (val + modulus) % modulus
+    return BitVecNumRef(ctx.solver.mkBitVector(size, str(val), 10), ctx)
 
 
 def BitVec(name, bv, ctx=None):
