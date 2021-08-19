@@ -778,7 +778,7 @@ class FuncDeclRef(ExprRef):
         >>> isinstance(f.name(), str)
         True
         """
-        return str(self)
+        return str(self.ast)
 
     def arity(self):
         """Return the number of arguments of a function declaration.
@@ -831,20 +831,25 @@ class FuncDeclRef(ExprRef):
         >>> f(x, x)
         f(x, ToReal(x))
         """
-        args = _get_args(args)
-        num = len(args)
-        if debugging():
-            _assert(
-                num == self.arity(),
-                "Incorrect number of arguments to %s" % self,
-            )
-        _args = []
-        for i in range(num):
-            tmp = self.domain(i).cast(args[i])
-            _args.append(tmp.as_ast())
-        return _to_expr_ref(
-            self.ctx.solver.mkTerm(kinds.ApplyUf, self.ast, *_args), self.ctx
+        return _higherorder_apply(self, args, kinds.ApplyUf)
+
+
+def _higherorder_apply(func, args, kind):
+    """Create an SMT application from a FuncDeclRef and a kind of application"""
+    args = _get_args(args)
+    num = len(args)
+    if debugging():
+        _assert(
+            num == func.arity(),
+            "Incorrect number of arguments to %s" % func,
         )
+    _args = []
+    for i in range(num):
+        tmp = func.domain(i).cast(args[i])
+        _args.append(tmp.as_ast())
+    return _to_expr_ref(
+        func.ctx.solver.mkTerm(kind, func.ast, *_args), func.ctx
+    )
 
 
 def is_func_decl(a):
@@ -6545,3 +6550,475 @@ def fpToReal(x, ctx=None):
         _assert(is_fp(x), "First argument must be a SMT floating-point expression")
     ctx = _get_ctx(ctx)
     return ArithRef(ctx.solver.mkTerm(kinds.FPToReal, x.ast), ctx)
+
+
+#########################################
+#
+# Datatypes
+#
+#########################################
+
+def _valid_accessor(acc):
+    """Return `True` if acc is pair of the form (String, Datatype or Sort). """
+    if not isinstance(acc, tuple):
+        return False
+    if len(acc) != 2:
+        return False
+    return isinstance(acc[0], str) and (isinstance(acc[1], Datatype) or is_sort(acc[1]))
+
+
+class Datatype:
+    """Helper class for declaring Z3 datatypes.
+    >>> List = Datatype('List')
+    >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+    >>> List.declare('nil')
+    >>> List = List.create()
+    >>> # List is now a Z3 declaration
+    >>> List.nil
+    nil
+    >>> List.cons(10, List.nil)
+    cons(10, nil)
+    >>> List.cons(10, List.nil).sort()
+    List
+    >>> cons = List.cons
+    >>> nil  = List.nil
+    >>> car  = List.car
+    >>> cdr  = List.cdr
+    >>> n = cons(1, cons(0, nil))
+    >>> n
+    cons(1, cons(0, nil))
+    >>> simplify(cdr(n))
+    cons(0, nil)
+    >>> simplify(car(n))
+    1
+    """
+
+    def __init__(self, name, ctx=None):
+        self.ctx = _get_ctx(ctx)
+        self.name = name
+        self.constructors = []
+
+    def declare_core(self, name, rec_name, *args):
+        if debugging():
+            _assert(isinstance(name, str), "String expected")
+            _assert(isinstance(rec_name, str), "String expected")
+            _assert(
+                all([_valid_accessor(a) for a in args]),
+                "Valid list of accessors expected. An accessor is a pair of the form (String, Datatype|Sort)",
+            )
+        self.constructors.append((name, rec_name, args))
+
+    def declare(self, name, *args):
+        """Declare constructor named `name` with the given accessors `args`.
+        Each accessor is a pair `(name, sort)`, where `name` is a string and `sort` an SMT sort
+        or a reference to the datatypes being declared.
+        In the following example `List.declare('cons', ('car', IntSort()), ('cdr', List))`
+        declares the constructor named `cons` that builds a new List using an integer and a List.
+        It also declares the accessors `car` and `cdr`. The accessor `car` extracts the integer
+        of a `cons` cell, and `cdr` the list of a `cons` cell. After all constructors were declared,
+        we use the method create() to create the actual datatype in SMT.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        """
+        if debugging():
+            _assert(isinstance(name, str), "String expected")
+            _assert(name != "", "Constructor name cannot be empty")
+        return self.declare_core(name, "is-" + name, *args)
+
+    def __repr__(self):
+        return "Datatype(%s, %s)" % (self.name, self.constructors)
+
+    def create(self):
+        """Create an SMT datatype based on the constructors declared using the method `declare()`.
+        The function `CreateDatatypes()` must be used to define mutually recursive datatypes.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.nil
+        nil
+        >>> List.cons(10, List.nil)
+        cons(10, nil)
+        """
+        return CreateDatatypes([self])[0]
+
+
+def CreateDatatypes(*ds):
+    """Create mutually recursive SMT datatypes using 1 or more Datatype helper objects.
+    In the following example we define a Tree-List using two mutually recursive datatypes.
+    >>> TreeList = Datatype('TreeList')
+    >>> Tree     = Datatype('Tree')
+    >>> # Tree has two constructors: leaf and node
+    >>> Tree.declare('leaf', ('val', IntSort()))
+    >>> # a node contains a list of trees
+    >>> Tree.declare('node', ('children', TreeList))
+    >>> TreeList.declare('nil')
+    >>> TreeList.declare('cons', ('car', Tree), ('cdr', TreeList))
+    >>> Tree, TreeList = CreateDatatypes(Tree, TreeList)
+    >>> Tree.val(Tree.leaf(10))
+    val(leaf(10))
+    >>> simplify(Tree.val(Tree.leaf(10)))
+    10
+    >>> l1 = TreeList.cons(Tree.leaf(10), TreeList.cons(Tree.leaf(20), TreeList.nil))
+    >>> n1 = Tree.node(TreeList.cons(Tree.leaf(10), TreeList.cons(Tree.leaf(20), TreeList.nil)))
+    >>> n1
+    node(cons(leaf(10), cons(leaf(20), nil)))
+    >>> n2 = Tree.node(TreeList.cons(n1, TreeList.nil))
+    >>> simplify(n2 == n1)
+    False
+    >>> simplify(TreeList.car(Tree.children(n2)) == n1)
+    True
+    """
+    ds = _get_args(ds)
+    if debugging():
+        _assert(len(ds) > 0, "At least one Datatype must be specified")
+        _assert(all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes")
+        _assert(all([d.ctx == ds[0].ctx for d in ds]), "Context mismatch")
+        _assert(all([d.constructors != [] for d in ds]), "Non-empty Datatypes expected")
+    ctx = ds[0].ctx
+    s = ctx.solver
+    num = len(ds)
+    uninterp_sorts = {}
+    for d in ds:
+        uninterp_sorts[d.name] = s.mkUninterpretedSort(d.name)
+    dt_decls = []
+    for i in range(num):
+        d = ds[i]
+        decl = s.mkDatatypeDecl(d.name)
+        dt_decls.append(decl)
+        con_decls = []
+        for j, c in enumerate(d.constructors):
+            cname = c[0]
+            rname = c[1]
+            con = s.mkDatatypeConstructorDecl(cname)
+            con_decls.append(decl)
+            fs = c[2]
+            num_fs = len(fs)
+            for k in range(num_fs):
+                fname = fs[k][0]
+                ftype = fs[k][1]
+                if isinstance(ftype, Datatype):
+                    if debugging():
+                        _assert(
+                            ftype.name in uninterp_sorts,
+                            "Missing datatype: " + ftype.name,
+                        )
+                    ftype = uninterp_sorts[ftype.name]
+                else:
+                    if debugging():
+                        _assert(is_sort(ftype), "Z3 sort expected")
+                    ftype = ftype.ast
+                con.addSelector(fname, ftype)
+            decl.addConstructor(con)
+    uninterp_sort_set = { sort for _name, sort in uninterp_sorts.items() }
+    dt_sorts = s.mkDatatypeSorts(dt_decls, uninterp_sort_set)
+    # Create a field for every constructor, recognizer and accessor
+    result = []
+    for i in range(num):
+        dref = DatatypeSortRef(dt_sorts[i], ctx)
+        num_cs = dref.num_constructors()
+        for j in range(num_cs):
+            cref = dref.constructor(j)
+            cref_name = cref.name()
+            cref_arity = cref.arity()
+            if cref_arity == 0:
+                cref = cref()
+            setattr(dref, cref_name, cref)
+            rref = dref.recognizer(j)
+            setattr(dref, "is_" + cref_name, rref)
+            for k in range(cref_arity):
+                aref = dref.accessor(j, k)
+                setattr(dref, aref.name(), aref)
+        result.append(dref)
+    return tuple(result)
+
+
+class DatatypeSortRef(SortRef):
+    """Datatype sorts."""
+
+    def __init__(self, ast, ctx=None):
+        super().__init__(ast, ctx)
+        self.dt = ast.getDatatype()
+
+    def num_constructors(self):
+        """Return the number of constructors in the given Z3 datatype.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> # List is now a Z3 declaration
+        >>> List.num_constructors()
+        2
+        """
+        return self.dt.getNumConstructors()
+
+    def constructor(self, idx):
+        """Return a constructor of the datatype `self`.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> # List is now a Z3 declaration
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0)
+        cons
+        >>> List.constructor(1)
+        nil
+        """
+        if debugging():
+            _assert(idx < self.num_constructors(), "Invalid constructor index")
+        return DatatypeConstructorRef(self.dt[idx], self.ctx)
+
+    def recognizer(self, idx):
+        """In SMT, each constructor has an associated recognizer predicate.
+        If the constructor is named `name`, then the recognizer `is_name`.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> # List is now a SMT declaration
+        >>> List.num_constructors()
+        2
+        >>> List.recognizer(0)
+        is_cons
+        >>> List.recognizer(1)
+        is_nil
+        >>> simplify(List.is_nil(List.cons(10, List.nil)))
+        False
+        >>> simplify(List.is_cons(List.cons(10, List.nil)))
+        True
+        >>> l = Const('l', List)
+        >>> simplify(List.is_cons(l))
+        is_cons(l)
+        """
+        if debugging():
+            _assert(idx < self.num_constructors(), "Invalid recognizer index")
+        return DatatypeRecognizerRef(self.dt[idx], self.ctx)
+
+    def accessor(self, i, j):
+        """In SMT, each constructor has 0 or more accessor.
+        The number of accessors is equal to the arity of the constructor.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0)
+        cons
+        >>> num_accs = List.constructor(0).arity()
+        >>> num_accs
+        2
+        >>> List.accessor(0, 0)
+        car
+        >>> List.accessor(0, 1)
+        cdr
+        >>> List.constructor(1)
+        nil
+        >>> num_accs = List.constructor(1).arity()
+        >>> num_accs
+        0
+        """
+        if debugging():
+            _assert(i < self.num_constructors(), "Invalid constructor index")
+            _assert(j < self.constructor(i).arity(), "Invalid accessor index")
+        return DatatypeSelectorRef(self.dt[i][j], self.ctx)
+
+
+class DatatypeConstructorRef(FuncDeclRef):
+    def __init__(self, datatype, ctx=None, r=False):
+        super().__init__(datatype.getConstructorTerm(), ctx, r)
+        self.dt = datatype
+
+    def arity(self):
+        """Return the number of arguments of a constructor.
+
+        The number of accessors is equal to the arity of the constructor.
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0).arity()
+        2
+        """
+        return self.dt.getNumSelectors()
+
+    def domain(self, i):
+        """Return the sort of the argument `i` of a constructor.
+        This method assumes that `0 <= i < self.arity()`.
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0).domain(0)
+        Int
+        """
+        return _to_sort_ref(self.ast.getSort().getConstructorDomainSorts()[i], self.ctx)
+
+    def range(self):
+        """Return the sort of the range of a function declaration.
+        For constants, this is the sort of the constant.
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0).range()
+        List
+        """
+        return _to_sort_ref(self.ast.getSort().getConstructorCodomainSort(), self.ctx)
+
+    def __call__(self, *args):
+        """Create an SMT application expression using the function `self`,
+        and the given arguments.
+
+        The arguments must be SMT expressions. This method assumes that
+        the sorts of the elements in `args` match the sorts of the
+        domain. Limited coercion is supported.  For example, if
+        args[0] is a Python integer, and the function expects a SMT
+        integer, then the argument is automatically converted into a
+        SMT integer.
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> List.num_constructors()
+        2
+        >>> List.constructor(0)(1, List.nil)
+        cons(1, nil)
+        """
+        return _higherorder_apply(self, args, kinds.ApplyConstructor)
+
+
+class DatatypeSelectorRef(FuncDeclRef):
+    def __init__(self, datatype, ctx=None, r=False):
+        super().__init__(datatype.getSelectorTerm(), ctx, r)
+        self.dt = datatype
+
+    def arity(self):
+        """Return the number of arguments of a selector (always 1).
+        """
+        return 1
+
+    def domain(self, i):
+        """Return the sort of the argument `i` of a selector.
+        This method assumes that `0 <= i < self.arity()`.
+        """
+        _assert(i == 0, "Selectors take 1 argument")
+        return _to_sort_ref(self.ast.getSort().getSelectorDomainSort(), self.ctx)
+
+    def range(self):
+        """Return the sort of the range of a function declaration.
+        For constants, this is the sort of the constant.
+        """
+        return _to_sort_ref(self.ast.getSort().getSelectorCodomainSort(), self.ctx)
+
+    def __call__(self, *args):
+        """Create an SMT application expression using the function `self`,
+        and the given arguments.
+
+        The arguments must be SMT expressions. This method assumes that
+        the sorts of the elements in `args` match the sorts of the
+        domain. Limited coercion is supported.  For example, if
+        args[0] is a Python integer, and the function expects a SMT
+        integer, then the argument is automatically converted into a
+        SMT integer.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> x = Int('x')
+        >>> y = Real('y')
+        >>> f(x, y)
+        f(x, y)
+        >>> f(x, x)
+        f(x, ToReal(x))
+        """
+        return _higherorder_apply(self, args, kinds.ApplySelector)
+
+
+class DatatypeRecognizerRef(FuncDeclRef):
+    def __init__(self, constructor, ctx=None, r=False):
+        super().__init__(constructor.getTesterTerm(), ctx, r)
+        self.constructor = constructor
+
+    def arity(self):
+        """Return the number of arguments of a selector (always 1).
+        """
+        return 1
+
+    def domain(self, i):
+        """Return the sort of the argument `i` of a selector.
+        This method assumes that `0 <= i < self.arity()`.
+        """
+        _assert(i == 0, "Recognizers take 1 argument")
+        return _to_sort_ref(self.ast.getSort().getTesterDomainSort(), self.ctx)
+
+    def range(self):
+        """Return the sort of the range of a function declaration.
+        For constants, this is the sort of the constant.
+        """
+        return BoolSort(self.ctx)
+
+    def __call__(self, *args):
+        """Create an SMT application expression using the function `self`,
+        and the given arguments.
+
+        The arguments must be SMT expressions. This method assumes that
+        the sorts of the elements in `args` match the sorts of the
+        domain. Limited coercion is supported.  For example, if
+        args[0] is a Python integer, and the function expects a SMT
+        integer, then the argument is automatically converted into a
+        SMT integer.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> x = Int('x')
+        >>> y = Real('y')
+        >>> f(x, y)
+        f(x, y)
+        >>> f(x, x)
+        f(x, ToReal(x))
+        """
+        return _higherorder_apply(self, args, kinds.ApplyTester)
+
+
+
+class DatatypeRef(ExprRef):
+    """Datatype expressions."""
+
+    def sort(self):
+        """Return the datatype sort of the datatype expression `self`."""
+        return DatatypeSortRef(Z3_get_sort(self.ctx_ref(), self.as_ast()), self.ctx)
+
+
+def TupleSort(name, sorts, ctx=None):
+    """Create a named tuple sort base on a set of underlying sorts
+    Example:
+        >>> pair, mk_pair, (first, second) = TupleSort("pair", [IntSort(), BoolSort()])
+    """
+    tuple = Datatype(name, ctx)
+    projects = [("project%d" % i, sorts[i]) for i in range(len(sorts))]
+    tuple.declare(name, *projects)
+    tuple = tuple.create()
+    return tuple, tuple.constructor(0), [tuple.accessor(0, i) for i in range(len(sorts))]
+
+
+def DisjointSum(name, sorts, ctx=None):
+    """Create a named tagged union sort base on a set of underlying sorts
+    Example:
+        >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
+    """
+    sum = Datatype(name, ctx)
+    for i in range(len(sorts)):
+        sum.declare("inject%d" % i, ("project%d" % i, sorts[i]))
+    sum = sum.create()
+    return sum, [(sum.constructor(i), sum.accessor(i, 0)) for i in range(len(sorts))]
