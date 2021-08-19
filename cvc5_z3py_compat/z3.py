@@ -6722,7 +6722,7 @@ def CreateDatatypes(*ds):
             cref = dref.constructor(j)
             cref_name = cref.name()
             cref_arity = cref.arity()
-            if cref.arity() == 0:
+            if cref_arity == 0:
                 cref = cref()
             setattr(dref, cref_name, cref)
             rref = dref.recognizer(j)
