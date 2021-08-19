@@ -6592,11 +6592,6 @@ class Datatype:
         self.name = name
         self.constructors = []
 
-    def __deepcopy__(self, memo={}):
-        r = Datatype(self.name, self.ctx)
-        r.constructors = copy.deepcopy(self.constructors)
-        return r
-
     def declare_core(self, name, rec_name, *args):
         if debugging():
             _assert(isinstance(name, str), "String expected")
