@@ -5910,7 +5910,7 @@ def FPVal(val, exp=None, fps=None, ctx=None):
         bv_str = bin(ctypes.c_uint64.from_buffer(ctypes.c_double(val)).value)[2:]
         bv_str = "0" * (64 - len(bv_str)) + bv_str
         dub = Float64(ctx)
-        bv = ctx.solver.mkBitVector(bv_str)
+        bv = ctx.solver.mkBitVector(len(bv_str), bv_str, 2)
         fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
         fp_to_fp_op = ctx.solver.mkOp(kinds.FPToFpFP, fps.ebits(), fps.sbits())
         fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
