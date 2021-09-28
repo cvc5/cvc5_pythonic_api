@@ -347,7 +347,7 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode]:
+        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode, kinds.Variable]:
             return str(a.ast)
         if k == kinds.InternalKind:
             # Hack to handle DT selectors and constructors
@@ -1116,8 +1116,8 @@ class Formatter:
             #     return self.pp_map(a, d, xs)
             elif k == kinds.ConstArray:
                 return self.pp_K(a, d, xs)
-            # Slight hack to handle DT fns here.
-            elif k in [kinds.Constant, kinds.InternalKind]:
+            # Slight hack to handle DT fns here (InternalKind case).
+            elif k in [kinds.Constant, kinds.InternalKind, kinds.Variable]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
@@ -1195,10 +1195,10 @@ class Formatter:
         self.visited = self.visited + 1
         if d > self.max_depth or self.visited > self.max_visited:
             return self.pp_ellipses()
-        if cvc.is_var(a):
-            return self.pp_var(a, d, xs)
-        # elif cvc.is_quantifier(a):
-        #     return self.pp_quantifier(a, d, xs)
+        # if cvc.is_var(a):
+        #     return self.pp_var(a, d, xs)
+        elif cvc.is_quantifier(a):
+            return self.pp_quantifier(a, d, xs)
         elif cvc.is_app(a):
             return self.pp_app(a, d, xs)
         else:

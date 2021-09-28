@@ -933,7 +933,10 @@ def _to_expr_ref(a, ctx, r=None):
         raise SMTException("Non-term/expression given to _to_expr_ref")
     sort = ast.getSort()
     if sort.isBoolean():
-        return BoolRef(ast, ctx, r)
+        if ast.getKind() in [kinds.Forall, kinds.Exists]:
+            return QuantifierRef(ast, ctx, r)
+        else:
+            return BoolRef(ast, ctx, r)
     if sort.isInteger():
         if ast.getKind() == kinds.ConstRational:
             return IntNumRef(ast, ctx, r)
@@ -7022,3 +7025,157 @@ def DisjointSum(name, sorts, ctx=None):
         sum.declare("inject%d" % i, ("project%d" % i, sorts[i]))
     sum = sum.create()
     return sum, [(sum.constructor(i), sum.accessor(i, 0)) for i in range(len(sorts))]
+
+
+#########################################
+#
+# Quantifiers
+#
+#########################################
+
+
+class QuantifierRef(BoolRef):
+    """Universally and Existentially quantified formulas."""
+
+    def as_ast(self):
+        return self.ast
+
+    def sort(self):
+        """Return the Boolean sort"""
+        return BoolSort(self.ctx)
+
+    def is_forall(self):
+        """Return `True` if `self` is a universal quantifier.
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> q = ForAll(x, f(x) == 0)
+        >>> q.is_forall()
+        True
+        >>> q = Exists(x, f(x) != 0)
+        >>> q.is_forall()
+        False
+        """
+        return self.ast.getKind() == kinds.Forall
+
+    def is_exists(self):
+        """Return `True` if `self` is an existential quantifier.
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> q = ForAll(x, f(x) == 0)
+        >>> q.is_exists()
+        False
+        >>> q = Exists(x, f(x) != 0)
+        >>> q.is_exists()
+        True
+        """
+        return self.ast.getKind() == kinds.Exists
+
+    def body(self):
+        """Return the expression being quantified.
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> q = ForAll(x, f(x) == 0)
+        >>> q.body()
+        f(x) == 0
+        """
+        return _to_expr_ref(self.ast[1], self.ctx)
+
+    def num_vars(self):
+        """Return the number of variables bounded by this quantifier.
+        >>> f = Function('f', IntSort(), IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> q = ForAll([x, y], f(x, y) >= x)
+        >>> q.num_vars()
+        2
+        """
+        return self.ast[0].getNumChildren()
+
+    def var_name(self, idx):
+        """Return a string representing a name used when displaying the quantifier.
+        >>> f = Function('f', IntSort(), IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> y = Int('y')
+        >>> q = ForAll([x, y], f(x, y) >= x)
+        >>> q.var_name(0)
+        'x'
+        >>> q.var_name(1)
+        'y'
+        """
+        if debugging():
+            _assert(idx < self.num_vars(), "Invalid variable idx")
+        return str(self.ast[0][idx])
+
+    def var_sort(self, idx):
+        """Return the sort of a bound variable.
+        >>> f = Function('f', IntSort(), RealSort(), IntSort())
+        >>> x = Int('x')
+        >>> y = Real('y')
+        >>> q = ForAll([x, y], f(x, y) >= x)
+        >>> q.var_sort(0)
+        Int
+        >>> q.var_sort(1)
+        Real
+        """
+        if debugging():
+            _assert(idx < self.num_vars(), "Invalid variable idx")
+        return _to_sort_ref(self.ast[0][idx].getSort(), self.ctx)
+
+    def children(self):
+        """Return a list containing a single element self.body()
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> q = ForAll(x, f(x) == 0)
+        >>> q.children()
+        [f(x) == 0]
+        """
+        return [self.body()]
+
+
+def is_quantifier(a):
+    """Return `True` if `a` is a Z3 quantifier.
+    >>> f = Function('f', IntSort(), IntSort())
+    >>> x = Int('x')
+    >>> q = ForAll(x, f(x) == 0)
+    >>> is_quantifier(q)
+    True
+    >>> is_quantifier(f(x))
+    False
+    """
+    return isinstance(a, QuantifierRef)
+
+
+def _mk_quant(vs, body, forall=True):
+    if not isinstance(vs, list):
+        vs = [vs]
+    c = vs[0].ctx
+    s = c.solver
+    consts = [v.ast for v in vs]
+    vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
+    subbed_body = body.ast.substitute(consts, vars_)
+    k = kinds.Forall if forall else kinds.Exists
+    ast = s.mkTerm(k, s.mkTerm(kinds.BoundVarList, vars_), subbed_body)
+    return QuantifierRef(ast, c)
+
+
+def ForAll(vs, body):
+    """Create a forall formula.
+    >>> f = Function('f', IntSort(), IntSort(), IntSort())
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> ForAll([x, y], f(x, y) >= x)
+    ForAll([x, y], f(x, y) >= x)
+    """
+    return _mk_quant(vs, body, True)
+
+
+def Exists(vs, body):
+    """Create a exists formula.
+    >>> f = Function('f', IntSort(), IntSort(), IntSort())
+    >>> x = Int('x')
+    >>> y = Int('y')
+    >>> q = Exists([x, y], f(x, y) >= x)
+    >>> q
+    Exists([x, y], f(x, y) >= x)
+    """
+    return _mk_quant(vs, body, False)
