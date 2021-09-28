@@ -7159,7 +7159,7 @@ def _mk_quant(vs, body, forall=True):
 
 
 def ForAll(vs, body):
-    """Create a Z3 forall formula.
+    """Create a forall formula.
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
@@ -7170,7 +7170,7 @@ def ForAll(vs, body):
 
 
 def Exists(vs, body):
-    """Create a Z3 exists formula.
+    """Create a exists formula.
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
