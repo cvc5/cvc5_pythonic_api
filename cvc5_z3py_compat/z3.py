@@ -7160,7 +7160,6 @@ def _mk_quant(vs, body, forall=True):
 
 def ForAll(vs, body):
     """Create a Z3 forall formula.
-    The parameters `weight`, `qid`, `skid`, `patterns` and `no_patterns` are optional annotations.
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
@@ -7170,9 +7169,8 @@ def ForAll(vs, body):
     return _mk_quant(vs, body, True)
 
 
-def Exists(vs, body, weight=1, qid="", skid="", patterns=[], no_patterns=[]):
+def Exists(vs, body):
     """Create a Z3 exists formula.
-    The parameters `weight`, `qif`, `skid`, `patterns` and `no_patterns` are optional annotations.
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
