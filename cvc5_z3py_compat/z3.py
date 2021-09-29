@@ -931,12 +931,11 @@ def _to_expr_ref(a, ctx, r=None):
         ast = a
     else:
         raise SMTException("Non-term/expression given to _to_expr_ref")
+    if ast.getKind() in [kinds.Forall, kinds.Exists, kinds.Lambda]:
+        return QuantifierRef(ast, ctx, r)
     sort = ast.getSort()
     if sort.isBoolean():
-        if ast.getKind() in [kinds.Forall, kinds.Exists]:
-            return QuantifierRef(ast, ctx, r)
-        else:
-            return BoolRef(ast, ctx, r)
+        return BoolRef(ast, ctx, r)
     if sort.isInteger():
         if ast.getKind() == kinds.ConstRational:
             return IntNumRef(ast, ctx, r)
@@ -7070,6 +7069,19 @@ class QuantifierRef(BoolRef):
         """
         return self.ast.getKind() == kinds.Exists
 
+    def is_lambda(self):
+        """Return `True` if `self` is a lambda expression.
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> q = Lambda(x, f(x))
+        >>> q.is_lambda()
+        True
+        >>> q = Exists(x, f(x) != 0)
+        >>> q.is_lambda()
+        False
+        """
+        return self.ast.getKind() == kinds.Lambda
+
     def body(self):
         """Return the expression being quantified.
         >>> f = Function('f', IntSort(), IntSort())
@@ -7145,7 +7157,10 @@ def is_quantifier(a):
     return isinstance(a, QuantifierRef)
 
 
-def _mk_quant(vs, body, forall=True):
+def _mk_quant(vs, body, kind):
+    """Make a quantifier or lambda.
+    Replaces constants in `vs` with bound variables.
+    """
     if not isinstance(vs, list):
         vs = [vs]
     c = vs[0].ctx
@@ -7153,8 +7168,7 @@ def _mk_quant(vs, body, forall=True):
     consts = [v.ast for v in vs]
     vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    k = kinds.Forall if forall else kinds.Exists
-    ast = s.mkTerm(k, s.mkTerm(kinds.BoundVarList, vars_), subbed_body)
+    ast = s.mkTerm(kind, s.mkTerm(kinds.BoundVarList, vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
@@ -7166,7 +7180,7 @@ def ForAll(vs, body):
     >>> ForAll([x, y], f(x, y) >= x)
     ForAll([x, y], f(x, y) >= x)
     """
-    return _mk_quant(vs, body, True)
+    return _mk_quant(vs, body, kinds.Forall)
 
 
 def Exists(vs, body):
@@ -7178,4 +7192,16 @@ def Exists(vs, body):
     >>> q
     Exists([x, y], f(x, y) >= x)
     """
-    return _mk_quant(vs, body, False)
+    return _mk_quant(vs, body, kinds.Exists)
+
+
+def Lambda(vs, body):
+    """Create a lambda expression.
+    >>> f = Function('f', IntSort(), IntSort(), IntSort())
+    >>> mem0 = Array('mem0', IntSort(), IntSort())
+    >>> lo, hi, e, i = Ints('lo hi e i')
+    >>> mem1 = Lambda([i], If(And(lo <= i, i <= hi), e, mem0[i]))
+    >>> mem1
+    Lambda(i, If(And(lo <= i, i <= hi), e, mem0[i]))
+    """
+    return _mk_quant(vs, body, kinds.Lambda)
