@@ -6648,10 +6648,18 @@ class Datatype:
         >>> Stream.declare('cons', ('car', IntSort()), ('cdr', Stream))
         >>> Stream.declare('nil')
         >>> Stream = Stream.create()
-        >>> Stream.nil
-        nil
-        >>> Stream.cons(10, Stream.nil)
-        cons(10, nil)
+        >>> a = Const('a', Stream)
+        >>> b = Const('b', Stream)
+        >>> s = Solver()
+        >>> s += a == Stream.cons(0, a)
+        >>> s.check()
+        sat
+        >>> s = Solver()
+        >>> s += a == Stream.cons(0, a)
+        >>> s += b == Stream.cons(0, b)
+        >>> s += a != b
+        >>> s.check()
+        unsat
         """
         return CreateDatatypes([self])[0]
 
