@@ -47,11 +47,27 @@ SMT exceptions:
 failed: sort mismatch
 
 
-TODO:
-    * multiple solvers
-    * FP
-    * DT
-    * quantifiers & variables
+Differences with Z3py:
+
+* Missing features:
+  * Patterns
+  * Models for uninterpreted sorts
+  * Pseudo-boolean counting constraints
+    * AtMost, AtLeast, PbLe, PbGe, PbEq
+  * HTML integration
+  * String, Sequences, Regexes
+  * User propagation hooks
+  * Special relations:
+    * PartialOrder, LinearOrder, TreeOrder, PiecewiseLinearOrder, TransitiveClosure
+  * Optimization
+  * FiniteDomainSort
+  * Fixedpoint API
+  * SMT2 file support
+  * Statistics
+* Not missing, but different
+  * Options
+    * as expected
+  * Some pretty printing
 """
 from .z3printer import *
 from fractions import Fraction
