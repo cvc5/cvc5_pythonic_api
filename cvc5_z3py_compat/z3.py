@@ -6705,6 +6705,7 @@ def CreateDatatypes(*ds):
     dt_decls = []
     for i in range(num):
         d = ds[i]
+        # Convert from True/False to None/not None
         isCoDatatype = None if not d.isCoDatatype else True
         decl = s.mkDatatypeDecl(d.name, isCoDatatype)
         dt_decls.append(decl)
