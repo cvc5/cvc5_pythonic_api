@@ -6597,10 +6597,11 @@ class Datatype:
     1
     """
 
-    def __init__(self, name, ctx=None):
+    def __init__(self, name, ctx=None, isCoDatatype=False):
         self.ctx = _get_ctx(ctx)
         self.name = name
         self.constructors = []
+        self.isCoDatatype = isCoDatatype
 
     def declare_core(self, name, rec_name, *args):
         if debugging():
@@ -6645,6 +6646,22 @@ class Datatype:
         nil
         >>> List.cons(10, List.nil)
         cons(10, nil)
+        >>> Stream = Datatype('Stream', isCoDatatype=True)
+        >>> Stream.declare('cons', ('car', IntSort()), ('cdr', Stream))
+        >>> Stream.declare('nil')
+        >>> Stream = Stream.create()
+        >>> a = Const('a', Stream)
+        >>> b = Const('b', Stream)
+        >>> s = Solver()
+        >>> s += a == Stream.cons(0, a)
+        >>> s.check()
+        sat
+        >>> s = Solver()
+        >>> s += a == Stream.cons(0, a)
+        >>> s += b == Stream.cons(0, b)
+        >>> s += a != b
+        >>> s.check()
+        unsat
         """
         return CreateDatatypes([self])[0]
 
@@ -6690,7 +6707,9 @@ def CreateDatatypes(*ds):
     dt_decls = []
     for i in range(num):
         d = ds[i]
-        decl = s.mkDatatypeDecl(d.name)
+        # Convert from True/False to None/not None
+        isCoDatatype = None if not d.isCoDatatype else True
+        decl = s.mkDatatypeDecl(d.name, isCoDatatype)
         dt_decls.append(decl)
         con_decls = []
         for j, c in enumerate(d.constructors):
