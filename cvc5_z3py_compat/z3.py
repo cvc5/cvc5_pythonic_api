@@ -704,6 +704,8 @@ def DeclareSort(name, ctx=None):
     True
     >>> a == b
     a == b
+    >>> solve(a == b)
+    [a = (as @uc_A_0 A), b = (as @uc_A_0 A)]
     """
     ctx = _get_ctx(ctx)
     return SortRef(ctx.solver.mkUninterpretedSort(name), ctx)

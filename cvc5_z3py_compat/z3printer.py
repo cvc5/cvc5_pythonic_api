@@ -347,7 +347,7 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode, kinds.Variable]:
+        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode, kinds.Variable, kinds.UninterpretedConstant]:
             return str(a.ast)
         if k == kinds.InternalKind:
             # Hack to handle DT selectors and constructors
@@ -1117,7 +1117,7 @@ class Formatter:
             elif k == kinds.ConstArray:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [kinds.Constant, kinds.InternalKind, kinds.Variable]:
+            elif k in [kinds.Constant, kinds.InternalKind, kinds.Variable, kinds.UninterpretedConstant]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
