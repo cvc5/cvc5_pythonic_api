@@ -6595,10 +6595,11 @@ class Datatype:
     1
     """
 
-    def __init__(self, name, ctx=None):
+    def __init__(self, name, ctx=None, isCoDatatype=False):
         self.ctx = _get_ctx(ctx)
         self.name = name
         self.constructors = []
+        self.isCoDatatype = isCoDatatype
 
     def declare_core(self, name, rec_name, *args):
         if debugging():
@@ -6642,6 +6643,14 @@ class Datatype:
         >>> List.nil
         nil
         >>> List.cons(10, List.nil)
+        cons(10, nil)
+        >>> Stream = Datatype('Stream', isCoDatatype=True)
+        >>> Stream.declare('cons', ('car', IntSort()), ('cdr', Stream))
+        >>> Stream.declare('nil')
+        >>> Stream = Stream.create()
+        >>> Stream.nil
+        nil
+        >>> Stream.cons(10, Stream.nil)
         cons(10, nil)
         """
         return CreateDatatypes([self])[0]
@@ -6688,7 +6697,8 @@ def CreateDatatypes(*ds):
     dt_decls = []
     for i in range(num):
         d = ds[i]
-        decl = s.mkDatatypeDecl(d.name)
+        isCoDatatype = None if not d.isCoDatatype else True
+        decl = s.mkDatatypeDecl(d.name, isCoDatatype)
         dt_decls.append(decl)
         con_decls = []
         for j, c in enumerate(d.constructors):
