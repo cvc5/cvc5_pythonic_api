@@ -1,0 +1,3 @@
+val(leaf(10))
+10
+cons(leaf(20), nil)

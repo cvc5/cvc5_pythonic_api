@@ -1,5 +1,7 @@
+.PHONY: test check fmt coverage
+
 test:
-	python z3test.py
+	./test/test.zsh
 
 check:
 	pyright ./cvc5_z3py_compat
