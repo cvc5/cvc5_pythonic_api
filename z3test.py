@@ -22,7 +22,7 @@ class TestExamples(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as tmpfile:
                 tee_path = tmpfile.name
                 sub.run(
-                    "python {} | tee {}".format(script_path, tee_path),
+                    "python3 {} | tee {}".format(script_path, tee_path),
                     shell=True,
                     check=True,
                 )
