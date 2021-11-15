@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 import os
@@ -6,7 +6,6 @@ import shutil
 import tempfile
 import subprocess as sub
 
-tempfile.NamedTemporaryFile
 root_dir = (
     sub.check_output("git rev-parse --show-toplevel", shell=True).decode().strip()
 )
@@ -18,21 +17,29 @@ class TestExamples(unittest.TestCase):
         pgm_path = os.path.join(path, "pgms")
         for example in os.listdir(pgm_path):
             script_path = os.path.join(pgm_path, example)
-            output_path = os.path.join(path, "pgm_outputs", f"{example}.out")
-            print(f"Testing {script_path}")
+            output_path = os.path.join(path, "pgm_outputs", "{}.out".format(example))
+            print("Testing {}".format(script_path))
             with tempfile.NamedTemporaryFile() as tmpfile:
                 tee_path = tmpfile.name
                 sub.run(
-                    f"python {script_path} | tee {tee_path}", shell=True, check=True
+                    "python {} | tee {}".format(script_path, tee_path),
+                    shell=True,
+                    check=True,
                 )
                 try:
-                    sub.run(f"diff {output_path} {tee_path}", shell=True, check=True)
+                    sub.run(
+                        "diff {} {}".format(output_path, tee_path),
+                        shell=True,
+                        check=True,
+                    )
                 except sub.CalledProcessError as e:
                     print("Output mismatch")
-                    print(f"Expected: {output_path}")
-                    print(f"Actual: {tee_path}")
+                    print("Expected output in: {}".format(output_path))
+                    f = open(tee_path, "r")
+                    print("Actual ouput: {}".format(f.read()))
+                    f.close()
                     raise e
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
