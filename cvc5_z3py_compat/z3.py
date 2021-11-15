@@ -4764,7 +4764,7 @@ class Solver(object):
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
     def set(self, **kwargs):
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
             _assert(isinstance(v, str), "non-string key " + str(v))
             self.solver.setOption(k, v)
