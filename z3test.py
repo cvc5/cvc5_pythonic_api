@@ -19,26 +19,20 @@ class TestExamples(unittest.TestCase):
             script_path = os.path.join(pgm_path, example)
             output_path = os.path.join(path, "pgm_outputs", "{}.out".format(example))
             print("Testing {}".format(script_path))
-            with tempfile.NamedTemporaryFile() as tmpfile:
-                tee_path = tmpfile.name
-                sub.run(
-                    "python3 {} | tee {}".format(script_path, tee_path),
-                    shell=True,
-                    check=True,
-                )
-                try:
-                    sub.run(
-                        "diff {} {}".format(output_path, tee_path),
-                        shell=True,
-                        check=True,
-                    )
-                except sub.CalledProcessError as e:
-                    print("Output mismatch")
-                    print("Expected output in: {}".format(output_path))
-                    f = open(tee_path, "r")
-                    print("Actual ouput: {}".format(f.read()))
-                    f.close()
-                    raise e
+            process_result = sub.run(
+                ["python3", script_path],
+                stdout=sub.PIPE,
+                stderr=sub.STDOUT,
+                check=True,
+            )
+            with open(output_path, "r") as f:
+                expected_output = f.read()
+
+            if expected_output != process_result.stdout.decode():
+                print("Output mismatch")
+                print("Expected output: {}".format(process_result.stdout.decode()))
+                print("Actual ouput: {}".format(expected_output))
+                assert False, "Output mismatch"
 
 
 if __name__ == "__main__":
