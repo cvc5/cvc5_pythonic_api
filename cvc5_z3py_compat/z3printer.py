@@ -97,14 +97,14 @@ _z3_op_to_str = {
     kinds.SeqNth: "Nth",
     kinds.SeqIndexof: "IndexOf",
     kinds.SeqLength: "Length",
-    kinds.Subset: "subset",
-    kinds.Setminus: "setminus",
-    kinds.Complement: "complement",
-    kinds.Singleton: "singleton",
-    kinds.Insert: "insert",
-    kinds.Intersection: "intersection",
-    kinds.Union: "union",
-    kinds.Member: "member",
+    kinds.SetSubset: "subset",
+    kinds.SetMinus: "setminus",
+    kinds.SetComplement: "complement",
+    kinds.SetSingleton: "singleton",
+    kinds.SetInsert: "insert",
+    kinds.SetInter: "intersection",
+    kinds.SetUnion: "union",
+    kinds.SetMember: "member",
     kinds.StringToInt: "StrToInt",
     kinds.StringFromInt: "IntToStr",
     # kinds.Seq_in_re: "InRe",
@@ -713,11 +713,11 @@ class Formatter:
 
     def pp_const(self, a):
         k = a.kind()
-        if k == kinds.Emptyset:
+        if k == kinds.SetEmpty:
             return self.pp_set("Empty", a)
         # elif k == Z3_OP_SEQ_EMPTY:
         #     return self.pp_set("Empty", a)
-        elif k == kinds.UniverseSet:
+        elif k == kinds.SetUniverse:
             return self.pp_set("Full", a)
         return self.pp_name(a)
 
