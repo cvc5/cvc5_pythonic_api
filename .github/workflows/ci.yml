@@ -15,19 +15,19 @@ jobs:
         path: cvc5
       
     - name: Install dependencies
-      uses: cvc5/.github/actions/install-dependencies
+      uses: ./cvc5/.github/actions/install-dependencies
       with:
         with-documentation: false
         with-python-bindings: true
 
     - name: Setup caches
-      uses: cvc5/.github/actions/setup-cache
+      uses: ./cvc5/.github/actions/setup-cache
       with:
         cache-key: cvc5-z3py-compat
 
     - name: Configure and build
       id: configure-and-build
-      uses: cvc5/.github/actions/configure-and-build
+      uses: ./cvc5/.github/actions/configure-and-build
       with:
         configure-config: production --auto-download --python-bindings
         build-static: false
