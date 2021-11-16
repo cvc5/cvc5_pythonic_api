@@ -713,11 +713,11 @@ class Formatter:
 
     def pp_const(self, a):
         k = a.kind()
-        if k == kinds.Emptyset:
+        if k == kinds.SetEmpty:
             return self.pp_set("Empty", a)
         # elif k == Z3_OP_SEQ_EMPTY:
         #     return self.pp_set("Empty", a)
-        elif k == kinds.UniverseSet:
+        elif k == kinds.SetUniverse:
             return self.pp_set("Full", a)
         return self.pp_name(a)
 

@@ -1134,8 +1134,8 @@ def is_const(a):
         kinds.ConstBV,
         kinds.ConstFP,
         kinds.ConstRational,
-        kinds.Emptyset,
-        kinds.UniverseSet,
+        kinds.SetEmpty,
+        kinds.SetUniverse,
         kinds.Constant,
     ]
 
@@ -2890,7 +2890,7 @@ class BitVecSortRef(SortRef):
         >>> b.size()
         32
         """
-        return self.ast.getBVSize()
+        return self.ast.getBitVectorSize()
 
     def subsort(self, other):
         return is_bv_sort(other) and self.size() < other.size()
@@ -4292,7 +4292,7 @@ class SetRef(ExprRef):
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
-            self.ctx.solver.mkTerm(kinds.Member, arg.ast, self.ast), self.ctx
+            self.ctx.solver.mkTerm(kinds.SetMember, arg.ast, self.ast), self.ctx
         )
 
     def default(self):
@@ -4353,7 +4353,7 @@ def SetUnion(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(kinds.Union, [a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.SetUnion, [a.ast for a in args]), ctx)
 
 
 def SetIntersect(*args):
@@ -4365,7 +4365,7 @@ def SetIntersect(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(kinds.Intersection, [a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.SetInter, [a.ast for a in args]), ctx)
 
 
 def SetAdd(s, e):
@@ -4378,7 +4378,7 @@ def SetAdd(s, e):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     e = _py2expr(e, ctx)
-    return SetRef(ctx.solver.mkTerm(kinds.Insert, e.ast, s.ast), ctx, True)
+    return SetRef(ctx.solver.mkTerm(kinds.SetInsert, e.ast, s.ast), ctx, True)
 
 
 def SetDel(s, e):
@@ -4397,7 +4397,7 @@ def SetComplement(s):
     complement(a)
     """
     ctx = s.ctx
-    return ArrayRef(ctx.solver.mkTerm(kinds.Complement, s.ast), ctx)
+    return ArrayRef(ctx.solver.mkTerm(kinds.SetComplement, s.ast), ctx)
 
 
 def Singleton(s):
@@ -4407,7 +4407,7 @@ def Singleton(s):
     """
     s = _py2expr(s)
     ctx = s.ctx
-    return SetRef(ctx.solver.mkTerm(kinds.Singleton, s.ast), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.SetSingleton, s.ast), ctx)
 
 
 def SetDifference(a, b):
@@ -4418,7 +4418,7 @@ def SetDifference(a, b):
     setminus(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return SetRef(ctx.solver.mkTerm(kinds.Setminus, a.ast, b.ast), ctx)
+    return SetRef(ctx.solver.mkTerm(kinds.SetMinus, a.ast, b.ast), ctx)
 
 
 def SetMinus(a, b):
@@ -4439,7 +4439,7 @@ def IsMember(e, s):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     arg = s.domain().cast(e)
-    return BoolRef(ctx.solver.mkTerm(kinds.Member, arg.ast, s.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.SetMember, arg.ast, s.ast), ctx)
 
 
 def IsSubset(a, b):
@@ -4450,7 +4450,7 @@ def IsSubset(a, b):
     subset(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return BoolRef(ctx.solver.mkTerm(kinds.Subset, a.ast, b.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(kinds.SetSubset, a.ast, b.ast), ctx)
 
 
 #########################################
@@ -5262,7 +5262,7 @@ class FPSortRef(SortRef):
         >>> b.ebits()
         8
         """
-        return self.ast.getFPExponentSize()
+        return self.ast.getFloatingPointExponentSize()
 
     def sbits(self):
         """Retrieves the number of bits reserved for the significand in the FloatingPoint sort `self`.
@@ -5270,7 +5270,7 @@ class FPSortRef(SortRef):
         >>> b.sbits()
         24
         """
-        return self.ast.getFPSignificandSize()
+        return self.ast.getFloatingPointSignificandSize()
 
     def cast(self, val):
         """Try to cast `val` as a floating-point expression.
@@ -7205,7 +7205,7 @@ def _mk_quant(vs, body, kind):
     consts = [v.ast for v in vs]
     vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    ast = s.mkTerm(kind, s.mkTerm(kinds.BoundVarList, vars_), subbed_body)
+    ast = s.mkTerm(kind, s.mkTerm(kinds.VariableList, vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
