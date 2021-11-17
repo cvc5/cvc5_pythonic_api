@@ -39,18 +39,17 @@ jobs:
     - name: Setup dependencies cache
       uses: actions/cache@v2
       with:
-        path: cvc5/build-shared/deps
+        path: cvc5/build/deps
         key: cvc5-z3py-compat-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
 
-    - name: Configure and build
-      id: configure-and-build
-      uses: ./cvc5/.github/actions/configure-and-build
-      with:
-        configure-config: production --auto-download --python-bindings
-        build-static: false
+    - name: Build cvc5
+      run: |
+        ./configure.sh production --auto-download --python-bindings
+        cd build/
+        make -j${{ env.num_proc }}
 
     - name: Test z3py compatibility API
       run: |
         make test
       env:
-        PYTHONPATH: cvc5/build_shared/src/api/python:.
+        PYTHONPATH: cvc5/build/src/api/python:.
