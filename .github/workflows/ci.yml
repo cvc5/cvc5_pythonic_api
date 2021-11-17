@@ -20,10 +20,27 @@ jobs:
         with-documentation: false
         with-python-bindings: true
 
-    - name: Setup caches
-      uses: ./cvc5/.github/actions/setup-cache
+    - name: Setup ccache cache
+      uses: actions/cache@v2
       with:
-        cache-key: cvc5-z3py-compat
+        path: ccache-dir
+        key: cvc5-z3py-compat-ccache-${{ github.sha }}
+        restore-keys: cvc5-z3py-compat-ccache-
+
+    - name: Configure ccache
+      shell: bash
+      run: |
+        ccache --set-config=cache_dir=${{ github.workspace }}/ccache-dir
+        ccache --set-config=compression=true
+        ccache --set-config=compression_level=6
+        ccache -M 500M
+        ccache -z
+
+    - name: Setup dependencies cache
+      uses: actions/cache@v2
+      with:
+        path: cvc5/build-shared/deps
+        key: cvc5-z3py-compat-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
 
     - name: Configure and build
       id: configure-and-build
@@ -35,3 +52,5 @@ jobs:
     - name: Test z3py compatibility API
       run: |
         make test
+      env:
+        PYTHONPATH: cvc5/build_shared/src/api/python:.
