@@ -1,0 +1,56 @@
+on: [push, pull_request]
+name: CI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - uses: actions/checkout@v2
+      with:
+        repository: cvc5/cvc5
+        path: cvc5
+      
+    - name: Install dependencies
+      uses: ./cvc5/.github/actions/install-dependencies
+      with:
+        with-documentation: false
+        with-python-bindings: true
+
+    - name: Setup ccache cache
+      uses: actions/cache@v2
+      with:
+        path: ccache-dir
+        key: cvc5-z3py-compat-ccache-${{ github.sha }}
+        restore-keys: cvc5-z3py-compat-ccache-
+
+    - name: Configure ccache
+      shell: bash
+      run: |
+        ccache --set-config=cache_dir=${{ github.workspace }}/ccache-dir
+        ccache --set-config=compression=true
+        ccache --set-config=compression_level=6
+        ccache -M 500M
+        ccache -z
+
+    - name: Setup dependencies cache
+      uses: actions/cache@v2
+      with:
+        path: cvc5/build/deps
+        key: cvc5-z3py-compat-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
+
+    - name: Build cvc5
+      run: |
+        cd cvc5/
+        ./configure.sh production --auto-download --python-bindings
+        cd build/
+        make -j${{ env.num_proc }}
+
+    - name: Test z3py compatibility API
+      run: |
+        make test
+      env:
+        PYTHONPATH: cvc5/build/src/api/python:.
