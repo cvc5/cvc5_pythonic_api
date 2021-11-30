@@ -23,15 +23,14 @@ class TestExamples(unittest.TestCase):
                 ["python3", script_path],
                 stdout=sub.PIPE,
                 stderr=sub.STDOUT,  # merge output streams
-                check=True,  # Converts subprocess failure to a python exception
             )
             with open(output_path, "r") as f:
                 expected_output = f.read()
 
             if expected_output != process_result.stdout.decode():
                 print("Output mismatch")
-                print("Expected output: {}".format(process_result.stdout.decode()))
-                print("Actual ouput: {}".format(expected_output))
+                print("Expected ouput: <{}>".format(expected_output))
+                print("Actual output: <{}>".format(process_result.stdout.decode()))
                 assert False, "Output mismatch"
 
 
