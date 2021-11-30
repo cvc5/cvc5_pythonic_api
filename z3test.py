@@ -29,8 +29,8 @@ class TestExamples(unittest.TestCase):
 
             if expected_output != process_result.stdout.decode():
                 print("Output mismatch")
-                print("Expected output: {}".format(process_result.stdout.decode()))
-                print("Actual ouput: {}".format(expected_output))
+                print("Expected output: <{}>".format(process_result.stdout.decode()))
+                print("Actual ouput: <{}>".format(expected_output))
                 assert False, "Output mismatch"
 
 
