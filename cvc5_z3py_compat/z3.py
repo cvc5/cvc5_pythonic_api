@@ -1441,6 +1441,18 @@ def is_implies(a):
     return is_app_of(a, kinds.Implies)
 
 
+def is_xor(a):
+    """Return `True` if `a` is an SMT XOR expression.
+
+    >>> p, q = Bools('p q')
+    >>> is_xor(Xor(p, q))
+    True
+    >>> is_xor(And(p, q))
+    False
+    """
+    return is_app_of(a, kinds.Xor)
+
+
 def is_not(a):
     """Return `True` if `a` is an SMT not expression.
 
