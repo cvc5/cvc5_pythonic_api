@@ -23,7 +23,6 @@ class TestExamples(unittest.TestCase):
                 ["python3", script_path],
                 stdout=sub.PIPE,
                 stderr=sub.STDOUT,  # merge output streams
-                check=True,  # Converts subprocess failure to a python exception
             )
             with open(output_path, "r") as f:
                 expected_output = f.read()
