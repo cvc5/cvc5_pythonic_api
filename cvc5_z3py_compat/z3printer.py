@@ -14,7 +14,7 @@ import itertools as it
 
 from cvc5_z3py_compat import z3 as cvc
 import pycvc5 as pc
-from pycvc5 import kinds
+from pycvc5 import Kind
 
 
 def _assert(cond, msg):
@@ -29,169 +29,169 @@ def _assert(cond, msg):
 
 # Z3 operator names to Z3Py
 _z3_op_to_str = {
-    kinds.Equal: "==",
-    kinds.Distinct: "Distinct",
-    kinds.Ite: "If",
-    kinds.And: "And",
-    kinds.Or: "Or",
-    kinds.Xor: "Xor",
-    kinds.Not: "Not",
-    kinds.Plus: "+",
-    kinds.Minus: "-",
-    kinds.Pow: "**",
-    kinds.Uminus: "-",
-    kinds.Mult: "*",
-    kinds.Implies: "Implies",
-    kinds.IntsDivision: "/",
-    kinds.Division: "/",
-    kinds.IntsModulus: "%",
-    kinds.ToReal: "ToReal",
-    kinds.ToInteger: "ToInt",
-    kinds.IsInteger: "IsInt",
-    kinds.BVAdd: "+",
-    kinds.BVSub: "-",
-    kinds.BVMult: "*",
-    kinds.BVOr: "|",
-    kinds.BVAnd: "&",
-    kinds.BVNot: "~",
-    kinds.BVXor: "^",
-    kinds.BVNeg: "-",
-    kinds.BVUdiv: "UDiv",
-    kinds.BVSdiv: "/",
-    kinds.BVSmod: "%",
-    kinds.BVSrem: "SRem",
-    kinds.BVUrem: "URem",
-    kinds.BVRotateLeft: "RotateLeft",
-    kinds.BVRotateRight: "RotateRight",
-    kinds.Leq: "<=",
-    kinds.Lt: "<",
-    kinds.Geq: ">=",
-    kinds.Gt: ">",
-    kinds.BVSle: "<=",
-    kinds.BVSlt: "<",
-    kinds.BVSge: ">=",
-    kinds.BVSgt: ">",
-    kinds.BVUle: "ULE",
-    kinds.BVUlt: "ULT",
-    kinds.BVUge: "UGE",
-    kinds.BVUgt: "UGT",
-    kinds.BVSignExtend: "SignExt",
-    kinds.BVZeroExtend: "ZeroExt",
-    kinds.BVRepeat: "RepeatBitVec",
-    kinds.BVAshr: ">>",
-    kinds.BVShl: "<<",
-    kinds.BVLshr: "LShR",
-    kinds.BVConcat: "Concat",
-    kinds.BVExtract: "Extract",
-    kinds.BVToNat: "BV2Int",
-    kinds.Select: "Select",
-    kinds.Store: "Store",
-    kinds.ConstArray: "K",
-    kinds.SeqConcat: "Concat",
-    kinds.SeqPrefix: "PrefixOf",
-    kinds.SeqSuffix: "SuffixOf",
-    kinds.SeqUnit: "Unit",
-    kinds.SeqContains: "Contains",
-    kinds.SeqReplace: "Replace",
-    kinds.SeqAt: "At",
-    kinds.SeqNth: "Nth",
-    kinds.SeqIndexof: "IndexOf",
-    kinds.SeqLength: "Length",
-    kinds.SetSubset: "subset",
-    kinds.SetMinus: "setminus",
-    kinds.SetComplement: "complement",
-    kinds.SetSingleton: "singleton",
-    kinds.SetInsert: "insert",
-    kinds.SetInter: "intersection",
-    kinds.SetUnion: "union",
-    kinds.SetMember: "member",
-    kinds.StringToInt: "StrToInt",
-    kinds.StringFromInt: "IntToStr",
-    # kinds.Seq_in_re: "InRe",
-    # kinds.Seq_to_re: "Re",
-    kinds.RegexpPlus: "Plus",
-    kinds.RegexpStar: "Star",
-    kinds.RegexpUnion: "Union",
-    kinds.RegexpRange: "Range",
-    kinds.RegexpInter: "Intersect",
-    kinds.RegexpComplement: "Complement",
-    kinds.FPIsNan: "fpIsNaN",
-    kinds.FPIsInf: "fpIsInf",
-    kinds.FPIsZ: "fpIsZero",
-    kinds.FPIsN: "fpIsNormal",
-    kinds.FPIsSn: "fpIsMinusnormal",
-    kinds.FPIsNeg: "fpIsNegative",
-    kinds.FPIsPos: "fpIsPositive",
+    Kind.Equal: "==",
+    Kind.Distinct: "Distinct",
+    Kind.Ite: "If",
+    Kind.And: "And",
+    Kind.Or: "Or",
+    Kind.Xor: "Xor",
+    Kind.Not: "Not",
+    Kind.Plus: "+",
+    Kind.Minus: "-",
+    Kind.Pow: "**",
+    Kind.Uminus: "-",
+    Kind.Mult: "*",
+    Kind.Implies: "Implies",
+    Kind.IntsDivision: "/",
+    Kind.Division: "/",
+    Kind.IntsModulus: "%",
+    Kind.ToReal: "ToReal",
+    Kind.ToInteger: "ToInt",
+    Kind.IsInteger: "IsInt",
+    Kind.BVAdd: "+",
+    Kind.BVSub: "-",
+    Kind.BVMult: "*",
+    Kind.BVOr: "|",
+    Kind.BVAnd: "&",
+    Kind.BVNot: "~",
+    Kind.BVXor: "^",
+    Kind.BVNeg: "-",
+    Kind.BVUdiv: "UDiv",
+    Kind.BVSdiv: "/",
+    Kind.BVSmod: "%",
+    Kind.BVSrem: "SRem",
+    Kind.BVUrem: "URem",
+    Kind.BVRotateLeft: "RotateLeft",
+    Kind.BVRotateRight: "RotateRight",
+    Kind.Leq: "<=",
+    Kind.Lt: "<",
+    Kind.Geq: ">=",
+    Kind.Gt: ">",
+    Kind.BVSle: "<=",
+    Kind.BVSlt: "<",
+    Kind.BVSge: ">=",
+    Kind.BVSgt: ">",
+    Kind.BVUle: "ULE",
+    Kind.BVUlt: "ULT",
+    Kind.BVUge: "UGE",
+    Kind.BVUgt: "UGT",
+    Kind.BVSignExtend: "SignExt",
+    Kind.BVZeroExtend: "ZeroExt",
+    Kind.BVRepeat: "RepeatBitVec",
+    Kind.BVAshr: ">>",
+    Kind.BVShl: "<<",
+    Kind.BVLshr: "LShR",
+    Kind.BVConcat: "Concat",
+    Kind.BVExtract: "Extract",
+    Kind.BVToNat: "BV2Int",
+    Kind.Select: "Select",
+    Kind.Store: "Store",
+    Kind.ConstArray: "K",
+    Kind.SeqConcat: "Concat",
+    Kind.SeqPrefix: "PrefixOf",
+    Kind.SeqSuffix: "SuffixOf",
+    Kind.SeqUnit: "Unit",
+    Kind.SeqContains: "Contains",
+    Kind.SeqReplace: "Replace",
+    Kind.SeqAt: "At",
+    Kind.SeqNth: "Nth",
+    Kind.SeqIndexof: "IndexOf",
+    Kind.SeqLength: "Length",
+    Kind.SetSubset: "subset",
+    Kind.SetMinus: "setminus",
+    Kind.SetComplement: "complement",
+    Kind.SetSingleton: "singleton",
+    Kind.SetInsert: "insert",
+    Kind.SetInter: "intersection",
+    Kind.SetUnion: "union",
+    Kind.SetMember: "member",
+    Kind.StringToInt: "StrToInt",
+    Kind.StringFromInt: "IntToStr",
+    # Kind.Seq_in_re: "InRe",
+    # Kind.Seq_to_re: "Re",
+    Kind.RegexpPlus: "Plus",
+    Kind.RegexpStar: "Star",
+    Kind.RegexpUnion: "Union",
+    Kind.RegexpRange: "Range",
+    Kind.RegexpInter: "Intersect",
+    Kind.RegexpComplement: "Complement",
+    Kind.FPIsNan: "fpIsNaN",
+    Kind.FPIsInf: "fpIsInf",
+    Kind.FPIsZ: "fpIsZero",
+    Kind.FPIsN: "fpIsNormal",
+    Kind.FPIsSn: "fpIsMinusnormal",
+    Kind.FPIsNeg: "fpIsNegative",
+    Kind.FPIsPos: "fpIsPositive",
 }
 
 # List of infix operators
 _z3_infix = [
-    kinds.Equal,
-    kinds.Plus,
-    kinds.Pow,
-    kinds.Minus,
-    kinds.Mult,
-    kinds.Division,
-    kinds.IntsDivision,
-    kinds.IntsModulus,
-    kinds.Leq,
-    kinds.Lt,
-    kinds.Geq,
-    kinds.Gt,
-    kinds.BVAdd,
-    kinds.BVSub,
-    kinds.BVMult,
-    kinds.BVSdiv,
-    kinds.BVSmod,
-    kinds.BVOr,
-    kinds.BVAnd,
-    kinds.BVXor,
-    kinds.BVSdiv,
-    kinds.BVSle,
-    kinds.BVSlt,
-    kinds.BVSge,
-    kinds.BVSgt,
-    kinds.BVAshr,
-    kinds.BVShl,
+    Kind.Equal,
+    Kind.Plus,
+    Kind.Pow,
+    Kind.Minus,
+    Kind.Mult,
+    Kind.Division,
+    Kind.IntsDivision,
+    Kind.IntsModulus,
+    Kind.Leq,
+    Kind.Lt,
+    Kind.Geq,
+    Kind.Gt,
+    Kind.BVAdd,
+    Kind.BVSub,
+    Kind.BVMult,
+    Kind.BVSdiv,
+    Kind.BVSmod,
+    Kind.BVOr,
+    Kind.BVAnd,
+    Kind.BVXor,
+    Kind.BVSdiv,
+    Kind.BVSle,
+    Kind.BVSlt,
+    Kind.BVSge,
+    Kind.BVSgt,
+    Kind.BVAshr,
+    Kind.BVShl,
 ]
 
-_z3_unary = [kinds.Uminus, kinds.BVNeg, kinds.BVNot]
+_z3_unary = [Kind.Uminus, Kind.BVNeg, Kind.BVNot]
 
 # Precedence
 _z3_precedence = {
-    kinds.Pow: 0,
-    kinds.Uminus: 1,
-    kinds.BVNeg: 1,
-    kinds.BVNot: 1,
-    kinds.Mult: 2,
-    kinds.Division: 2,
-    kinds.IntsDivision: 2,
-    kinds.IntsModulus: 2,
-    kinds.BVMult: 2,
-    kinds.BVSdiv: 2,
-    kinds.BVSmod: 2,
-    kinds.Plus: 3,
-    kinds.Minus: 3,
-    kinds.BVAdd: 3,
-    kinds.BVSub: 3,
-    kinds.BVAshr: 4,
-    kinds.BVShl: 4,
-    kinds.BVAnd: 5,
-    kinds.BVXor: 6,
-    kinds.BVOr: 7,
-    kinds.Leq: 8,
-    kinds.Lt: 8,
-    kinds.Geq: 8,
-    kinds.Gt: 8,
-    kinds.Equal: 8,
-    kinds.BVSle: 8,
-    kinds.BVSlt: 8,
-    kinds.BVSge: 8,
-    kinds.BVSgt: 8,
-    kinds.BVUle: 8,
-    kinds.BVUlt: 8,
-    kinds.BVUge: 8,
-    kinds.BVUgt: 8,
+    Kind.Pow: 0,
+    Kind.Uminus: 1,
+    Kind.BVNeg: 1,
+    Kind.BVNot: 1,
+    Kind.Mult: 2,
+    Kind.Division: 2,
+    Kind.IntsDivision: 2,
+    Kind.IntsModulus: 2,
+    Kind.BVMult: 2,
+    Kind.BVSdiv: 2,
+    Kind.BVSmod: 2,
+    Kind.Plus: 3,
+    Kind.Minus: 3,
+    Kind.BVAdd: 3,
+    Kind.BVSub: 3,
+    Kind.BVAshr: 4,
+    Kind.BVShl: 4,
+    Kind.BVAnd: 5,
+    Kind.BVXor: 6,
+    Kind.BVOr: 7,
+    Kind.Leq: 8,
+    Kind.Lt: 8,
+    Kind.Geq: 8,
+    Kind.Gt: 8,
+    Kind.Equal: 8,
+    Kind.BVSle: 8,
+    Kind.BVSlt: 8,
+    Kind.BVSge: 8,
+    Kind.BVSgt: 8,
+    Kind.BVUle: 8,
+    Kind.BVUlt: 8,
+    Kind.BVUge: 8,
+    Kind.BVUgt: 8,
 }
 
 _z3_fpa_rm_strings = {
@@ -211,71 +211,71 @@ _z3_fpa_rm_short_strings = {
 
 # FPA operators
 _z3_op_to_fpa_normal_str = {
-    kinds.FPAdd: "fpAdd",
-    kinds.FPSub: "fpSub",
-    kinds.FPNeg: "fpNeg",
-    kinds.FPMult: "fpMul",
-    kinds.FPDiv: "fpDiv",
-    kinds.FPRem: "fpRem",
-    kinds.FPAbs: "fpAbs",
-    kinds.FPMin: "fpMin",
-    kinds.FPMax: "fpMax",
-    kinds.FPFma: "fpFMA",
-    kinds.FPSqrt: "fpSqrt",
-    kinds.FPRti: "fpRoundToIntegral",
+    Kind.FPAdd: "fpAdd",
+    Kind.FPSub: "fpSub",
+    Kind.FPNeg: "fpNeg",
+    Kind.FPMult: "fpMul",
+    Kind.FPDiv: "fpDiv",
+    Kind.FPRem: "fpRem",
+    Kind.FPAbs: "fpAbs",
+    Kind.FPMin: "fpMin",
+    Kind.FPMax: "fpMax",
+    Kind.FPFma: "fpFMA",
+    Kind.FPSqrt: "fpSqrt",
+    Kind.FPRti: "fpRoundToIntegral",
 
-    kinds.FPEq: "fpEQ",
-    kinds.FPLt: "fpLT",
-    kinds.FPGt: "fpGT",
-    kinds.FPLeq: "fpLEQ",
-    kinds.FPGeq: "fpGEQ",
+    Kind.FPEq: "fpEQ",
+    Kind.FPLt: "fpLT",
+    Kind.FPGt: "fpGT",
+    Kind.FPLeq: "fpLEQ",
+    Kind.FPGeq: "fpGEQ",
 
-    kinds.FPToFpGeneric: "fpFP",
-    kinds.FPToFpFP: "fpToFP",
-    kinds.FPToFpUnsignedBV: "fpToFP",
-    kinds.FPToFpSignedBV: "fpToFP",
-    kinds.FPToFpReal: "fpToFP",
-    kinds.FPToFpIeeeBV: "fpToFP",
-    kinds.FPToUbv: "fpToUBV",
-    kinds.FPToSbv: "fpToSBV",
-    kinds.FPToReal: "fpToReal",
+    Kind.FPToFpGeneric: "fpFP",
+    Kind.FPToFpFP: "fpToFP",
+    Kind.FPToFpUnsignedBV: "fpToFP",
+    Kind.FPToFpSignedBV: "fpToFP",
+    Kind.FPToFpReal: "fpToFP",
+    Kind.FPToFpIeeeBV: "fpToFP",
+    Kind.FPToUbv: "fpToUBV",
+    Kind.FPToSbv: "fpToSBV",
+    Kind.FPToReal: "fpToReal",
 }
 
 _z3_op_to_fpa_pretty_str = {
-    kinds.FPAdd: "+", kinds.FPSub: "-", kinds.FPMult: "*", kinds.FPDiv: "/",
-    kinds.FPRem: "%", kinds.FPNeg: "-",
+    Kind.FPAdd: "+", Kind.FPSub: "-", Kind.FPMult: "*", Kind.FPDiv: "/",
+    Kind.FPRem: "%", Kind.FPNeg: "-",
 
-    kinds.FPEq: "fpEQ", kinds.FPLt: "<", kinds.FPGt: ">", kinds.FPLeq: "<=",
-    kinds.FPGeq: ">="
+    Kind.FPEq: "fpEQ", Kind.FPLt: "<", Kind.FPGt: ">", Kind.FPLeq: "<=",
+    Kind.FPGeq: ">="
 }
 
 _z3_fpa_infix = [
-    kinds.FPAdd, kinds.FPSub, kinds.FPMult, kinds.FPDiv, kinds.FPRem,
-    kinds.FPLt, kinds.FPGt, kinds.FPLeq, kinds.FPGeq
+    Kind.FPAdd, Kind.FPSub, Kind.FPMult, Kind.FPDiv, Kind.FPRem,
+    Kind.FPLt, Kind.FPGt, Kind.FPLeq, Kind.FPGeq
 ]
 
 def _is_assoc(k):
     return (
-        k == kinds.BVOr
-        or k == kinds.BVXor
-        or k == kinds.BVAnd
-        or k == kinds.Plus
-        or k == kinds.BVAdd
-        or k == kinds.Mult
-        or k == kinds.BVMult
+        k == Kind.BVOr
+        or k == Kind.BVXor
+        or k == Kind.BVAnd
+        or k == Kind.Plus
+        or k == Kind.BVAdd
+        or k == Kind.Mult
+        or k == Kind.BVMult
     )
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == kinds.Minus or k == kinds.BVSub
+    return _is_assoc(k) or k == Kind.Minus or k == Kind.BVSub
 
 
 def _is_add(k):
-    return k == kinds.Plus or k == kinds.BVAdd
+    return k == Kind.Plus or k == Kind.BVAdd
 
 
 def _is_sub(k):
-    return k == kinds.Minus or k == kinds.BVSub
+    return k == Kind.Minus or k == Kind.BVSub
 
 
 if sys.version < "3":
@@ -292,14 +292,14 @@ else:
 
 
 _z3_infix_compact = [
-    kinds.Mult,
-    kinds.BVMult,
-    kinds.Division,
-    kinds.Pow,
-    kinds.IntsDivision,
-    kinds.IntsModulus,
-    kinds.BVSdiv,
-    kinds.BVSmod,
+    Kind.Mult,
+    Kind.BVMult,
+    Kind.Division,
+    Kind.Pow,
+    Kind.IntsDivision,
+    Kind.IntsModulus,
+    Kind.BVSdiv,
+    Kind.BVSmod,
 ]
 
 _ellipses = "..."
@@ -347,9 +347,9 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [kinds.Constant, kinds.ConstFP, kinds.ConstRoundingmode, kinds.Variable, kinds.UninterpretedConstant]:
+        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedConstant]:
             return str(a.ast)
-        if k == kinds.InternalKind:
+        if k == Kind.InternalKind:
             # Hack to handle DT selectors and constructors
             return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
@@ -713,11 +713,11 @@ class Formatter:
 
     def pp_const(self, a):
         k = a.kind()
-        if k == kinds.SetEmpty:
+        if k == Kind.SetEmpty:
             return self.pp_set("Empty", a)
         # elif k == Z3_OP_SEQ_EMPTY:
         #     return self.pp_set("Empty", a)
-        elif k == kinds.SetUniverse:
+        elif k == Kind.SetUniverse:
             return self.pp_set("Full", a)
         return self.pp_name(a)
 
@@ -853,7 +853,7 @@ class Formatter:
                     r.append(to_format(" "))
                     r.append(arg2)
                     return compose(r)
-            elif k == kinds.FPNeg:
+            elif k == Kind.FPNeg:
                 return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
 
         if k in _z3_op_to_fpa_normal_str:
@@ -1098,26 +1098,26 @@ class Formatter:
             return self.pp_const(a)
         else:
             k = a.kind()
-            if k == kinds.Pow:
+            if k == Kind.Pow:
                 return self.pp_power(a, d, xs)
-            if k == kinds.Distinct:
+            if k == Kind.Distinct:
                 return self.pp_distinct(a, d, xs)
-            elif k == kinds.Select:
+            elif k == Kind.Select:
                 return self.pp_select(a, d, xs)
-            elif k in [kinds.BVSignExtend, kinds.BVZeroExtend, kinds.BVRepeat]:
+            elif k in [Kind.BVSignExtend, Kind.BVZeroExtend, Kind.BVRepeat]:
                 return self.pp_unary_param(a, d, xs, False)
-            elif k in [kinds.BVRotateLeft, kinds.BVRotateRight]:
+            elif k in [Kind.BVRotateLeft, Kind.BVRotateRight]:
                 return self.pp_unary_param(a, d, xs, True)
-            elif k == kinds.BVExtract:
+            elif k == Kind.BVExtract:
                 return self.pp_extract(a, d, xs)
             # elif k == Z3_OP_DT_IS:
             #     return self.pp_is(a, d, xs)
             # elif k == Z3_OP_ARRAY_MAP:
             #     return self.pp_map(a, d, xs)
-            elif k == kinds.ConstArray:
+            elif k == Kind.ConstArray:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [kinds.Constant, kinds.InternalKind, kinds.Variable, kinds.UninterpretedConstant]:
+            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedConstant]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
@@ -1133,9 +1133,9 @@ class Formatter:
                 return self.pp_infix(a, d, xs)
             elif self.is_unary(k):
                 return self.pp_unary(a, d, xs)
-            elif k == kinds.ApplyUf:
+            elif k == Kind.ApplyUf:
                 return self.pp_uf_apply(a, d, xs)
-            elif k in [kinds.ApplyConstructor, kinds.ApplySelector, kinds.ApplyTester]:
+            elif k in [Kind.ApplyConstructor, Kind.ApplySelector, Kind.ApplyTester]:
                 return self.pp_dt_apply(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
