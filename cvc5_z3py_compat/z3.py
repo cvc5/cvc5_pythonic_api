@@ -4147,7 +4147,7 @@ def Update(a, i, v):
 
 
 def Store(a, i, v):
-    """Return an SMT store array expression.
+    """Return an SMT ``store`` array expression.
 
     >>> a    = Array('a', IntSort(), IntSort())
     >>> i, v = Ints('i v')
@@ -4202,7 +4202,7 @@ def K(dom, v):
 
 
 def ConstArray(dom, v):
-    """Return an SMT constant array expression. An alias for K.
+    """Return an SMT constant array expression.
 
     >>> a = ConstArray(IntSort(), 10)
     >>> a
@@ -4238,7 +4238,7 @@ def is_select(a):
 
 
 def is_store(a):
-    """Return `True` if `a` is an SMT array store application.
+    """Return `True` if `a` is an SMT array ``store`` application.
 
     >>> a = Array('a', IntSort(), IntSort())
     >>> is_store(a)
@@ -4250,7 +4250,7 @@ def is_store(a):
 
 
 def is_update(a):
-    """Return `True` if `a` is an SMT array store application.
+    """Return `True` if `a` is an SMT array ``store`` application.
     An alias for is_store.
 
     >>> a = Array('a', IntSort(), IntSort())
