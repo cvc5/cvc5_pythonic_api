@@ -1450,7 +1450,7 @@ def is_xor(a):
     >>> is_xor(And(p, q))
     False
     """
-    return is_app_of(a, kinds.Xor)
+    return is_app_of(a, Kind.Xor)
 
 
 def is_not(a):
@@ -4004,7 +4004,7 @@ class ArrayRef(ExprRef):
     def arg(self, idx):
         """Get the "argument" (base element) of this constant array.
 
-        >>> b = K(IntSort(), 1)
+        >>> b = ConstArray(IntSort(), 1)
         >>> b.arg(0)
         1
         """
@@ -4015,7 +4015,7 @@ class ArrayRef(ExprRef):
 
     def default(self):
         """Get the constant element of this (constant) array
-        >>> b = K(IntSort(), 1)
+        >>> b = ConstArray(IntSort(), 1)
         >>> b.default()
         1
         """
@@ -4054,7 +4054,7 @@ def is_array(a):
 def is_const_array(a):
     """Return `True` if `a` is an SMT constant array.
 
-    >>> a = K(IntSort(), 10)
+    >>> a = ConstArray(IntSort(), 10)
     >>> is_const_array(a)
     True
     >>> a = Array('a', IntSort(), IntSort())
@@ -4066,8 +4066,9 @@ def is_const_array(a):
 
 def is_K(a):
     """Return `True` if `a` is an SMT constant array.
+    An alias for is_const_array.
 
-    >>> a = K(IntSort(), 10)
+    >>> a = ConstArray(IntSort(), 10)
     >>> is_K(a)
     True
     >>> a = Array('a', IntSort(), IntSort())
@@ -4129,7 +4130,7 @@ def Array(name, dom, rng):
 
 
 def Update(a, i, v):
-    """Return an SMT store array expression.
+    """Return an SMT ``store`` array expression. An alias for Store.
 
     >>> a    = Array('a', IntSort(), IntSort())
     >>> i, v = Ints('i v')
@@ -4142,16 +4143,11 @@ def Update(a, i, v):
     >>> prove(Implies(i != j, s[j] == a[j]))
     proved
     """
-    if debugging():
-        _assert(is_array(a), "First argument must be an SMT array expression")
-    i = a.sort().domain().cast(i)
-    v = a.sort().range().cast(v)
-    ctx = a.ctx
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.Store, a.ast, i.ast, v.ast), ctx)
+    return Store(a, i, v)
 
 
 def Store(a, i, v):
-    """Return an SMT store array expression.
+    """Return an SMT ``store`` array expression.
 
     >>> a    = Array('a', IntSort(), IntSort())
     >>> i, v = Ints('i v')
@@ -4164,7 +4160,13 @@ def Store(a, i, v):
     >>> prove(Implies(i != j, s[j] == a[j]))
     proved
     """
-    return Update(a, i, v)
+
+    if debugging():
+        _assert(is_array(a), "First argument must be an SMT array expression")
+    i = a.sort().domain().cast(i)
+    v = a.sort().range().cast(v)
+    ctx = a.ctx
+    return _to_expr_ref(ctx.solver.mkTerm(Kind.Store, a.ast, i.ast, v.ast), ctx)
 
 
 def Select(a, i):
@@ -4183,16 +4185,33 @@ def Select(a, i):
 
 
 def K(dom, v):
-    """Return an SMT constant array expression.
+    """Return an SMT constant array expression. An alias for ConstArray.
 
     >>> a = K(IntSort(), 10)
     >>> a
-    K(Int, 10)
+    ConstArray(Int, 10)
     >>> a.sort()
     Array(Int, Int)
     >>> i = Int('i')
     >>> a[i]
-    K(Int, 10)[i]
+    ConstArray(Int, 10)[i]
+    >>> simplify(a[i])
+    10
+    """
+    return ConstArray(dom, v)
+
+
+def ConstArray(dom, v):
+    """Return an SMT constant array expression.
+
+    >>> a = ConstArray(IntSort(), 10)
+    >>> a
+    ConstArray(Int, 10)
+    >>> a.sort()
+    Array(Int, Int)
+    >>> i = Int('i')
+    >>> a[i]
+    ConstArray(Int, 10)[i]
     >>> simplify(a[i])
     10
     """
@@ -4219,7 +4238,7 @@ def is_select(a):
 
 
 def is_store(a):
-    """Return `True` if `a` is an SMT array store application.
+    """Return `True` if `a` is an SMT array ``store`` application.
 
     >>> a = Array('a', IntSort(), IntSort())
     >>> is_store(a)
@@ -4228,6 +4247,19 @@ def is_store(a):
     True
     """
     return is_app_of(a, Kind.Store)
+
+
+def is_update(a):
+    """Return `True` if `a` is an SMT array ``store`` application.
+    An alias for is_store.
+
+    >>> a = Array('a', IntSort(), IntSort())
+    >>> is_update(a)
+    False
+    >>> is_update(Update(a, 0, 1))
+    True
+    """
+    return is_store(a)
 
 
 #########################################
