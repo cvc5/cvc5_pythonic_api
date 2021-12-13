@@ -86,7 +86,7 @@ _z3_op_to_str = {
     Kind.BVToNat: "BV2Int",
     Kind.Select: "Select",
     Kind.Store: "Store",
-    Kind.ConstArray: "K",
+    Kind.ConstArray: "ConstArray",
     Kind.SeqConcat: "Concat",
     Kind.SeqPrefix: "PrefixOf",
     Kind.SeqSuffix: "SuffixOf",
