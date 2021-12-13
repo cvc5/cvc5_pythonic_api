@@ -4130,7 +4130,7 @@ def Array(name, dom, rng):
 
 
 def Update(a, i, v):
-    """Return an SMT store array expression. An alias for Store.
+    """Return an SMT ``store`` array expression. An alias for Store.
 
     >>> a    = Array('a', IntSort(), IntSort())
     >>> i, v = Ints('i v')
