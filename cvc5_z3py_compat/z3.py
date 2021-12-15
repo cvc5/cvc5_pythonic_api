@@ -1077,13 +1077,13 @@ def _nary_kind_builder(kind, *args):
     """
     last_arg = None
     if len(args) > 0:
-        last_arg = args[len(args) - 1]
+        last_arg = args[-1]
     if isinstance(last_arg, Context):
-        ctx = args[len(args) - 1]
-        args = args[: len(args) - 1]
+        ctx = args[-1]
+        args = args[:-1]
     elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
         ctx = args[0][0]
-        args = [a for a in args[0]]
+        args = list(args[0])
     else:
         ctx = None
     args = _get_args(args)
