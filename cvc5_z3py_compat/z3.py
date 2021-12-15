@@ -1066,6 +1066,37 @@ def _coerce_expr_list(alist, ctx=None):
     return [s.cast(a) for a in alist]
 
 
+def _nary_kind_builder(kind, *args):
+    """ Helper for defining n-ary builders where args can represent a list of
+    expressions, either as a python list or tuple, or as a var-arg sequence of
+    expressions.
+
+    The args list can also terminate in a context, which will be used if
+    present. If missing, then a context will be infered from the other
+    arguments.
+    """
+    last_arg = None
+    if len(args) > 0:
+        last_arg = args[-1]
+    if isinstance(last_arg, Context):
+        ctx = args[-1]
+        args = args[:-1]
+    elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
+        ctx = args[0][0]
+        args = list(args[0])
+    else:
+        ctx = None
+    args = _get_args(args)
+    ctx = _get_ctx(_ctx_from_ast_arg_list(args, ctx))
+    if debugging():
+        _assert(
+            ctx is not None,
+            "At least one of the arguments must be an SMT expression",
+        )
+    args = _coerce_expr_list(args, ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(kind, [a.ast for a in args]), ctx)
+
+
 def is_expr(a):
     """Return `True` if `a` is an SMT expression.
 
@@ -1654,26 +1685,7 @@ def And(*args):
     >>> And(P)
     And(p__0, p__1, p__2, p__3, p__4)
     """
-    last_arg = None
-    if len(args) > 0:
-        last_arg = args[len(args) - 1]
-    if isinstance(last_arg, Context):
-        ctx = args[len(args) - 1]
-        args = args[: len(args) - 1]
-    elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
-        ctx = args[0][0]
-        args = [a for a in args[0]]
-    else:
-        ctx = None
-    args = _get_args(args)
-    ctx = _get_ctx(_ctx_from_ast_arg_list(args, ctx))
-    if debugging():
-        _assert(
-            ctx is not None,
-            "At least one of the arguments must be an SMT expression or probe",
-        )
-    args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.And, [a.ast for a in args]), ctx)
+    return _nary_kind_builder(Kind.And, *args)
 
 
 def Or(*args):
@@ -1688,26 +1700,7 @@ def Or(*args):
     >>> Or(P)
     Or(p__0, p__1, p__2, p__3, p__4)
     """
-    last_arg = None
-    if len(args) > 0:
-        last_arg = args[len(args) - 1]
-    if isinstance(last_arg, Context):
-        ctx = args[len(args) - 1]
-        args = args[: len(args) - 1]
-    elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
-        ctx = args[0][0]
-        args = [a for a in args[0]]
-    else:
-        ctx = None
-    args = _get_args(args)
-    ctx = _get_ctx(_ctx_from_ast_arg_list(args, ctx))
-    if debugging():
-        _assert(
-            ctx is not None,
-            "At least one of the arguments must be an SMT expression or probe",
-        )
-    args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.Or, [a.ast for a in args]), ctx)
+    return _nary_kind_builder(Kind.Or, *args)
 
 
 #########################################
@@ -2884,6 +2877,148 @@ def Cbrt(a, ctx=None):
         ctx = _get_ctx(ctx)
         a = RealVal(a, ctx)
     return a ** "1/3"
+
+
+def Plus(*args):
+    """ Create an SMT addition.
+
+    See also the __add__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Plus(x, x, y)
+    x + x + y
+    >>> Plus(x, x, y, main_ctx())
+    x + x + y
+    """
+    return _nary_kind_builder(Kind.Plus, *args)
+
+
+def Mult(*args):
+    """ Create an SMT multiplication.
+
+    See also the __mul__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Mult(x, x, y)
+    x*x*y
+    >>> Mult(x, x, y, main_ctx())
+    x*x*y
+    """
+    return _nary_kind_builder(Kind.Mult, *args)
+
+
+def Sub(a, b):
+    """ Create an SMT subtraction.
+
+    See also the __sub__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Sub(x, y)
+    x - y
+    """
+    return a - b
+
+
+def UMinus(a):
+    """ Create an SMT unary negation.
+
+    See also the __neg__ overload for arithmetic SMT expressions.
+
+    >>> x = Int('x')
+    >>> UMinus(x)
+    -x
+    """
+    return -a
+
+
+def Div(a, b):
+    """ Create an SMT division.
+
+    See also the __div__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> a, b = Reals('x y')
+    >>> Div(x, y).sexpr()
+    '(div x y)'
+    >>> Div(a, y).sexpr()
+    '(/ x (to_real y))'
+    >>> Div(a, b).sexpr()
+    '(/ x y)'
+    """
+    return a / b
+
+
+def Pow(a, b):
+    """ Create an SMT power.
+
+    See also the __pow__ overload for arithmetic SMT expressions.
+
+    >>> x = Int('x')
+    >>> Pow(x, 3)
+    x**3
+    """
+    return a ** b
+
+
+def IntsModulus(a, b):
+    """ Create an SMT integer modulus.
+
+    See also the __mod__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> IntsModulus(x, y)
+    x%y
+    """
+    return a % b
+
+
+def Leq(a, b):
+    """ Create an SMT less-than-or-equal-to.
+
+    See also the __le__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Leq(x, y)
+    x <= y
+    """
+    return a <= b
+
+
+def Geq(a, b):
+    """ Create an SMT greater-than-or-equal-to.
+
+    See also the __ge__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Geq(x, y)
+    x >= y
+    """
+    return a >= b
+
+
+def Lt(a, b):
+    """ Create an SMT less-than.
+
+    See also the __lt__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Lt(x, y)
+    x < y
+    """
+    return a < b
+
+
+def Gt(a, b):
+    """ Create an SMT greater-than.
+
+    See also the __gt__ overload for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Gt(x, y)
+    x > y
+    """
+    return a > b
+
 
 #########################################
 #
