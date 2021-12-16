@@ -2882,7 +2882,7 @@ def Cbrt(a, ctx=None):
 def Plus(*args):
     """ Create an SMT addition.
 
-    See also the __add__ overload for arithmetic SMT expressions.
+    See also the __add__ overload (+ operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Plus(x, x, y)
@@ -2896,7 +2896,7 @@ def Plus(*args):
 def Mult(*args):
     """ Create an SMT multiplication.
 
-    See also the __mul__ overload for arithmetic SMT expressions.
+    See also the __mul__ overload (* operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Mult(x, x, y)
@@ -2910,7 +2910,7 @@ def Mult(*args):
 def Sub(a, b):
     """ Create an SMT subtraction.
 
-    See also the __sub__ overload for arithmetic SMT expressions.
+    See also the __sub__ overload (- operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Sub(x, y)
@@ -2922,7 +2922,7 @@ def Sub(a, b):
 def UMinus(a):
     """ Create an SMT unary negation.
 
-    See also the __neg__ overload for arithmetic SMT expressions.
+    See also the __neg__ overload (unary - operator) for arithmetic SMT expressions.
 
     >>> x = Int('x')
     >>> UMinus(x)
@@ -2934,7 +2934,7 @@ def UMinus(a):
 def Div(a, b):
     """ Create an SMT division.
 
-    See also the __div__ overload for arithmetic SMT expressions.
+    See also the __div__ overload (/ operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> a, b = Reals('x y')
@@ -2963,7 +2963,7 @@ def Pow(a, b):
 def IntsModulus(a, b):
     """ Create an SMT integer modulus.
 
-    See also the __mod__ overload for arithmetic SMT expressions.
+    See also the __mod__ overload (% operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> IntsModulus(x, y)
@@ -2975,7 +2975,7 @@ def IntsModulus(a, b):
 def Leq(a, b):
     """ Create an SMT less-than-or-equal-to.
 
-    See also the __le__ overload for arithmetic SMT expressions.
+    See also the __le__ overload (<= operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Leq(x, y)
@@ -2987,7 +2987,7 @@ def Leq(a, b):
 def Geq(a, b):
     """ Create an SMT greater-than-or-equal-to.
 
-    See also the __ge__ overload for arithmetic SMT expressions.
+    See also the __ge__ overload (>= operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Geq(x, y)
@@ -2999,7 +2999,7 @@ def Geq(a, b):
 def Lt(a, b):
     """ Create an SMT less-than.
 
-    See also the __lt__ overload for arithmetic SMT expressions.
+    See also the __lt__ overload (< operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Lt(x, y)
@@ -3011,7 +3011,7 @@ def Lt(a, b):
 def Gt(a, b):
     """ Create an SMT greater-than.
 
-    See also the __gt__ overload for arithmetic SMT expressions.
+    See also the __gt__ overload (> operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
     >>> Gt(x, y)
@@ -3817,6 +3817,62 @@ def UGT(a, b):
     return BoolRef(a.ctx.solver.mkTerm(Kind.BVUgt, a.ast, b.ast), a.ctx)
 
 
+def SLE(a, b):
+    """Create the SMT expression (signed) `other <= self`.
+
+    See also the __le__ overload (<= operator) for BitVecRef
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> SLE(x, y).sexpr()
+    '(bvsle x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSle, a.ast, b.ast), a.ctx)
+
+
+def SLT(a, b):
+    """Create the SMT expression (signed) `other < self`.
+
+    See also the __lt__ overload (< operator) for BitVecRef
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> SLT(x, y).sexpr()
+    '(bvslt x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSlt, a.ast, b.ast), a.ctx)
+
+
+def SGE(a, b):
+    """Create the SMT expression (signed) `other >= self`.
+
+    See also the __ge__ overload (>= operator) for BitVecRef
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> SGE(x, y).sexpr()
+    '(bvsge x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSge, a.ast, b.ast), a.ctx)
+
+
+def SGT(a, b):
+    """Create the SMT expression (signed) `other > self`.
+
+    See also the __gt__ overload (> operator) for BitVecRef
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> SGT(x, y).sexpr()
+    '(bvsgt x y)'
+    """
+    _check_bv_args(a, b)
+    a, b = _coerce_exprs(a, b)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSgt, a.ast, b.ast), a.ctx)
+
+
 def UDiv(a, b):
     """Create the SMT expression (unsigned) division `self / other`.
 
@@ -3857,6 +3913,32 @@ def URem(a, b):
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
     return BitVecRef(a.ctx.solver.mkTerm(Kind.BVUrem, a.ast, b.ast), a.ctx)
+
+
+def SDiv(a, b):
+    """Create an SMT signed division expression.
+
+    See also the __div__ overload (/ operator) for BitVecRef.
+
+    >>> x = BitVec('x', 32)
+    >>> y = BitVec('y', 32)
+    >>> SDiv(x, y)
+    x/y
+    """
+    return a / b
+
+
+def SMod(a, b):
+    """Create an SMT expression for the signed modulus `self % other`.
+
+    See also the __mod__ overload (% operator) for BitVecRef.
+
+    >>> x = BitVec('x', 32)
+    >>> y = BitVec('y', 32)
+    >>> SMod(x, y)
+    x%y
+    """
+    return a % b
 
 
 def SRem(a, b):
@@ -4059,6 +4141,103 @@ def BVRedOr(a):
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
     return BitVecRef(a.ctx.solver.mkTerm(Kind.BVRedor, a.ast), a.ctx)
+
+
+def BVAdd(*args):
+    """ Create a sum of bit-vectors.
+
+    See also the __add__ overload (+ operator) for BitVecRef.
+
+    >>> x, y, z = BitVecs('x y z', 32)
+    >>> BVAdd(x, y, z)
+    x + y + z
+    """
+    return _nary_kind_builder(Kind.BVAdd, *args)
+
+
+def BVMult(*args):
+    """ Create a product of bit-vectors.
+
+    See also the __mul__ overload (* operator) for BitVecRef.
+
+    >>> x, y, z = BitVecs('x y z', 32)
+    >>> BVMult(x, y, z)
+    x*y*z
+    """
+    return _nary_kind_builder(Kind.BVMult, *args)
+
+
+def BVSub(a, b):
+    """ Create a difference of bit-vectors.
+
+    See also the __sub__ overload (- operator) for BitVecRef.
+
+    >>> x, y = BitVecs('x y', 32)
+    >>> BVSub(x, y)
+    x - y
+    """
+    return a - b
+
+
+def BVOr(*args):
+    """ Create a bit-wise disjunction of bit-vectors.
+
+    See also the __or__ overload (| operator) for BitVecRef.
+
+    >>> x, y, z = BitVecs('x y z', 32)
+    >>> BVOr(x, y, z)
+    x | y | z
+    """
+    return _nary_kind_builder(Kind.BVOr, *args)
+
+
+def BVAnd(*args):
+    """ Create a bit-wise conjunction of bit-vectors.
+
+    See also the __and__ overload (& operator) for BitVecRef.
+
+    >>> x, y, z = BitVecs('x y z', 32)
+    >>> BVAnd(x, y, z)
+    x & y & z
+    """
+    return _nary_kind_builder(Kind.BVAnd, *args)
+
+
+def BVXor(*args):
+    """ Create a bit-wise exclusive disjunction of bit-vectors.
+
+    See also the __xor__ overload (^ operator) for BitVecRef.
+
+    >>> x, y, z = BitVecs('x y z', 32)
+    >>> BVXor(x, y, z)
+    x ^ y ^ z
+    """
+    return _nary_kind_builder(Kind.BVXor, *args)
+
+
+def BVNeg(a):
+    """ Create a negation (two's complement) of a bit-vector
+
+    See also the __neg__ overload (unary - operator) for BitVecRef.
+
+    >>> x = BitVec('x', 32)
+    >>> BVNeg(x)
+    -x
+    """
+    return -a
+
+
+def BVNot(a):
+    """ Create a bitwise not of a bit-vector
+
+    See also the __invert__ overload (unary ~ operator) for BitVecRef.
+
+    >>> x = BitVec('x', 32)
+    >>> BVNot(x)
+    ~x
+    """
+    return ~a
+
 
 #########################################
 #
