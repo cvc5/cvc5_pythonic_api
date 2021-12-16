@@ -4182,7 +4182,7 @@ def BVSub(a, b):
 def BVOr(*args):
     """ Create a bit-wise disjunction of bit-vectors.
 
-    See also the __or__ overload for BitVecRef.
+    See also the __or__ overload (| operator) for BitVecRef.
 
     >>> x, y, z = BitVecs('x y z', 32)
     >>> BVOr(x, y, z)
@@ -4194,7 +4194,7 @@ def BVOr(*args):
 def BVAnd(*args):
     """ Create a bit-wise conjunction of bit-vectors.
 
-    See also the __and__ overload for BitVecRef.
+    See also the __and__ overload (& operator) for BitVecRef.
 
     >>> x, y, z = BitVecs('x y z', 32)
     >>> BVAnd(x, y, z)
@@ -4206,7 +4206,7 @@ def BVAnd(*args):
 def BVXor(*args):
     """ Create a bit-wise exclusive disjunction of bit-vectors.
 
-    See also the __xor__ overload for BitVecRef.
+    See also the __xor__ overload (^ operator) for BitVecRef.
 
     >>> x, y, z = BitVecs('x y z', 32)
     >>> BVXor(x, y, z)
@@ -4230,7 +4230,7 @@ def BVNeg(a):
 def BVNot(a):
     """ Create a bitwise not of a bit-vector
 
-    See also the __invert__ overload for BitVecRef.
+    See also the __invert__ overload (unary ~ operator) for BitVecRef.
 
     >>> x = BitVec('x', 32)
     >>> BVNot(x)
