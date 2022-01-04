@@ -7399,8 +7399,8 @@ class DatatypeRef(ExprRef):
 
 def TupleSort(name, sorts, ctx=None):
     """Create a named tuple sort base on a set of underlying sorts
-    Example:
-        >>> pair, mk_pair, (first, second) = TupleSort("pair", [IntSort(), BoolSort()])
+
+    >>> pair, mk_pair, (first, second) = TupleSort("pair", [IntSort(), BoolSort()])
     """
     tuple = Datatype(name, ctx)
     projects = [("project%d" % i, sorts[i]) for i in range(len(sorts))]
@@ -7411,8 +7411,8 @@ def TupleSort(name, sorts, ctx=None):
 
 def DisjointSum(name, sorts, ctx=None):
     """Create a named tagged union sort base on a set of underlying sorts
-    Example:
-        >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
+
+    >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
     """
     sum = Datatype(name, ctx)
     for i in range(len(sorts)):
