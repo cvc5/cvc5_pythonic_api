@@ -6959,6 +6959,7 @@ def _valid_accessor(acc):
 
 class Datatype:
     """Helper class for declaring Z3 datatypes.
+
     >>> List = Datatype('List')
     >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
     >>> List.declare('nil')
@@ -7008,6 +7009,7 @@ class Datatype:
         It also declares the accessors `car` and `cdr`. The accessor `car` extracts the integer
         of a `cons` cell, and `cdr` the list of a `cons` cell. After all constructors were declared,
         we use the method create() to create the actual datatype in SMT.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7024,6 +7026,7 @@ class Datatype:
     def create(self):
         """Create an SMT datatype based on the constructors declared using the method `declare()`.
         The function `CreateDatatypes()` must be used to define mutually recursive datatypes.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7055,6 +7058,7 @@ class Datatype:
 def CreateDatatypes(*ds):
     """Create mutually recursive SMT datatypes using 1 or more Datatype helper objects.
     In the following example we define a Tree-List using two mutually recursive datatypes.
+
     >>> TreeList = Datatype('TreeList')
     >>> Tree     = Datatype('Tree')
     >>> # Tree has two constructors: leaf and node
@@ -7153,6 +7157,7 @@ class DatatypeSortRef(SortRef):
 
     def num_constructors(self):
         """Return the number of constructors in the given Z3 datatype.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7165,6 +7170,7 @@ class DatatypeSortRef(SortRef):
 
     def constructor(self, idx):
         """Return a constructor of the datatype `self`.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7184,6 +7190,7 @@ class DatatypeSortRef(SortRef):
     def recognizer(self, idx):
         """In SMT, each constructor has an associated recognizer predicate.
         If the constructor is named `name`, then the recognizer `is_name`.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7210,6 +7217,7 @@ class DatatypeSortRef(SortRef):
     def accessor(self, i, j):
         """In SMT, each constructor has 0 or more accessor.
         The number of accessors is equal to the arity of the constructor.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7246,6 +7254,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         """Return the number of arguments of a constructor.
 
         The number of accessors is equal to the arity of the constructor.
+
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
@@ -7468,6 +7477,7 @@ class QuantifierRef(BoolRef):
 
     def is_forall(self):
         """Return `True` if `self` is a universal quantifier.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> q = ForAll(x, f(x) == 0)
@@ -7481,6 +7491,7 @@ class QuantifierRef(BoolRef):
 
     def is_exists(self):
         """Return `True` if `self` is an existential quantifier.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> q = ForAll(x, f(x) == 0)
@@ -7494,6 +7505,7 @@ class QuantifierRef(BoolRef):
 
     def is_lambda(self):
         """Return `True` if `self` is a lambda expression.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> q = Lambda(x, f(x))
@@ -7507,6 +7519,7 @@ class QuantifierRef(BoolRef):
 
     def body(self):
         """Return the expression being quantified.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> q = ForAll(x, f(x) == 0)
@@ -7517,6 +7530,7 @@ class QuantifierRef(BoolRef):
 
     def num_vars(self):
         """Return the number of variables bounded by this quantifier.
+
         >>> f = Function('f', IntSort(), IntSort(), IntSort())
         >>> x = Int('x')
         >>> y = Int('y')
@@ -7528,6 +7542,7 @@ class QuantifierRef(BoolRef):
 
     def var_name(self, idx):
         """Return a string representing a name used when displaying the quantifier.
+
         >>> f = Function('f', IntSort(), IntSort(), IntSort())
         >>> x = Int('x')
         >>> y = Int('y')
@@ -7543,6 +7558,7 @@ class QuantifierRef(BoolRef):
 
     def var_sort(self, idx):
         """Return the sort of a bound variable.
+
         >>> f = Function('f', IntSort(), RealSort(), IntSort())
         >>> x = Int('x')
         >>> y = Real('y')
@@ -7558,6 +7574,7 @@ class QuantifierRef(BoolRef):
 
     def children(self):
         """Return a list containing a single element self.body()
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> q = ForAll(x, f(x) == 0)
@@ -7569,6 +7586,7 @@ class QuantifierRef(BoolRef):
 
 def is_quantifier(a):
     """Return `True` if `a` is a Z3 quantifier.
+
     >>> f = Function('f', IntSort(), IntSort())
     >>> x = Int('x')
     >>> q = ForAll(x, f(x) == 0)
@@ -7597,6 +7615,7 @@ def _mk_quant(vs, body, kind):
 
 def ForAll(vs, body):
     """Create a forall formula.
+
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
@@ -7608,6 +7627,7 @@ def ForAll(vs, body):
 
 def Exists(vs, body):
     """Create a exists formula.
+
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> x = Int('x')
     >>> y = Int('y')
@@ -7620,6 +7640,7 @@ def Exists(vs, body):
 
 def Lambda(vs, body):
     """Create a lambda expression.
+
     >>> f = Function('f', IntSort(), IntSort(), IntSort())
     >>> mem0 = Array('mem0', IntSort(), IntSort())
     >>> lo, hi, e, i = Ints('lo hi e i')
