@@ -7421,7 +7421,8 @@ def TupleSort(name, sorts, ctx=None):
 def DisjointSum(name, sorts, ctx=None):
     """Create a named tagged union sort base on a set of underlying sorts
 
-    Returns the created datatype and a list of (injector, extractor) pairs.
+    Returns the created datatype and a tuple of (injector, extractor) pairs for
+    the different variants.
 
     >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
     >>> b = Bool('b')
