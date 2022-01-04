@@ -7408,7 +7408,7 @@ def TupleSort(name, sorts, ctx=None):
     >>> p = mk_pair(i, b)
     >>> p
     pair(i, b)
-    >>> solve([b != second(mk_pair(i, b))])
+    >>> solve([b != second(p)])
     no solution
     """
     tuple = Datatype(name, ctx)
