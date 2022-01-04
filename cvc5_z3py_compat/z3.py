@@ -4684,6 +4684,7 @@ def Set(name, elem_sort):
 
 def EmptySet(s):
     """Create the empty set
+
     >>> EmptySet(IntSort())
     Empty(Set(Int))
     """
@@ -4694,6 +4695,7 @@ def EmptySet(s):
 
 def FullSet(s):
     """Create the full set
+
     >>> FullSet(IntSort())
     Full(Set(Int))
     """
@@ -4704,6 +4706,7 @@ def FullSet(s):
 
 def SetUnion(*args):
     """Take the union of sets
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetUnion(a, b)
@@ -4716,6 +4719,7 @@ def SetUnion(*args):
 
 def SetIntersect(*args):
     """Take the union of sets
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetIntersect(a, b)
@@ -4728,6 +4732,7 @@ def SetIntersect(*args):
 
 def SetAdd(s, e):
     """Add element e to set s
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetAdd(a, 1)
     insert(a, 1)
@@ -4741,6 +4746,7 @@ def SetAdd(s, e):
 
 def SetDel(s, e):
     """Remove element e to set s
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetDel(a, 1)
     setminus(a, singleton(1))
@@ -4750,6 +4756,7 @@ def SetDel(s, e):
 
 def SetComplement(s):
     """The complement of set s
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetComplement(a)
     complement(a)
@@ -4760,6 +4767,7 @@ def SetComplement(s):
 
 def Singleton(s):
     """The single element set of just e
+
     >>> Singleton(IntVal(1))
     singleton(1)
     """
@@ -4770,6 +4778,7 @@ def Singleton(s):
 
 def SetDifference(a, b):
     """The set difference of a and b
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetDifference(a, b)
@@ -4781,6 +4790,7 @@ def SetDifference(a, b):
 
 def SetMinus(a, b):
     """The set difference of a and b
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetMinus(a, b)
@@ -4791,6 +4801,7 @@ def SetMinus(a, b):
 
 def IsMember(e, s):
     """Check if e is a member of set s
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> IsMember(1, a)
     member(1, a)
@@ -4802,6 +4813,7 @@ def IsMember(e, s):
 
 def IsSubset(a, b):
     """Check if a is a subset of b
+
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> IsSubset(a, b)
