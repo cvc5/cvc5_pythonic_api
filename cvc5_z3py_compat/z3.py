@@ -7411,8 +7411,17 @@ class DatatypeRef(ExprRef):
 
 def TupleSort(name, sorts, ctx=None):
     """Create a named tuple sort base on a set of underlying sorts
-    Example:
-        >>> pair, mk_pair, (first, second) = TupleSort("pair", [IntSort(), BoolSort()])
+
+    Returns the tuple datatype, its constructor, and a list of accessors, in order.
+
+    >>> pair, mk_pair, (first, second) = TupleSort("pair", [IntSort(), BoolSort()])
+    >>> b = Bool('b')
+    >>> i = Int('i')
+    >>> p = mk_pair(i, b)
+    >>> p
+    pair(i, b)
+    >>> solve([b != second(p)])
+    no solution
     """
     tuple = Datatype(name, ctx)
     projects = [("project%d" % i, sorts[i]) for i in range(len(sorts))]
@@ -7423,8 +7432,15 @@ def TupleSort(name, sorts, ctx=None):
 
 def DisjointSum(name, sorts, ctx=None):
     """Create a named tagged union sort base on a set of underlying sorts
-    Example:
-        >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
+
+    Returns the created datatype and a tuple of (injector, extractor) pairs for
+    the different variants.
+
+    >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
+    >>> b = Bool('b')
+    >>> i = Int('i')
+    >>> solve([inject0(i) == inject1(b)])
+    no solution
     """
     sum = Datatype(name, ctx)
     for i in range(len(sorts)):
