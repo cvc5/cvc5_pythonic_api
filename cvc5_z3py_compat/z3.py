@@ -4646,7 +4646,7 @@ class SetRef(ExprRef):
         >>> a = Set('a', IntSort())
         >>> i = Int('i')
         >>> a[i]
-        member(i, a)
+        IsMember(i, a)
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
@@ -4710,7 +4710,7 @@ def SetUnion(*args):
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetUnion(a, b)
-    union(a, b)
+    SetUnion(a, b)
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
@@ -4723,7 +4723,7 @@ def SetIntersect(*args):
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetIntersect(a, b)
-    intersection(a, b)
+    SetIntersect(a, b)
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
@@ -4735,7 +4735,7 @@ def SetAdd(s, e):
 
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetAdd(a, 1)
-    insert(a, 1)
+    SetAdd(a, 1)
     >>> SetAdd(a, 1).arg(0)
     a
     """
@@ -4749,7 +4749,7 @@ def SetDel(s, e):
 
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetDel(a, 1)
-    setminus(a, singleton(1))
+    SetDifference(a, Singleton(1))
     """
     return SetDifference(s, Singleton(e))
 
@@ -4759,7 +4759,7 @@ def SetComplement(s):
 
     >>> a = Const('a', SetSort(IntSort()))
     >>> SetComplement(a)
-    complement(a)
+    SetComplement(a)
     """
     ctx = s.ctx
     return ArrayRef(ctx.solver.mkTerm(Kind.SetComplement, s.ast), ctx)
@@ -4769,7 +4769,7 @@ def Singleton(s):
     """The single element set of just e
 
     >>> Singleton(IntVal(1))
-    singleton(1)
+    Singleton(1)
     """
     s = _py2expr(s)
     ctx = s.ctx
@@ -4782,7 +4782,7 @@ def SetDifference(a, b):
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetDifference(a, b)
-    setminus(a, b)
+    SetDifference(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
     return SetRef(ctx.solver.mkTerm(Kind.SetMinus, a.ast, b.ast), ctx)
@@ -4794,7 +4794,7 @@ def SetMinus(a, b):
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> SetMinus(a, b)
-    setminus(a, b)
+    SetDifference(a, b)
     """
     return SetDifference(a, b)
 
@@ -4804,7 +4804,7 @@ def IsMember(e, s):
 
     >>> a = Const('a', SetSort(IntSort()))
     >>> IsMember(1, a)
-    member(1, a)
+    IsMember(1, a)
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     arg = s.domain().cast(e)
@@ -4817,7 +4817,7 @@ def IsSubset(a, b):
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
     >>> IsSubset(a, b)
-    subset(a, b)
+    IsSubset(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
     return BoolRef(ctx.solver.mkTerm(Kind.SetSubset, a.ast, b.ast), ctx)
@@ -5909,47 +5909,147 @@ class FPRMRef(ExprRef):
 
 
 def RoundNearestTiesToEven(ctx=None):
+    """Round to nearest, with ties broken towards even.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RoundNearestTiesToEven(), x, y)
+    fpMul(RNE(), x, y)
+    """
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundNearestTiesToEven), ctx)
 
 
 def RNE(ctx=None):
+    """Round to nearest, with ties broken towards even.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RNE(), x, y)
+    fpMul(RNE(), x, y)
+    """
     return RoundNearestTiesToEven(ctx)
 
 
 def RoundNearestTiesToAway(ctx=None):
+    """Round to nearest, with ties broken away from zero.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RoundNearestTiesToAway(), x, y)
+    fpMul(RNA(), x, y)
+    """
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundNearestTiesToAway), ctx)
 
 
 def RNA(ctx=None):
+    """Round to nearest, with ties broken away from zero.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RNA(), x, y)
+    fpMul(RNA(), x, y)
+    """
     return RoundNearestTiesToAway(ctx)
 
 
 def RoundTowardPositive(ctx=None):
+    """Round towards more positive values.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RoundTowardPositive(), x, y)
+    fpMul(RTP(), x, y)
+    """
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardPositive), ctx)
 
 
 def RTP(ctx=None):
+    """Round towards more positive values.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RTP(), x, y)
+    fpMul(RTP(), x, y)
+    """
     return RoundTowardPositive(ctx)
 
 
 def RoundTowardNegative(ctx=None):
+    """Round towards more negative values.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RoundTowardNegative(), x, y)
+    fpMul(RTN(), x, y)
+    """
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardNegative), ctx)
 
 
 def RTN(ctx=None):
+    """Round towards more negative values.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RTN(), x, y)
+    fpMul(RTN(), x, y)
+    """
     return RoundTowardNegative(ctx)
 
 
 def RoundTowardZero(ctx=None):
+    """Round towards zero.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RoundTowardZero(), x, y)
+    x * y
+    """
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundTowardZero), ctx)
 
 
 def RTZ(ctx=None):
+    """Round towards zero.
+
+    See `Section 4.2 of the IEEE standard <https://doi.org/10.1109/IEEESTD.2019.8766229>`
+    or `wikipedia <https://en.wikipedia.org/wiki/Floating-point_arithmetic#Rounding_modes>`
+    for details on rounding modes.
+
+    >>> x, y = FPs('x y', FPSort(8, 24))
+    >>> fpMul(RTZ(), x, y)
+    x * y
+    """
     return RoundTowardZero(ctx)
 
 
@@ -6736,24 +6836,21 @@ def fpToFP(a1, a2=None, a3=None, ctx=None):
     """Create a SMT floating-point conversion expression from other term sorts
     to floating-point.
 
-    # From a bit-vector term in IEEE 754-2008 format:
-    # >>> x = FPVal(1.0, Float32())
-    # >>> x_bv = fpToIEEEBV(x)
-    # >>> simplify(fpToFP(x_bv, Float32()))
-    # 1
-
     From a floating-point term with different precision:
+
     >>> x = FPVal(1.0, Float32())
     >>> x_db = fpToFP(RNE(), x, Float64())
     >>> x_db.sort()
     FPSort(11, 53)
 
     From a real term:
+
     >>> x_r = RealVal(1.5)
     >>> simplify(fpToFP(RNE(), x_r, Float32()))
     1.5
 
     From a signed bit-vector term:
+
     >>> x_signed = BitVecVal(-5, BitVecSort(32))
     >>> simplify(fpToFP(RNE(), x_signed, Float32()))
     -1.25*(2**2)
@@ -7440,16 +7537,21 @@ def TupleSort(name, sorts, ctx=None):
 
 
 def DisjointSum(name, sorts, ctx=None):
-    """Create a named tagged union sort base on a set of underlying sorts
+    """Create a named tagged union sort base on a set of underlying sorts.
+
+    See `this page <https://en.wikipedia.org/wiki/Tagged_union>` for
+    information about tagged unions.
 
     Returns the created datatype and a tuple of (injector, extractor) pairs for
     the different variants.
 
     >>> sum, ((inject0, extract0), (inject1, extract1)) = DisjointSum("+", [IntSort(), BoolSort()])
     >>> b = Bool('b')
-    >>> i = Int('i')
+    >>> i, j = Ints('i j')
     >>> solve([inject0(i) == inject1(b)])
     no solution
+    >>> solve([inject0(i) == inject0(j), extract0(inject0(i)) == 5])
+    [i = 5, j = 5]
     """
     sum = Datatype(name, ctx)
     for i in range(len(sorts)):
