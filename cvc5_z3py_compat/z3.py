@@ -7297,15 +7297,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         return _to_sort_ref(self.ast.getSort().getConstructorCodomainSort(), self.ctx)
 
     def __call__(self, *args):
-        """Create an SMT application expression using the function `self`,
-        and the given arguments.
-
-        The arguments must be SMT expressions. This method assumes that
-        the sorts of the elements in `args` match the sorts of the
-        domain. Limited coercion is supported.  For example, if
-        args[0] is a Python integer, and the function expects a SMT
-        integer, then the argument is automatically converted into a
-        SMT integer.
+        """Apply this constructor.
 
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
@@ -7315,6 +7307,13 @@ class DatatypeConstructorRef(FuncDeclRef):
         2
         >>> List.constructor(0)(1, List.nil)
         cons(1, nil)
+
+        The arguments must be SMT expressions. This method assumes that
+        the sorts of the elements in `args` match the sorts of the
+        domain. Limited coercion is supported.  For example, if
+        args[0] is a Python integer, and the function expects a SMT
+        integer, then the argument is automatically converted into a
+        SMT integer.
         """
         return _higherorder_apply(self, args, Kind.ApplyConstructor)
 
@@ -7343,8 +7342,15 @@ class DatatypeSelectorRef(FuncDeclRef):
         return _to_sort_ref(self.ast.getSort().getSelectorCodomainSort(), self.ctx)
 
     def __call__(self, *args):
-        """Create an SMT application expression using the function `self`,
-        and the given arguments.
+        """Apply this selector.
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> l = List.cons(1, List.nil)
+        >>> solve([1 != List.car(l)])
+        no solution
 
         The arguments must be SMT expressions. This method assumes that
         the sorts of the elements in `args` match the sorts of the
@@ -7352,14 +7358,6 @@ class DatatypeSelectorRef(FuncDeclRef):
         args[0] is a Python integer, and the function expects a SMT
         integer, then the argument is automatically converted into a
         SMT integer.
-
-        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
-        >>> x = Int('x')
-        >>> y = Real('y')
-        >>> f(x, y)
-        f(x, y)
-        >>> f(x, x)
-        f(x, ToReal(x))
         """
         return _higherorder_apply(self, args, Kind.ApplySelector)
 
@@ -7388,8 +7386,15 @@ class DatatypeRecognizerRef(FuncDeclRef):
         return BoolSort(self.ctx)
 
     def __call__(self, *args):
-        """Create an SMT application expression using the function `self`,
-        and the given arguments.
+        """Apply this tester (a.k.a., recognizer).
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> l = List.cons(1, List.nil)
+        >>> solve([List.is_nil(l)])
+        no solution
 
         The arguments must be SMT expressions. This method assumes that
         the sorts of the elements in `args` match the sorts of the
@@ -7397,14 +7402,6 @@ class DatatypeRecognizerRef(FuncDeclRef):
         args[0] is a Python integer, and the function expects a SMT
         integer, then the argument is automatically converted into a
         SMT integer.
-
-        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
-        >>> x = Int('x')
-        >>> y = Real('y')
-        >>> f(x, y)
-        f(x, y)
-        >>> f(x, x)
-        f(x, ToReal(x))
         """
         return _higherorder_apply(self, args, Kind.ApplyTester)
 
