@@ -4886,6 +4886,7 @@ unknown = CheckSatResultLiteral("unknown")
 
 class Solver(object):
     """Solver API provides methods for implementing the main SMT 2.0 commands:
+
     * push,
     * pop,
     * check,
