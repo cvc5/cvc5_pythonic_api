@@ -7684,12 +7684,15 @@ class QuantifierRef(BoolRef):
 
 
 def is_quantifier(a):
-    """Return `True` if `a` is a Z3 quantifier.
+    """Return `True` if `a` is an SMT quantifier, including lambda expressions.
 
     >>> f = Function('f', IntSort(), IntSort())
     >>> x = Int('x')
     >>> q = ForAll(x, f(x) == 0)
+    >>> p = Lambda(x, f(x) == 0)
     >>> is_quantifier(q)
+    True
+    >>> is_quantifier(p)
     True
     >>> is_quantifier(f(x))
     False
