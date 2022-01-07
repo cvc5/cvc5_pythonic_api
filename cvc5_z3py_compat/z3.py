@@ -5146,7 +5146,7 @@ def SolverFor(logic, ctx=None, logFile=None):
 
     The parameter `logic` is a string. It should be the name of an SMT-LIB
     logic.
-    See http://www.smtlib.org/ for the name of all available logics.
+    See https://smtlib.cs.uiowa.edu/ for the name of all available logics.
     """
 
     # Pending multiple solvers
