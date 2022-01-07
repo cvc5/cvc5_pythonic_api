@@ -904,6 +904,7 @@ def Function(name, *sig):
 
 def FreshFunction(*sig):
     """Create a new fresh SMT uninterpreted function with the given sorts.
+
     >>> f = FreshFunction(IntSort(), IntSort())
     >>> x = Int('x')
     >>> solve([f(x) != f(x)])
