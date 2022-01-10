@@ -1,0 +1,15 @@
+t is: cons(0, nil)
+head of t is: head(cons(0, nil))
+after simplify: 0
+
+ctor: cons
+ + arg: Int
+   + selector: head
+ + arg: list
+   + selector: tail
+ctor: nil
+
+t is a 'cons': True
+
+[a = 51]
+proved

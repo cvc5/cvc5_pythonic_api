@@ -278,6 +278,12 @@ class ExprRef(object):
         elif is_false(self):
             return False
         elif is_eq(self) and self.num_args() == 2:
+            # Special case so that expressions bool(x == y) yield a Python boolean.
+            # This is critical because
+            # 1) We want x == y to be symbolic AND
+            # 2) we want symbolic terms to be hashable
+            #   - in Python, hashable objects must support == that returns
+            #     something castable to a Python boolean via __bool__.
             return self.arg(0).eq(self.arg(1))
         else:
             raise SMTException(
@@ -4666,6 +4672,28 @@ class SetRef(ExprRef):
         """
         return BoolRef(self.ctx.solver.mkFalse(), self.ctx)
 
+    def __and__(self, other):
+        """ Intersection
+
+        >>> a = Const('a', SetSort(IntSort()))
+        >>> b = Const('b', SetSort(IntSort()))
+        >>> a & b
+        SetIntersect(a, b)
+        """
+        a, b = _coerce_exprs(self, other)
+        return SetIntersect(a, b)
+
+    def __or__(self, other):
+        """ Union
+
+        >>> a = Const('a', SetSort(IntSort()))
+        >>> b = Const('b', SetSort(IntSort()))
+        >>> a | b
+        SetUnion(a, b)
+        """
+        a, b = _coerce_exprs(self, other)
+        return SetUnion(a, b)
+
 
 def SetSort(s):
     """Create a set sort over element sort s"""
@@ -4719,7 +4747,7 @@ def SetUnion(*args):
 
 
 def SetIntersect(*args):
-    """Take the union of sets
+    """Take the intersection of sets
 
     >>> a = Const('a', SetSort(IntSort()))
     >>> b = Const('b', SetSort(IntSort()))
@@ -5364,6 +5392,38 @@ def prove(claim, **keywords):
         print(s.model())
 
 
+def is_sat(*args):
+    """Return whether these constraints are satifiable.
+
+    Prints nothing.
+
+    >>> a = Int('a')
+    >>> is_sat(a > 0, a < 2)
+    True
+    """
+    s = Solver()
+    s.add(args)
+    r = s.check()
+    _assert(r != unknown, "Unknown result in is_sat")
+    return r == sat
+
+
+def is_tautology(taut):
+    """Return whether these constraints hold *for all assignments*.
+
+    Prints nothing.
+
+    >>> p, q = Bools('p q')
+    >>> is_tautology(Not(And(p, q)) == Or(Not(p), Not(q)))
+    True
+    """
+    s = Solver()
+    s.add(Not(taut))
+    r = s.check()
+    _assert(r != unknown, "Unknown result in is_tautology")
+    return r == unsat
+
+
 class ModelRef:
     """Model/Solution of a satisfiability problem (aka system of constraints)."""
 
@@ -5533,69 +5593,11 @@ def simplify(a):
     return _to_expr_ref(a.ctx.solver.simplify(a.ast), a.ctx)
 
 
-
 #########################################
 #
 # Floating-Point Arithmetic
 #
 #########################################
-
-
-# Global default rounding mode
-_dflt_rounding_mode = pc.RoundTowardZero
-_dflt_fpsort_ebits = 11
-_dflt_fpsort_sbits = 53
-
-
-def get_default_rounding_mode(ctx=None):
-    """Retrieves the global default rounding mode."""
-    if _dflt_rounding_mode == pc.RoundTowardZero:
-        return RTZ(ctx)
-    elif _dflt_rounding_mode == pc.RoundTowardNegative:
-        return RTN(ctx)
-    elif _dflt_rounding_mode == pc.RoundTowardPositive:
-        return RTP(ctx)
-    elif _dflt_rounding_mode == pc.RoundNearestTiesToEven:
-        return RNE(ctx)
-    elif _dflt_rounding_mode == pc.RoundNearestTiesToAway:
-        return RNA(ctx)
-
-
-_ROUNDING_MODES = frozenset({
-    pc.RoundTowardZero,
-    pc.RoundTowardNegative,
-    pc.RoundTowardPositive,
-    pc.RoundNearestTiesToEven,
-    pc.RoundNearestTiesToAway
-})
-
-
-def set_default_rounding_mode(rm, ctx=None):
-    global _dflt_rounding_mode
-    if is_fprm_value(rm):
-        _dflt_rounding_mode = rm.decl().kind()
-    else:
-        _assert(_dflt_rounding_mode in _ROUNDING_MODES, "illegal rounding mode")
-        _dflt_rounding_mode = rm
-
-
-def get_default_fp_sort(ctx=None):
-    return FPSort(_dflt_fpsort_ebits, _dflt_fpsort_sbits, ctx)
-
-
-def set_default_fp_sort(ebits, sbits, ctx=None):
-    global _dflt_fpsort_ebits
-    global _dflt_fpsort_sbits
-    _dflt_fpsort_ebits = ebits
-    _dflt_fpsort_sbits = sbits
-
-
-def _dflt_rm(ctx=None):
-    return get_default_rounding_mode(ctx)
-
-
-def _dflt_fps(ctx=None):
-    return get_default_fp_sort(ctx)
 
 
 def _coerce_fp_expr_list(alist, ctx):
@@ -6071,6 +6073,62 @@ def is_fprm(a):
 def is_fprm_value(a):
     """Return `True` if `a` is a SMT floating-point rounding mode numeral value."""
     return is_fprm(a) and _is_numeral(a.ctx, a.ast)
+
+
+# Global default rounding mode
+_dflt_rounding_mode = RTZ()
+_dflt_fpsort_ebits = 11
+_dflt_fpsort_sbits = 53
+
+
+def get_default_rounding_mode(ctx=None):
+    """Retrieves the global default rounding mode."""
+    if debugging():
+        _assert(isinstance(_dflt_rounding_mode, FPRMRef), "illegal rounding mode")
+    return _dflt_rounding_mode
+
+
+def set_default_rounding_mode(rm, ctx=None):
+    """Set the default rounding mode
+
+    >>> x, y = FPs('x y', Float32())
+    >>> set_default_rounding_mode(RTN())
+    >>> sum1 = x + y
+    >>> set_default_rounding_mode(RTP())
+    >>> sum2 = x + y
+    >>> print((sum1 == sum2).sexpr())
+    (= (fp.add roundTowardNegative x y) (fp.add roundTowardPositive x y))
+    >>> s = SolverFor("QF_FP")
+    >>> s += sum1 != sum2
+    >>> s.check()
+    sat
+    >>> m = s.model()
+    >>> assert str(m[sum1]) != str(m[sum2])
+
+    Note the the FP term builders can take an explicit rounding mode.
+    """
+    global _dflt_rounding_mode
+    _assert(is_fprm_value(rm), "illegal rounding mode")
+    _dflt_rounding_mode = rm
+
+
+def get_default_fp_sort(ctx=None):
+    return FPSort(_dflt_fpsort_ebits, _dflt_fpsort_sbits, ctx)
+
+
+def set_default_fp_sort(ebits, sbits, ctx=None):
+    global _dflt_fpsort_ebits
+    global _dflt_fpsort_sbits
+    _dflt_fpsort_ebits = ebits
+    _dflt_fpsort_sbits = sbits
+
+
+def _dflt_rm(ctx=None):
+    return get_default_rounding_mode(ctx)
+
+
+def _dflt_fps(ctx=None):
+    return get_default_fp_sort(ctx)
 
 # FP Numerals
 
