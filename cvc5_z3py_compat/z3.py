@@ -5392,6 +5392,38 @@ def prove(claim, **keywords):
         print(s.model())
 
 
+def is_sat(*args):
+    """Return whether these constraints are satifiable.
+
+    Prints nothing.
+
+    >>> a = Int('a')
+    >>> is_sat(a > 0, a < 2)
+    True
+    """
+    s = Solver()
+    s.add(args)
+    r = s.check()
+    _assert(r != unknown, "Unknown result in is_sat")
+    return r == sat
+
+
+def is_tautology(taut):
+    """Return whether these constraints hold *for all assignments*.
+
+    Prints nothing.
+
+    >>> p, q = Bools('p q')
+    >>> is_tautology(Not(And(p, q)) == Or(Not(p), Not(q)))
+    True
+    """
+    s = Solver()
+    s.add(Not(taut))
+    r = s.check()
+    _assert(r != unknown, "Unknown result in is_tautology")
+    return r == unsat
+
+
 class ModelRef:
     """Model/Solution of a satisfiability problem (aka system of constraints)."""
 

@@ -5,10 +5,10 @@ if __name__ == "__main__":
     set_default_rounding_mode(RoundNearestTiesToEven())
 
     # FP addition is *not* commutative. This finds a counterexample.
-    prove(fpEQ(x + y, y + x))
+    assert not is_tautology(fpEQ(x + y, y + x))
 
     # Without NaN or infinities, is is commutative. This proof succeeds.
-    prove(
+    assert is_tautology(
         Implies(
             Not(Or(fpIsNaN(x), fpIsNaN(y), fpIsInf(x), fpIsInf(y))), fpEQ(x + y, y + x)
         )
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     pi = FPVal(+3.14, Float32())
 
     # FP addition is *not* associative in the range (-pi, pi).
-    prove(
+    assert not is_tautology(
         Implies(
             And(x >= -pi, x <= pi, y >= -pi, y <= pi, z >= -pi, z <= pi),
             fpEQ((x + y) + z, x + (y + z)),
