@@ -1,0 +1,2 @@
+counterexample
+[init_arr = Store(ConstArray(BitVec(2), 0), 0, 1073741825)]
