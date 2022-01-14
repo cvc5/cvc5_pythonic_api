@@ -13,8 +13,8 @@ import io
 import itertools as it
 
 from cvc5_z3py_compat import z3 as cvc
-import pycvc5 as pc
-from pycvc5 import Kind
+import cvc5 as pc
+from cvc5 import Kind
 
 
 def _assert(cond, msg):
@@ -347,7 +347,7 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedConstant]:
+        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedSortValue]:
             return str(a.ast)
         if k == Kind.InternalKind:
             # Hack to handle DT selectors and constructors
@@ -1117,7 +1117,7 @@ class Formatter:
             elif k == Kind.ConstArray:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedConstant]:
+            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)

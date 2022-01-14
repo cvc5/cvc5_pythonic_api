@@ -80,8 +80,8 @@ import io
 import functools as ft
 import operator as op
 
-import pycvc5 as pc
-from pycvc5 import Kind
+import cvc5 as pc
+from cvc5 import Kind
 
 DEBUG = __debug__
 
@@ -727,7 +727,7 @@ def DeclareSort(name, ctx=None):
     >>> a == b
     a == b
     >>> solve(a == b)
-    [a = (as @uc_A_0 A), b = (as @uc_A_0 A)]
+    [a = (as @a0 A), b = (as @a0 A)]
     """
     ctx = _get_ctx(ctx)
     return SortRef(ctx.solver.mkUninterpretedSort(name), ctx)
