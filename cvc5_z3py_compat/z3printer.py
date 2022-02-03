@@ -36,10 +36,10 @@ _z3_op_to_str = {
     Kind.Or: "Or",
     Kind.Xor: "Xor",
     Kind.Not: "Not",
-    Kind.Plus: "+",
-    Kind.Minus: "-",
+    Kind.Add: "+",
+    Kind.Sub: "-",
     Kind.Pow: "**",
-    Kind.Uminus: "-",
+    Kind.Neg: "-",
     Kind.Mult: "*",
     Kind.Implies: "Implies",
     Kind.IntsDivision: "/",
@@ -127,9 +127,9 @@ _z3_op_to_str = {
 # List of infix operators
 _z3_infix = [
     Kind.Equal,
-    Kind.Plus,
+    Kind.Add,
     Kind.Pow,
-    Kind.Minus,
+    Kind.Sub,
     Kind.Mult,
     Kind.Division,
     Kind.IntsDivision,
@@ -155,12 +155,12 @@ _z3_infix = [
     Kind.BVShl,
 ]
 
-_z3_unary = [Kind.Uminus, Kind.BVNeg, Kind.BVNot]
+_z3_unary = [Kind.Neg, Kind.BVNeg, Kind.BVNot]
 
 # Precedence
 _z3_precedence = {
     Kind.Pow: 0,
-    Kind.Uminus: 1,
+    Kind.Neg: 1,
     Kind.BVNeg: 1,
     Kind.BVNot: 1,
     Kind.Mult: 2,
@@ -170,8 +170,8 @@ _z3_precedence = {
     Kind.BVMult: 2,
     Kind.BVSdiv: 2,
     Kind.BVSmod: 2,
-    Kind.Plus: 3,
-    Kind.Minus: 3,
+    Kind.Add: 3,
+    Kind.Sub: 3,
     Kind.BVAdd: 3,
     Kind.BVSub: 3,
     Kind.BVAshr: 4,
@@ -259,7 +259,7 @@ def _is_assoc(k):
         k == Kind.BVOr
         or k == Kind.BVXor
         or k == Kind.BVAnd
-        or k == Kind.Plus
+        or k == Kind.Add
         or k == Kind.BVAdd
         or k == Kind.Mult
         or k == Kind.BVMult
@@ -267,15 +267,15 @@ def _is_assoc(k):
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == Kind.Minus or k == Kind.BVSub
+    return _is_assoc(k) or k == Kind.Sub or k == Kind.BVSub
 
 
 def _is_add(k):
-    return k == Kind.Plus or k == Kind.BVAdd
+    return k == Kind.Add or k == Kind.BVAdd
 
 
 def _is_sub(k):
-    return k == Kind.Minus or k == Kind.BVSub
+    return k == Kind.Sub or k == Kind.BVSub
 
 
 if sys.version < "3":

@@ -1200,7 +1200,7 @@ def is_app_of(a, k):
 
     >>> x = Int('x')
     >>> n = x + 1
-    >>> is_app_of(n, Kind.Plus)
+    >>> is_app_of(n, Kind.Add)
     True
     >>> is_app_of(n, Kind.Mult)
     False
@@ -1869,7 +1869,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Plus, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.Add, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -1879,7 +1879,7 @@ class ArithRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Plus, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.Add, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -1919,7 +1919,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Minus, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.Sub, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -1929,7 +1929,7 @@ class ArithRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Minus, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.Sub, b.ast, a.ast), self.ctx)
 
     def __pow__(self, other):
         """Create the SMT expression `self**other` (** is the power operator).
@@ -2045,7 +2045,7 @@ class ArithRef(ExprRef):
         >>> -x
         -x
         """
-        return ArithRef(self.ctx.solver.mkTerm(Kind.Uminus, self.ast), self.ctx)
+        return ArithRef(self.ctx.solver.mkTerm(Kind.Neg, self.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -2240,7 +2240,7 @@ def is_add(a):
     >>> is_add(x - y)
     False
     """
-    return is_app_of(a, Kind.Plus)
+    return is_app_of(a, Kind.Add)
 
 
 def is_mul(a):
@@ -2264,7 +2264,7 @@ def is_sub(a):
     >>> is_sub(x + y)
     False
     """
-    return is_app_of(a, Kind.Minus)
+    return is_app_of(a, Kind.Sub)
 
 
 def is_div(a):
@@ -2886,18 +2886,18 @@ def Cbrt(a, ctx=None):
     return a ** "1/3"
 
 
-def Plus(*args):
+def Add(*args):
     """ Create an SMT addition.
 
     See also the __add__ overload (+ operator) for arithmetic SMT expressions.
 
     >>> x, y = Ints('x y')
-    >>> Plus(x, x, y)
+    >>> Add(x, x, y)
     x + x + y
-    >>> Plus(x, x, y, main_ctx())
+    >>> Add(x, x, y, main_ctx())
     x + x + y
     """
-    return _nary_kind_builder(Kind.Plus, *args)
+    return _nary_kind_builder(Kind.Add, *args)
 
 
 def Mult(*args):
@@ -6362,7 +6362,7 @@ def fpNaN(s):
     >>> set_fpa_pretty(pb)
     """
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkNaN(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.solver.mkFloatingPointNaN(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpPlusInfinity(s):
@@ -6379,13 +6379,13 @@ def fpPlusInfinity(s):
     >>> set_fpa_pretty(pb)
     """
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkPosInf(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.solver.mkFloatingPointPosInf(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpMinusInfinity(s):
     """Create a SMT floating-point -oo term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkNegInf(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.solver.mkFloatingPointNegInf(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpInfinity(s, negative):
@@ -6398,13 +6398,13 @@ def fpInfinity(s, negative):
 def fpPlusZero(s):
     """Create a SMT floating-point +0.0 term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkPosZero(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.solver.mkFloatingPointPosZero(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpMinusZero(s):
     """Create a SMT floating-point -0.0 term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkNegZero(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.solver.mkFloatingPointNegZero(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpZero(s, negative):
