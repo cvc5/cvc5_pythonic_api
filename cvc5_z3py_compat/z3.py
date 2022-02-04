@@ -2886,6 +2886,22 @@ def Cbrt(a, ctx=None):
     return a ** "1/3"
 
 
+def Plus(*args):
+    """ Create an SMT addition.
+
+    Deprecated. Kept for compatiblity with Z3. See "Add".
+
+    See also the __add__ overload (+ operator) for arithmetic SMT expressions.
+
+    >>> x, y = Ints('x y')
+    >>> Plus(x, x, y)
+    x + x + y
+    >>> Plus(x, x, y, main_ctx())
+    x + x + y
+    """
+    return Add(*args)
+
+
 def Add(*args):
     """ Create an SMT addition.
 
@@ -2926,8 +2942,22 @@ def Sub(a, b):
     return a - b
 
 
+def Neg(a):
+    """ Create an SMT unary negation.
+
+    See also the __neg__ overload (unary - operator) for arithmetic SMT expressions.
+
+    >>> x = Int('x')
+    >>> Neg(x)
+    -x
+    """
+    return -a
+
+
 def UMinus(a):
     """ Create an SMT unary negation.
+
+    Deprecated. Kept for compatiblity with Z3. See "Neg".
 
     See also the __neg__ overload (unary - operator) for arithmetic SMT expressions.
 
