@@ -12,7 +12,7 @@ import io
 
 import itertools as it
 
-from cvc5_z3py_compat import z3 as cvc
+from . import z3 as cvc
 import cvc5 as pc
 from cvc5 import Kind
 
