@@ -117,9 +117,9 @@ _z3_op_to_str = {
     Kind.RegexpComplement: "Complement",
     Kind.FPIsNan: "fpIsNaN",
     Kind.FPIsInf: "fpIsInf",
-    Kind.FPIsZ: "fpIsZero",
-    Kind.FPIsN: "fpIsNormal",
-    Kind.FPIsSn: "fpIsMinusnormal",
+    Kind.FPIsZero: "fpIsZero",
+    Kind.FPIsNormal: "fpIsNormal",
+    Kind.FPIsSubnormal: "fpIsMinusnormal",
     Kind.FPIsNeg: "fpIsNegative",
     Kind.FPIsPos: "fpIsPositive",
 }
