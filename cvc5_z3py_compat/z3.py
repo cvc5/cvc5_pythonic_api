@@ -6492,7 +6492,7 @@ def FPVal(val, exp=None, fps=None, ctx=None):
         dub = Float64(ctx)
         bv = ctx.solver.mkBitVector(len(bv_str), bv_str, 2)
         fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
-        fp_to_fp_op = ctx.solver.mkOp(Kind.FPToFpFP, fps.ebits(), fps.sbits())
+        fp_to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromFp, fps.ebits(), fps.sbits())
         fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
         presimp = FPNumRef(fp, ctx)
         post = simplify(presimp)
@@ -6972,7 +6972,7 @@ def fpBVToFP(v, sort, ctx=None):
     _assert(is_bv(v), "First argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Second argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpIeeeBV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromIeeeBv, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, v.ast), ctx)
 
 
@@ -6993,7 +6993,7 @@ def fpFPToFP(rm, v, sort, ctx=None):
     _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFP, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromFp, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7012,7 +7012,7 @@ def fpRealToFP(rm, v, sort, ctx=None):
     _assert(is_real(v), "Second argument must be a SMT expression or real sort.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpReal, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromReal, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7031,7 +7031,7 @@ def fpSignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpSignedBV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromSbv, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7050,7 +7050,7 @@ def fpUnsignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpUnsignedBV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromUbv, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7061,7 +7061,7 @@ def fpToFPUnsigned(rm, x, s, ctx=None):
         _assert(is_bv(x), "Second argument must be a SMT bit-vector expression")
         _assert(is_fp_sort(s), "Third argument must be SMT floating-point sort")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpUnsignedBV, s.ebits(), s.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromUbv, s.ebits(), s.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, x.ast), ctx)
 
 
