@@ -5199,6 +5199,18 @@ class Solver(object):
             _assert(isinstance(v, str), "non-string key " + str(v))
             self.solver.setOption(k, v)
 
+    def statistics(self):
+        """Return the statistics of this solver.
+
+        >>> s = Solver()
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0)
+        >>> s.check()
+        sat
+        >>> s.statistics()
+        """
+        return self.solver.getStatistics()
+
 
 def SolverFor(logic, ctx=None, logFile=None):
     """Create a solver customized for the given logic.
