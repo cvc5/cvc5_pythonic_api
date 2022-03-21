@@ -5194,10 +5194,49 @@ class Solver(object):
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
     def set(self, **kwargs):
+        """Set an option on the solver. Wraps ``setOption()``.
+
+        >>> s = Solver()
+        >>> s.set(incremental="true")
+        """
+        self.setOption(**kwargs)
+    
+    def setOption(self, **kwargs):
+        """Set an option on the solver. The option value is passed as a string internally.
+        Boolean values are properly converted manually, all other types are convertes using ``str()``.
+
+        >>> s = Solver()
+        >>> s.set(incremental=True)
+        """
         for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
-            _assert(isinstance(v, str), "non-string key " + str(v))
+            if isinstance(v, bool):
+                v = "true" if v else "false"
+            elif not isinstance(v, str):
+                v = str(v)
             self.solver.setOption(k, v)
+
+    def getOption(self, name):
+        """Get the current value of an option from the solver. The value is returned as a string.
+        For type-safe querying use ``getOptionInfo()``.
+
+        >>> s = Solver()
+        >>> s.setOption(incremental=True)
+        >>> s.getOption("incremental")
+        true
+        """
+        return self.solver.getOption(name)
+    
+    def getOptionInfo(self, name):
+        """Get the current value of an option from the solver. The value is returned as a string.
+        For type-safe querying use ``getOptionInfo()``.
+
+        >>> s = Solver()
+        >>> s.setOption(incremental=True)
+        >>> s.getOption("incremental")
+        { 'type': bool, 'current': True, 'default': False }
+        """
+        return self.solver.getOptionInfo(name)
 
 
 def SolverFor(logic, ctx=None, logFile=None):
