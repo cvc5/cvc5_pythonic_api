@@ -5202,12 +5202,13 @@ class Solver(object):
     def statistics(self):
         """Return the statistics of this solver.
 
+        >>> del main_ctx()
         >>> s = Solver()
         >>> a = Int('a')
-        >>> s.add(a + 2 == 0)
+        >>> s.add(a == 0)
         >>> s.check()
         sat
-        >>> s.statistics().get('api::CONSTANTS')
+        >>> s.statistics()['api::CONSTANTS']
         { 'integer type': 1 }
         """
         return self.solver.getStatistics()
