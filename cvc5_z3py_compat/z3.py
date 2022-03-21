@@ -5208,6 +5208,7 @@ class Solver(object):
         >>> s.check()
         sat
         >>> s.statistics()
+        foo
         """
         return self.solver.getStatistics()
 
