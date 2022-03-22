@@ -5202,7 +5202,8 @@ class Solver(object):
     def statistics(self):
         """Return the statistics of this solver.
 
-        >>> del main_ctx()
+        >>> # enforce a fresh context
+        >>> main_ctx().__del__()
         >>> s = Solver()
         >>> a = Int('a')
         >>> s.add(a == 0)
