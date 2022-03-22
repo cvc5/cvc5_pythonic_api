@@ -5202,15 +5202,14 @@ class Solver(object):
     def statistics(self):
         """Return the statistics of this solver.
 
-        >>> # enforce a fresh context
-        >>> _main_ctx = None
-        >>> s = Solver()
+        >>> c = Context()
+        >>> s = Solver(c)
         >>> a = Int('a')
         >>> s.add(a == 0)
         >>> s.check()
         sat
         >>> s.statistics()['api::CONSTANT']
-        { 'integer type': 1 }
+        {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
         """
         return self.solver.getStatistics()
 
