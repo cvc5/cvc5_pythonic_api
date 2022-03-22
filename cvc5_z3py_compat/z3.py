@@ -5208,7 +5208,7 @@ class Solver(object):
         >>> s.add(a == 0)
         >>> s.check()
         sat
-        >>> s.statistics()['api::CONSTANTS']
+        >>> s.statistics()['api::CONSTANT']
         { 'integer type': 1 }
         """
         return self.solver.getStatistics()
