@@ -5204,7 +5204,7 @@ class Solver(object):
 
         >>> c = Context()
         >>> s = Solver(ctx=c)
-        >>> a = Int('a')
+        >>> a = Int('a', c)
         >>> s.add(a == 0)
         >>> s.check()
         sat
