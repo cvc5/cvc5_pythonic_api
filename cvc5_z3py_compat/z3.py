@@ -5203,7 +5203,7 @@ class Solver(object):
         """Return the statistics of this solver.
 
         >>> c = Context()
-        >>> s = Solver(c)
+        >>> s = Solver(ctx=c)
         >>> a = Int('a')
         >>> s.add(a == 0)
         >>> s.check()
