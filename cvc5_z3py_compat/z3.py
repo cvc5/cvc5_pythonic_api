@@ -137,15 +137,21 @@ class Context(object):
     """
 
     def __init__(self, *args, **kws):
+        self.reset()
+
+    def __del__(self):
+        self.solver = None
+    
+    def reset(self):
+        """Fully reset the context. This actually destroys the solver object and recreates this.
+        **This invalidates all objects created within this context and using them will most likely crash.**
+        """
         self.solver = pc.Solver()
         self.solver.setOption("produce-models", "true")
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
         self.next_fresh_var = 0
-
-    def __del__(self):
-        self.solver = None
 
     def get_var(self, name, sort):
         """Get the variable identified by `name`.
@@ -4959,7 +4965,7 @@ class Solver(object):
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
-        self.reset()
+        self.resetAssertions()
 
     def __del__(self):
         if self.solver is not None:
@@ -5035,7 +5041,7 @@ class Solver(object):
         """
         return self.scopes
 
-    def reset(self):
+    def resetAssertions(self):
         """Remove all asserted constraints and backtracking points created
         using `push()`.
 
@@ -5044,13 +5050,29 @@ class Solver(object):
         >>> s.add(x > 0)
         >>> s
         [x > 0]
-        >>> s.reset()
+        >>> s.resetAssertions()
         >>> s
         []
         """
         self.solver.resetAssertions()
         self.scopes = 0
         self.assertions_ = [[]]
+    
+    def reset(self):
+        """Fully reset the solver. This actually destroys the solver object in the context and recreates this.
+        **This invalidates all objects created within this context and using them will most likely crash.**
+        
+        >>> s = Solver()
+        >>> x = Int('x')
+        >>> s.add(x > 0)
+        >>> s.check()
+        sat
+        >>> s.reset()
+        >>> s.setOption(incremental=True)
+        """
+        self.ctx.reset()
+        self.solver = self.ctx.solver
+        self.resetAssertions()
 
     def assert_exprs(self, *args):
         """Assert constraints into the solver.
@@ -5130,7 +5152,7 @@ class Solver(object):
         >>> s.add(x < 1)
         >>> s.check()
         unsat
-        >>> s.reset()
+        >>> s.resetAssertions()
         """
         assumptions = _get_args(assumptions)
         r = CheckSatResult(self.solver.checkSatAssuming(*[a.ast for a in assumptions]))
@@ -5196,6 +5218,7 @@ class Solver(object):
     def set(self, **kwargs):
         """Set an option on the solver. Wraps ``setOption()``.
 
+        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.set(incremental="true")
         """
@@ -5205,6 +5228,7 @@ class Solver(object):
         """Set an option on the solver. The option value is passed as a string internally.
         Boolean values are properly converted manually, all other types are convertes using ``str()``.
 
+        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.set(incremental=True)
         """
@@ -5220,6 +5244,7 @@ class Solver(object):
         """Get the current value of an option from the solver. The value is returned as a string.
         For type-safe querying use ``getOptionInfo()``.
 
+        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.setOption(incremental=True)
         >>> s.getOption("incremental")
@@ -5231,9 +5256,10 @@ class Solver(object):
         """Get the current value of an option from the solver. The value is returned as a string.
         For type-safe querying use ``getOptionInfo()``.
 
+        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.setOption(incremental=True)
-        >>> s.getOption("incremental")
+        >>> s.getOptionInfo("incremental")
         { 'type': bool, 'current': True, 'default': False }
         """
         return self.solver.getOptionInfo(name)
