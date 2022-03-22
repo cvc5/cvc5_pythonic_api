@@ -1003,7 +1003,7 @@ class Formatter:
             )
 
     def pp_unary_param(self, a, d, xs, param_on_right):
-        p = a.ast.getOp().getIndices()
+        p = a.ast.getOp()[0].toPythonObj()
         arg = self.pp_expr(a.arg(0), d + 1, xs)
         if param_on_right:
             return seq1(self.pp_name(a), [arg, to_format(p)])
@@ -1011,7 +1011,8 @@ class Formatter:
             return seq1(self.pp_name(a), [to_format(p), arg])
 
     def pp_extract(self, a, d, xs):
-        h, l = a.ast.getOp().getIndices()
+        h = a.ast.getOp()[0].toPythonObj()
+        l = a.ast.getOp()[1].toPythonObj()
         arg = self.pp_expr(a.arg(0), d + 1, xs)
         return seq1(self.pp_name(a), [to_format(h), to_format(l), arg])
 
