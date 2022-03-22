@@ -5203,7 +5203,7 @@ class Solver(object):
         """Return the statistics of this solver.
 
         >>> # enforce a fresh context
-        >>> main_ctx().__del__()
+        >>> _main_ctx = None
         >>> s = Solver()
         >>> a = Int('a')
         >>> s.add(a == 0)
