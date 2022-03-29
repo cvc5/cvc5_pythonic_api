@@ -122,6 +122,21 @@ _z3_op_to_str = {
     Kind.FPIsSubnormal: "fpIsMinusnormal",
     Kind.FPIsNeg: "fpIsNegative",
     Kind.FPIsPos: "fpIsPositive",
+    # Transcendental
+    Kind.Sine: "Sine",
+    Kind.Cosine: "Cosine",
+    Kind.Tangent: "Tangent",
+    Kind.Secant: "Secant",
+    Kind.Cosecant: "Cosecant",
+    Kind.Cotangent: "Cotangent",
+    Kind.Arcsine: "Arcsine",
+    Kind.Arccosine: "Arccosine",
+    Kind.Arctangent: "Arctangent",
+    Kind.Arcsecant: "Arcsecant",
+    Kind.Arccosecant: "Arccosecant",
+    Kind.Arccotangent: "Arccotangent",
+    Kind.Pi: "Pi",
+    Kind.Exponential: "Exponential",
 }
 
 # List of infix operators
@@ -346,7 +361,7 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedSortValue]:
+        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedSortValue, Kind.Pi]:
             return str(a.ast)
         if k == Kind.InternalKind:
             # Hack to handle DT selectors and constructors
@@ -1117,7 +1132,7 @@ class Formatter:
             elif k == Kind.ConstArray:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue]:
+            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue, Kind.Pi]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)

@@ -3059,6 +3059,149 @@ def Gt(a, b):
 
 #########################################
 #
+# Transcendentals
+#
+#########################################
+
+
+def Pi(ctx=None):
+    """ Create the constant pi
+
+    >>> Pi()
+    Pi
+    """
+    ctx = get_ctx(ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(Kind.Pi, []), ctx)
+
+
+def Exponential(x):
+    """ Create an exponential function
+
+    >>> x = Real('x')
+    >>> solve(Exponential(x) == 1)
+    [x = 0]
+    """
+    return _nary_kind_builder(Kind.Exponential, RealSort().cast(x))
+
+
+def Sine(x):
+    """ Create a sine function
+
+    >>> x = Real('x')
+    >>> i = Int('i')
+    >>> prove(Sine(x) < 2)
+    proved
+    >>> prove(Sine(i) < 2)
+    proved
+    """
+    return _nary_kind_builder(Kind.Sine, RealSort().cast(x))
+
+
+def Cosine(x):
+    """ Create a cosine function
+
+    >>> x = Real('x')
+    >>> i = Int('i')
+    >>> prove(Cosine(x) < 2)
+    proved
+    >>> prove(Cosine(i) < 2)
+    proved
+    """
+    return _nary_kind_builder(Kind.Cosine, RealSort().cast(x))
+
+
+def Tangent(x):
+    """ Create a tangent function
+
+    >>> Tangent(Real('x'))
+    Tangent(x)
+    """
+    return _nary_kind_builder(Kind.Tangent, RealSort().cast(x))
+
+
+def Arcsine(x):
+    """ Create a sine function
+
+    >>> Arcsine(Real('x'))
+    Arcsine(x)
+    """
+    return _nary_kind_builder(Kind.Arcsine, RealSort().cast(x))
+
+
+def Arccosine(x):
+    """ Create a cosine function
+
+    >>> Arccosine(Real('x'))
+    Arccosine(x)
+    """
+    return _nary_kind_builder(Kind.Arccosine, RealSort().cast(x))
+
+
+def Arctangent(x):
+    """ Create a tangent function
+
+    >>> Arctangent(Real('x'))
+    Arctangent(x)
+    """
+    return _nary_kind_builder(Kind.Arctangent, RealSort().cast(x))
+
+
+def Secant(x):
+    """ Create a secant function
+
+    >>> Secant(Real('x'))
+    Secant(x)
+    """
+    return _nary_kind_builder(Kind.Secant, RealSort().cast(x))
+
+
+def Cosecant(x):
+    """ Create a cosecant function
+
+    >>> Cosecant(Real('x'))
+    Cosecant(x)
+    """
+    return _nary_kind_builder(Kind.Cosecant, RealSort().cast(x))
+
+
+def Cotangent(x):
+    """ Create a cotangent function
+
+    >>> Cotangent(Real('x'))
+    Cotangent(x)
+    """
+    return _nary_kind_builder(Kind.Cotangent, RealSort().cast(x))
+
+
+def Arcsecant(x):
+    """ Create a secant function
+
+    >>> Arcsecant(Real('x'))
+    Arcsecant(x)
+    """
+    return _nary_kind_builder(Kind.Arcsecant, RealSort().cast(x))
+
+
+def Arccosecant(x):
+    """ Create a cosecant function
+
+    >>> Arccosecant(Real('x'))
+    Arccosecant(x)
+    """
+    return _nary_kind_builder(Kind.Arccosecant, RealSort().cast(x))
+
+
+def Arccotangent(x):
+    """ Create a cotangent function
+
+    >>> Arccotangent(Real('x'))
+    Arccotangent(x)
+    """
+    return _nary_kind_builder(Kind.Arccotangent, RealSort().cast(x))
+
+
+#########################################
+#
 # Bit-Vectors
 #
 #########################################
