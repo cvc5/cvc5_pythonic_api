@@ -3120,7 +3120,7 @@ def Tangent(x):
 
 
 def Arcsine(x):
-    """ Create a sine function
+    """ Create an arcsine function
 
     >>> Arcsine(Real('x'))
     Arcsine(x)
@@ -3129,7 +3129,7 @@ def Arcsine(x):
 
 
 def Arccosine(x):
-    """ Create a cosine function
+    """ Create an arccosine function
 
     >>> Arccosine(Real('x'))
     Arccosine(x)
@@ -3138,7 +3138,7 @@ def Arccosine(x):
 
 
 def Arctangent(x):
-    """ Create a tangent function
+    """ Create an arctangent function
 
     >>> Arctangent(Real('x'))
     Arctangent(x)
@@ -3174,7 +3174,7 @@ def Cotangent(x):
 
 
 def Arcsecant(x):
-    """ Create a secant function
+    """ Create an arcsecant function
 
     >>> Arcsecant(Real('x'))
     Arcsecant(x)
@@ -3183,7 +3183,7 @@ def Arcsecant(x):
 
 
 def Arccosecant(x):
-    """ Create a cosecant function
+    """ Create an arccosecant function
 
     >>> Arccosecant(Real('x'))
     Arccosecant(x)
@@ -3192,7 +3192,7 @@ def Arccosecant(x):
 
 
 def Arccotangent(x):
-    """ Create a cotangent function
+    """ Create an arccotangent function
 
     >>> Arccotangent(Real('x'))
     Arccotangent(x)
