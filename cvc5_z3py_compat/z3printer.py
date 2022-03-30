@@ -230,7 +230,6 @@ _z3_op_to_fpa_normal_str = {
     Kind.FPLeq: "fpLEQ",
     Kind.FPGeq: "fpGEQ",
 
-    Kind.FPToFpGeneric: "fpToFP",
     Kind.FPToFpFromFp: "fpToFP",
     Kind.FPToFpFromUbv: "fpToFP",
     Kind.FPToFpFromSbv: "fpToFP",
