@@ -141,10 +141,11 @@ class Context(object):
 
     def __del__(self):
         self.solver = None
-    
+
     def reset(self):
-        """Fully reset the context. This actually destroys the solver object and recreates this.
-        **This invalidates all objects created within this context and using them will most likely crash.**
+        """Fully reset the context. This actually destroys the solver object and
+        recreates it. **This invalidates all objects created within this context
+        and using them will most likely crash.**
         """
         self.solver = pc.Solver()
         self.solver.setOption("produce-models", "true")
@@ -190,15 +191,15 @@ def main_ctx():
     >>> x.ctx == main_ctx()
     True
     """
-# Pending multiple solvers
-#    >>> c = Context()
-#    >>> c == main_ctx()
-#    False
-#    >>> x2 = Real('x', c)
-#    >>> x2.ctx == c
-#    True
-#    >>> eq(x, x2)
-#    False
+    # Pending multiple solvers
+    #    >>> c = Context()
+    #    >>> c == main_ctx()
+    #    False
+    #    >>> x2 = Real('x', c)
+    #    >>> x2.ctx == c
+    #    True
+    #    >>> eq(x, x2)
+    #    False
     global _main_ctx
     if _main_ctx is None:
         _main_ctx = Context()
@@ -5057,10 +5058,11 @@ class Solver(object):
         self.solver.resetAssertions()
         self.scopes = 0
         self.assertions_ = [[]]
-    
+
     def reset(self):
-        """Fully reset the solver. This actually destroys the solver object in the context and recreates this.
-        **This invalidates all objects created within this context and using them will most likely crash.**
+        """Fully reset the solver. This actually destroys the solver object in
+        the context and recreates this. **This invalidates all objects created
+        within this context and using them will most likely crash.**
         
         >>> s = Solver()
         >>> x = Int('x')
@@ -5223,10 +5225,11 @@ class Solver(object):
         >>> s.set(incremental="true")
         """
         self.setOption(**kwargs)
-    
+
     def setOption(self, **kwargs):
-        """Set an option on the solver. The option value is passed as a string internally.
-        Boolean values are properly converted manually, all other types are convertes using ``str()``.
+        """Set an option on the solver. The option value is passed as a string
+        internally. Boolean values are properly converted manually, all other
+        types are convertes using ``str()``.
 
         >>> main_ctx().reset()
         >>> s = Solver()
@@ -5241,8 +5244,8 @@ class Solver(object):
             self.solver.setOption(k, v)
 
     def getOption(self, name):
-        """Get the current value of an option from the solver. The value is returned as a string.
-        For type-safe querying use ``getOptionInfo()``.
+        """Get the current value of an option from the solver. The value is
+        returned as a string. For type-safe querying use ``getOptionInfo()``.
 
         >>> main_ctx().reset()
         >>> s = Solver()
@@ -5251,10 +5254,10 @@ class Solver(object):
         'true'
         """
         return self.solver.getOption(name)
-    
+
     def getOptionInfo(self, name):
-        """Get the current value of an option from the solver. The value is returned as a string.
-        For type-safe querying use ``getOptionInfo()``.
+        """Get the current value of an option from the solver. The value is
+        returned as a string. For type-safe querying use ``getOptionInfo()``.
 
         >>> main_ctx().reset()
         >>> s = Solver()
@@ -5273,16 +5276,16 @@ def SolverFor(logic, ctx=None, logFile=None):
     See https://smtlib.cs.uiowa.edu/ for the name of all available logics.
     """
 
-    # Pending multiple solvers
-    #     >>> s = SolverFor("QF_LIA")
-    #     >>> x = Int('x')
-    #     >>> s.add(x > 0)
-    #     >>> s.add(x < 2)
-    #     >>> s.check()
-    #     sat
-    #     >>> s.model()
-    #     [x = 1]
-    #     """
+# Pending multiple solvers
+#     >>> s = SolverFor("QF_LIA")
+#     >>> x = Int('x')
+#     >>> s.add(x > 0)
+#     >>> s.add(x < 2)
+#     >>> s.check()
+#     sat
+#     >>> s.model()
+#     [x = 1]
+#     """
     solver = pc.Solver()
     solver.setLogic(logic)
     ctx = _get_ctx(ctx)
