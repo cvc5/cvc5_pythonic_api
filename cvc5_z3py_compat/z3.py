@@ -5208,7 +5208,7 @@ class Solver(object):
         >>> s.check()
         sat
         >>> stats = s.statistics()
-        >>> stats['api::CONSTANT']
+        >>> stats['cvc5::CONSTANT']
         {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
         >>> len(stats.get()) > 30
         """
