@@ -5293,16 +5293,16 @@ def SolverFor(logic, ctx=None, logFile=None):
     See https://smtlib.cs.uiowa.edu/ for the name of all available logics.
     """
 
-# Pending multiple solvers
-#     >>> s = SolverFor("QF_LIA")
-#     >>> x = Int('x')
-#     >>> s.add(x > 0)
-#     >>> s.add(x < 2)
-#     >>> s.check()
-#     sat
-#     >>> s.model()
-#     [x = 1]
-#     """
+    # Pending multiple solvers
+    # >>> s = SolverFor("QF_LIA")
+    # >>> x = Int('x')
+    # >>> s.add(x > 0)
+    # >>> s.add(x < 2)
+    # >>> s.check()
+    # sat
+    # >>> s.model()
+    # [x = 1]
+    # """
     solver = pc.Solver()
     solver.setLogic(logic)
     ctx = _get_ctx(ctx)
