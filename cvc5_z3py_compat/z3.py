@@ -5254,6 +5254,16 @@ class Solver(object):
         'true'
         """
         return self.solver.getOption(name)
+    
+    def getOptionNames(self):
+        """Get all option names that can be used with ``getOption()``,
+        ``setOption()`` and ``getOptionInfo()``.
+
+        >>> s = Solver()
+        >>> s.getOptionNames()[:3]
+        ['']
+        """
+        return self.solver.getOptionNames()
 
     def getOptionInfo(self, name):
         """Get the current value of an option from the solver. The value is
