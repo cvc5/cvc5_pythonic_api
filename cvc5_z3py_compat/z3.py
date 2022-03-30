@@ -5268,7 +5268,7 @@ class Solver(object):
 
         >>> s = Solver()
         >>> s.getOptionNames()[:3]
-        ['']
+        ['abstract-values', 'ackermann', 'approx-branch-depth']
         """
         return self.solver.getOptionNames()
 
@@ -5278,9 +5278,9 @@ class Solver(object):
 
         >>> main_ctx().reset()
         >>> s = Solver()
-        >>> s.setOption(incremental=False)
+        >>> s.setOption(incremental=True)
         >>> s.getOptionInfo("incremental")
-        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': False}
+        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': True, 'default': False}
         """
         return self.solver.getOptionInfo(name)
 
