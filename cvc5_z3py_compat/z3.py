@@ -5217,24 +5217,31 @@ class Solver(object):
         """
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
-    def set(self, **kwargs):
+    def set(self, *args, **kwargs):
         """Set an option on the solver. Wraps ``setOption()``.
 
         >>> main_ctx().reset()
         >>> s = Solver()
-        >>> s.set(incremental="true")
+        >>> s.set(incremental=True)
+        >>> s.set('incremental', 'true')
         """
-        self.setOption(**kwargs)
+        self.setOption(*args, **kwargs)
 
-    def setOption(self, **kwargs):
-        """Set an option on the solver. The option value is passed as a string
-        internally. Boolean values are properly converted manually, all other
-        types are convertes using ``str()``.
+    def setOption(self, name=None, value=None, **kwargs):
+        """Set options on the solver. Options can either be set via the ``name``
+        and ``value`` arguments in the form ``setOption('foo', 'bar')``, or as
+        keyword arguments using the syntax ``setOption(foo='bar')``.
+        The option value is passed as a string internally. Boolean values are
+        properly converted manually, all other types are convertes using
+        ``str()``.
 
         >>> main_ctx().reset()
         >>> s = Solver()
-        >>> s.set(incremental=True)
+        >>> s.setOption('incremental', True)
+        >>> s.setOption(incremental='true')
         """
+        if name is not None:
+            kwargs[name] = value
         for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
             if isinstance(v, bool):
