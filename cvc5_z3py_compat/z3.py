@@ -5210,7 +5210,10 @@ class Solver(object):
         >>> stats = s.statistics()
         >>> stats['cvc5::CONSTANT']
         {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
-        >>> len(stats.get()) > 30
+        >>> len(stats.get()) < 10
+        True
+        >>> len(stats.get(True, True)) > 30
+        True
         """
         return self.solver.getStatistics()
 
