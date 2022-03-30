@@ -191,15 +191,15 @@ def main_ctx():
     >>> x.ctx == main_ctx()
     True
     """
-    # Pending multiple solvers
-    #    >>> c = Context()
-    #    >>> c == main_ctx()
-    #    False
-    #    >>> x2 = Real('x', c)
-    #    >>> x2.ctx == c
-    #    True
-    #    >>> eq(x, x2)
-    #    False
+# Pending multiple solvers
+#    >>> c = Context()
+#    >>> c == main_ctx()
+#    False
+#    >>> x2 = Real('x', c)
+#    >>> x2.ctx == c
+#    True
+#    >>> eq(x, x2)
+#    False
     global _main_ctx
     if _main_ctx is None:
         _main_ctx = Context()
