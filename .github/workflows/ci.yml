@@ -5,6 +5,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # cancel already running jobs for the same branch/pr/tag
+    concurrency:
+      group: build-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
 
     - uses: actions/checkout@v2
