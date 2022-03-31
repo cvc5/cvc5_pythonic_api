@@ -6191,7 +6191,7 @@ def is_fprm_value(a):
 
 
 # Global default rounding mode
-_dflt_rounding_mode = RTZ()
+_dflt_rounding_mode = pc.RoundingMode.RoundTowardZero
 _dflt_fpsort_ebits = 11
 _dflt_fpsort_sbits = 53
 
@@ -6199,8 +6199,9 @@ _dflt_fpsort_sbits = 53
 def get_default_rounding_mode(ctx=None):
     """Retrieves the global default rounding mode."""
     if debugging():
-        _assert(isinstance(_dflt_rounding_mode, FPRMRef), "illegal rounding mode")
-    return _dflt_rounding_mode
+        _assert(isinstance(_dflt_rounding_mode, pc.RoundingMode), "illegal rounding mode")
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(_dflt_rounding_mode), ctx)
 
 
 def set_default_rounding_mode(rm, ctx=None):
@@ -6224,7 +6225,7 @@ def set_default_rounding_mode(rm, ctx=None):
     """
     global _dflt_rounding_mode
     _assert(is_fprm_value(rm), "illegal rounding mode")
-    _dflt_rounding_mode = rm
+    _dflt_rounding_mode = rm.ast
 
 
 def get_default_fp_sort(ctx=None):
