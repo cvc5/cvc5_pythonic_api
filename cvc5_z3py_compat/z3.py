@@ -5278,9 +5278,9 @@ class Solver(object):
 
         >>> main_ctx().reset()
         >>> s = Solver()
-        >>> s.setOption(incremental=True)
+        >>> s.setOption(incremental=False)
         >>> s.getOptionInfo("incremental")
-        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': True, 'default': False}
+        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': False}
         """
         return self.solver.getOptionInfo(name)
 
