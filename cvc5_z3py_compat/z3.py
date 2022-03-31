@@ -6226,7 +6226,7 @@ def set_default_rounding_mode(rm, ctx=None):
     """
     global _dflt_rounding_mode
     _assert(is_fprm_value(rm), "illegal rounding mode")
-    _dflt_rounding_mode = rm.ast
+    _dflt_rounding_mode = rm.ast.getRoundingModeValue()
 
 
 def get_default_fp_sort(ctx=None):
