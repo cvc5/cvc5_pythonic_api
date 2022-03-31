@@ -5027,7 +5027,9 @@ class Solver(object):
     def num_scopes(self):
         """Return the current number of backtracking points.
 
+        >>> main_ctx().reset()
         >>> s = Solver()
+        >>> s.setOption(incremental=True)
         >>> s.num_scopes()
         0
         >>> s.push()
@@ -5280,7 +5282,7 @@ class Solver(object):
         >>> s = Solver()
         >>> s.setOption(incremental=False)
         >>> s.getOptionInfo("incremental")
-        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': False}
+        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': True}
         """
         return self.solver.getOptionInfo(name)
 
