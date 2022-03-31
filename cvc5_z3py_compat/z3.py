@@ -137,15 +137,22 @@ class Context(object):
     """
 
     def __init__(self, *args, **kws):
+        self.reset()
+
+    def __del__(self):
+        self.solver = None
+
+    def reset(self):
+        """Fully reset the context. This actually destroys the solver object and
+        recreates it. **This invalidates all objects created within this context
+        and using them will most likely crash.**
+        """
         self.solver = pc.Solver()
         self.solver.setOption("produce-models", "true")
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
         self.next_fresh_var = 0
-
-    def __del__(self):
-        self.solver = None
 
     def get_var(self, name, sort):
         """Get the variable identified by `name`.
@@ -4959,7 +4966,7 @@ class Solver(object):
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
-        self.reset()
+        self.resetAssertions()
 
     def __del__(self):
         if self.solver is not None:
@@ -5035,7 +5042,7 @@ class Solver(object):
         """
         return self.scopes
 
-    def reset(self):
+    def resetAssertions(self):
         """Remove all asserted constraints and backtracking points created
         using `push()`.
 
@@ -5044,13 +5051,30 @@ class Solver(object):
         >>> s.add(x > 0)
         >>> s
         [x > 0]
-        >>> s.reset()
+        >>> s.resetAssertions()
         >>> s
         []
         """
         self.solver.resetAssertions()
         self.scopes = 0
         self.assertions_ = [[]]
+
+    def reset(self):
+        """Fully reset the solver. This actually destroys the solver object in
+        the context and recreates this. **This invalidates all objects created
+        within this context and using them will most likely crash.**
+        
+        >>> s = Solver()
+        >>> x = Int('x')
+        >>> s.add(x > 0)
+        >>> s.check()
+        sat
+        >>> s.reset()
+        >>> s.setOption(incremental=True)
+        """
+        self.ctx.reset()
+        self.solver = self.ctx.solver
+        self.resetAssertions()
 
     def assert_exprs(self, *args):
         """Assert constraints into the solver.
@@ -5130,7 +5154,7 @@ class Solver(object):
         >>> s.add(x < 1)
         >>> s.check()
         unsat
-        >>> s.reset()
+        >>> s.resetAssertions()
         """
         assumptions = _get_args(assumptions)
         r = CheckSatResult(self.solver.checkSatAssuming(*[a.ast for a in assumptions]))
@@ -5193,11 +5217,73 @@ class Solver(object):
         """
         return "(and " + " ".join(a.sexpr() for a in self.assertions()) + ")"
 
-    def set(self, **kwargs):
+    def set(self, *args, **kwargs):
+        """Set an option on the solver. Wraps ``setOption()``.
+
+        >>> main_ctx().reset()
+        >>> s = Solver()
+        >>> s.set(incremental=True)
+        >>> s.set('incremental', 'true')
+        """
+        self.setOption(*args, **kwargs)
+
+    def setOption(self, name=None, value=None, **kwargs):
+        """Set options on the solver. Options can either be set via the ``name``
+        and ``value`` arguments in the form ``setOption('foo', 'bar')``, or as
+        keyword arguments using the syntax ``setOption(foo='bar')``.
+        The option value is passed as a string internally. Boolean values are
+        properly converted manually, all other types are convertes using
+        ``str()``.
+
+        >>> main_ctx().reset()
+        >>> s = Solver()
+        >>> s.setOption('incremental', True)
+        >>> s.setOption(incremental='true')
+        """
+        if name is not None:
+            kwargs[name] = value
         for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
-            _assert(isinstance(v, str), "non-string key " + str(v))
+            if isinstance(v, bool):
+                v = "true" if v else "false"
+            elif not isinstance(v, str):
+                v = str(v)
             self.solver.setOption(k, v)
+
+    def getOption(self, name):
+        """Get the current value of an option from the solver. The value is
+        returned as a string. For type-safe querying use ``getOptionInfo()``.
+
+        >>> main_ctx().reset()
+        >>> s = Solver()
+        >>> s.setOption(incremental=True)
+        >>> s.getOption("incremental")
+        'true'
+        """
+        return self.solver.getOption(name)
+    
+    def getOptionNames(self):
+        """Get all option names that can be used with ``getOption()``,
+        ``setOption()`` and ``getOptionInfo()``.
+
+        >>> s = Solver()
+        >>> s.getOptionNames()[:3]
+        ['abstract-values', 'ackermann', 'approx-branch-depth']
+        """
+        return self.solver.getOptionNames()
+
+    def getOptionInfo(self, name):
+        """Get the current value of an option from the solver. The value is
+        returned as a string. For type-safe querying use ``getOptionInfo()``.
+
+        >>> main_ctx().reset()
+        >>> s = Solver()
+        >>> s.setOption(incremental=False)
+        >>> s.getOptionInfo("incremental")
+        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': True}
+        >>> main_ctx().reset()
+        """
+        return self.solver.getOptionInfo(name)
 
 
 def SolverFor(logic, ctx=None, logFile=None):
@@ -5208,16 +5294,16 @@ def SolverFor(logic, ctx=None, logFile=None):
     See https://smtlib.cs.uiowa.edu/ for the name of all available logics.
     """
 
-    # Pending multiple solvers
-    #     >>> s = SolverFor("QF_LIA")
-    #     >>> x = Int('x')
-    #     >>> s.add(x > 0)
-    #     >>> s.add(x < 2)
-    #     >>> s.check()
-    #     sat
-    #     >>> s.model()
-    #     [x = 1]
-    #     """
+# Pending multiple solvers
+# >>> s = SolverFor("QF_LIA")
+# >>> x = Int('x')
+# >>> s.add(x > 0)
+# >>> s.add(x < 2)
+# >>> s.check()
+# sat
+# >>> s.model()
+# [x = 1]
+# """
     solver = pc.Solver()
     solver.setLogic(logic)
     ctx = _get_ctx(ctx)
@@ -6106,7 +6192,7 @@ def is_fprm_value(a):
 
 
 # Global default rounding mode
-_dflt_rounding_mode = RTZ()
+_dflt_rounding_mode = pc.RoundingMode.RoundTowardZero
 _dflt_fpsort_ebits = 11
 _dflt_fpsort_sbits = 53
 
@@ -6114,8 +6200,9 @@ _dflt_fpsort_sbits = 53
 def get_default_rounding_mode(ctx=None):
     """Retrieves the global default rounding mode."""
     if debugging():
-        _assert(isinstance(_dflt_rounding_mode, FPRMRef), "illegal rounding mode")
-    return _dflt_rounding_mode
+        _assert(isinstance(_dflt_rounding_mode, pc.RoundingMode), "illegal rounding mode")
+    ctx = _get_ctx(ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(_dflt_rounding_mode), ctx)
 
 
 def set_default_rounding_mode(rm, ctx=None):
@@ -6139,7 +6226,7 @@ def set_default_rounding_mode(rm, ctx=None):
     """
     global _dflt_rounding_mode
     _assert(is_fprm_value(rm), "illegal rounding mode")
-    _dflt_rounding_mode = rm
+    _dflt_rounding_mode = rm.ast.getRoundingModeValue()
 
 
 def get_default_fp_sort(ctx=None):
