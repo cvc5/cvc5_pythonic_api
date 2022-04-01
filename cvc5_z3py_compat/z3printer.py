@@ -346,9 +346,9 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FP, Kind.CONST_ROUNDINGMODE, Kind.Variable, Kind.UninterpretedSortValue]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
             return str(a.ast)
-        if k == Kind.InternalKind:
+        if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
             return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
@@ -712,11 +712,11 @@ class Formatter:
 
     def pp_const(self, a):
         k = a.kind()
-        if k == Kind.SetEmpty:
+        if k == Kind.SET_EMPTY:
             return self.pp_set("Empty", a)
         # elif k == Z3_OP_SEQ_EMPTY:
         #     return self.pp_set("Empty", a)
-        elif k == Kind.SetUniverse:
+        elif k == Kind.SET_UNIVERSE:
             return self.pp_set("Full", a)
         return self.pp_name(a)
 
@@ -1117,7 +1117,7 @@ class Formatter:
             elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.CONSTANT, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue]:
+            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
@@ -1135,7 +1135,7 @@ class Formatter:
                 return self.pp_unary(a, d, xs)
             elif k == Kind.APPLY_UF:
                 return self.pp_uf_apply(a, d, xs)
-            elif k in [Kind.ApplyConstructor, Kind.ApplySelector, Kind.ApplyTester]:
+            elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)

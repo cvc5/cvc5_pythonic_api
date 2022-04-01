@@ -981,7 +981,7 @@ def _to_expr_ref(a, ctx, r=None):
         else:
             return BitVecRef(ast, ctx, r)
     if sort.isFloatingPoint():
-        if ast.getKind() == Kind.CONST_FP:
+        if ast.getKind() == Kind.CONST_FLOATINGPOINT:
             return FPNumRef(a, ctx)
         else:
             return FPRef(a, ctx)
@@ -1176,10 +1176,10 @@ def is_const(a):
     return is_expr(a) and a.ast.getKind() in [
         Kind.CONST_BOOLEAN,
         Kind.CONST_BITVECTOR,
-        Kind.CONST_FP,
+        Kind.CONST_FLOATINGPOINT,
         Kind.CONST_RATIONAL,
-        Kind.SetEmpty,
-        Kind.SetUniverse,
+        Kind.SET_EMPTY,
+        Kind.SET_UNIVERSE,
         Kind.CONSTANT,
     ]
 
@@ -1198,7 +1198,7 @@ def is_var(a):
     if not is_expr(a):
         return False
     k = a.ast.getKind()
-    return k == Kind.Variable
+    return k == Kind.VARIABLE
 
 
 def is_app_of(a, k):
@@ -1470,7 +1470,7 @@ def is_or(a):
     >>> is_or(And(p, q))
     False
     """
-    return is_app_of(a, Kind.Or)
+    return is_app_of(a, Kind.OR)
 
 
 def is_implies(a):
@@ -1482,7 +1482,7 @@ def is_implies(a):
     >>> is_implies(And(p, q))
     False
     """
-    return is_app_of(a, Kind.Implies)
+    return is_app_of(a, Kind.IMPLIES)
 
 
 def is_xor(a):
@@ -1494,7 +1494,7 @@ def is_xor(a):
     >>> is_xor(And(p, q))
     False
     """
-    return is_app_of(a, Kind.Xor)
+    return is_app_of(a, Kind.XOR)
 
 
 def is_not(a):
@@ -1506,7 +1506,7 @@ def is_not(a):
     >>> is_not(Not(p))
     True
     """
-    return is_app_of(a, Kind.Not)
+    return is_app_of(a, Kind.NOT)
 
 
 def is_eq(a):
@@ -1640,7 +1640,7 @@ def Implies(a, b, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b = s.cast(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.Implies, a.as_ast(), b.as_ast()), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.IMPLIES, a.as_ast(), b.as_ast()), ctx)
 
 
 def Xor(a, b, ctx=None):
@@ -1654,7 +1654,7 @@ def Xor(a, b, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b = s.cast(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.Xor, a.as_ast(), b.as_ast()), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.XOR, a.as_ast(), b.as_ast()), ctx)
 
 
 def Not(a, ctx=None):
@@ -1667,7 +1667,7 @@ def Not(a, ctx=None):
     ctx = _get_ctx(_ctx_from_ast_arg_list([a], ctx))
     s = BoolSort(ctx)
     a = s.cast(a)
-    return BoolRef(ctx.solver.mkTerm(Kind.Not, a.as_ast()), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.NOT, a.as_ast()), ctx)
 
 
 def mk_not(a):
@@ -1713,7 +1713,7 @@ def Or(*args):
     >>> Or(P)
     Or(p__0, p__1, p__2, p__3, p__4)
     """
-    return _nary_kind_builder(Kind.Or, *args)
+    return _nary_kind_builder(Kind.OR, *args)
 
 
 #########################################
@@ -2175,7 +2175,7 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FP]
+    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FLOATINGPOINT]
 
 
 def is_int_value(a):
@@ -2373,7 +2373,7 @@ def is_is_int(a):
     >>> is_is_int(x)
     False
     """
-    return is_app_of(a, Kind.IsInteger)
+    return is_app_of(a, Kind.IS_INTEGER)
 
 
 def is_to_real(a):
@@ -2403,7 +2403,7 @@ def is_to_int(a):
     >>> is_to_int(x)
     False
     """
-    return is_app_of(a, Kind.ToInteger)
+    return is_app_of(a, Kind.TO_INTEGER)
 
 
 class IntNumRef(ArithRef):
@@ -2688,7 +2688,7 @@ def ToInt(a):
     if debugging():
         _assert(a.is_real(), "SMT real expression expected.")
     ctx = a.ctx
-    return ArithRef(ctx.solver.mkTerm(Kind.ToInteger, a.ast), ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.TO_INTEGER, a.ast), ctx)
 
 
 def IntSort(ctx=None):
@@ -2855,7 +2855,7 @@ def IsInt(a):
     if debugging():
         _assert(a.is_real(), "SMT real expression expected.")
     ctx = a.ctx
-    return BoolRef(ctx.solver.mkTerm(Kind.IsInteger, a.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.IS_INTEGER, a.ast), ctx)
 
 
 def Sqrt(a, ctx=None):
@@ -3640,7 +3640,7 @@ def Int2BV(a, num_bits):
     no solution
     """
     ctx = a.ctx
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.IntToBV, num_bits), a.ast), ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BV, num_bits), a.ast), ctx)
 
 
 def BitVecSort(sz, ctx=None):
@@ -7607,7 +7607,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         integer, then the argument is automatically converted into a
         SMT integer.
         """
-        return _higherorder_apply(self, args, Kind.ApplyConstructor)
+        return _higherorder_apply(self, args, Kind.APPLY_CONSTRUCTOR)
 
 
 class DatatypeSelectorRef(FuncDeclRef):
@@ -7651,7 +7651,7 @@ class DatatypeSelectorRef(FuncDeclRef):
         integer, then the argument is automatically converted into a
         SMT integer.
         """
-        return _higherorder_apply(self, args, Kind.ApplySelector)
+        return _higherorder_apply(self, args, Kind.APPLY_SELECTOR)
 
 
 class DatatypeRecognizerRef(FuncDeclRef):
@@ -7695,7 +7695,7 @@ class DatatypeRecognizerRef(FuncDeclRef):
         integer, then the argument is automatically converted into a
         SMT integer.
         """
-        return _higherorder_apply(self, args, Kind.ApplyTester)
+        return _higherorder_apply(self, args, Kind.APPLY_TESTER)
 
 
 
@@ -7906,7 +7906,7 @@ def _mk_quant(vs, body, kind):
     consts = [v.ast for v in vs]
     vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    ast = s.mkTerm(kind, s.mkTerm(Kind.VariableList, *vars_), subbed_body)
+    ast = s.mkTerm(kind, s.mkTerm(Kind.VARIABLEList, *vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
