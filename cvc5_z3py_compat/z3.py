@@ -7906,7 +7906,7 @@ def _mk_quant(vs, body, kind):
     consts = [v.ast for v in vs]
     vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    ast = s.mkTerm(kind, s.mkTerm(Kind.VariableList, vars_), subbed_body)
+    ast = s.mkTerm(kind, s.mkTerm(Kind.VariableList, *vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
