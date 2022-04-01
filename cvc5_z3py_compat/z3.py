@@ -1107,7 +1107,7 @@ def _nary_kind_builder(kind, *args):
             "At least one of the arguments must be an SMT expression",
         )
     args = _coerce_expr_list(args, ctx)
-    return _to_expr_ref(ctx.solver.mkTerm(kind, [a.ast for a in args]), ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(kind, *[a.ast for a in args]), ctx)
 
 
 def is_expr(a):
