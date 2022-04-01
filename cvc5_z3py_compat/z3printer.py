@@ -29,61 +29,61 @@ def _assert(cond, msg):
 
 # Z3 operator names to Z3Py
 _z3_op_to_str = {
-    Kind.Equal: "==",
-    Kind.Distinct: "Distinct",
-    Kind.Ite: "If",
-    Kind.And: "And",
-    Kind.Or: "Or",
-    Kind.Xor: "Xor",
-    Kind.Not: "Not",
-    Kind.Add: "+",
-    Kind.Sub: "-",
-    Kind.Pow: "**",
-    Kind.Neg: "-",
-    Kind.Mult: "*",
-    Kind.Implies: "Implies",
-    Kind.IntsDivision: "/",
-    Kind.Division: "/",
-    Kind.IntsModulus: "%",
-    Kind.ToReal: "ToReal",
-    Kind.ToInteger: "ToInt",
-    Kind.IsInteger: "IsInt",
-    Kind.BVAdd: "+",
-    Kind.BVSub: "-",
-    Kind.BVMult: "*",
-    Kind.BVOr: "|",
-    Kind.BVAnd: "&",
-    Kind.BVNot: "~",
-    Kind.BVXor: "^",
-    Kind.BVNeg: "-",
-    Kind.BVUdiv: "UDiv",
-    Kind.BVSdiv: "/",
-    Kind.BVSmod: "%",
-    Kind.BVSrem: "SRem",
-    Kind.BVUrem: "URem",
-    Kind.BVRotateLeft: "RotateLeft",
-    Kind.BVRotateRight: "RotateRight",
+    Kind.EQUAL: "==",
+    Kind.DISTINCT: "Distinct",
+    Kind.ITE: "If",
+    Kind.AND: "And",
+    Kind.OR: "Or",
+    Kind.XOR: "Xor",
+    Kind.NOT: "Not",
+    Kind.ADD: "+",
+    Kind.SUB: "-",
+    Kind.POW: "**",
+    Kind.NEG: "-",
+    Kind.MULT: "*",
+    Kind.IMPLIES: "Implies",
+    Kind.INTS_DIVISION: "/",
+    Kind.DIVISION: "/",
+    Kind.INTS_MODULUS: "%",
+    Kind.TO_REAL: "ToReal",
+    Kind.TO_INTEGER: "ToInt",
+    Kind.IS_INTEGER: "IsInt",
+    Kind.BITVECTOR_ADD: "+",
+    Kind.BITVECTOR_SUB: "-",
+    Kind.BITVECTOR_Mult: "*",
+    Kind.BITVECTOR_Or: "|",
+    Kind.BITVECTOR_And: "&",
+    Kind.BITVECTOR_Not: "~",
+    Kind.BITVECTOR_Xor: "^",
+    Kind.BITVECTOR_NEG: "-",
+    Kind.BITVECTOR_UDIV: "UDiv",
+    Kind.BITVECTOR_SDIV: "/",
+    Kind.BITVECTOR_SMOD: "%",
+    Kind.BITVECTOR_SREM: "SRem",
+    Kind.BITVECTOR_UREM: "URem",
+    Kind.BITVECTOR_RotateLeft: "RotateLeft",
+    Kind.BITVECTOR_RotateRight: "RotateRight",
     Kind.Leq: "<=",
     Kind.Lt: "<",
     Kind.Geq: ">=",
     Kind.Gt: ">",
-    Kind.BVSle: "<=",
-    Kind.BVSlt: "<",
-    Kind.BVSge: ">=",
-    Kind.BVSgt: ">",
-    Kind.BVUle: "ULE",
-    Kind.BVUlt: "ULT",
-    Kind.BVUge: "UGE",
-    Kind.BVUgt: "UGT",
-    Kind.BVSignExtend: "SignExt",
-    Kind.BVZeroExtend: "ZeroExt",
-    Kind.BVRepeat: "RepeatBitVec",
-    Kind.BVAshr: ">>",
-    Kind.BVShl: "<<",
-    Kind.BVLshr: "LShR",
-    Kind.BVConcat: "Concat",
-    Kind.BVExtract: "Extract",
-    Kind.BVToNat: "BV2Int",
+    Kind.BITVECTOR_SLE: "<=",
+    Kind.BITVECTOR_SLT: "<",
+    Kind.BITVECTOR_SGE: ">=",
+    Kind.BITVECTOR_SGT: ">",
+    Kind.BITVECTOR_ULE: "ULE",
+    Kind.BITVECTOR_ULT: "ULT",
+    Kind.BITVECTOR_Uge: "UGE",
+    Kind.BITVECTOR_Ugt: "UGT",
+    Kind.BITVECTOR_SignExtend: "SignExt",
+    Kind.BITVECTOR_ZeroExtend: "ZeroExt",
+    Kind.BITVECTOR_Repeat: "RepeatBitVec",
+    Kind.BITVECTOR_ASHR: ">>",
+    Kind.BITVECTOR_SHL: "<<",
+    Kind.BITVECTOR_LSHR: "LShR",
+    Kind.BITVECTOR_Concat: "Concat",
+    Kind.BITVECTOR_Extract: "Extract",
+    Kind.BITVECTOR_ToNat: "BV2Int",
     Kind.Select: "Select",
     Kind.Store: "Store",
     Kind.ConstArray: "ConstArray",
@@ -138,60 +138,60 @@ _z3_infix = [
     Kind.Lt,
     Kind.Geq,
     Kind.Gt,
-    Kind.BVAdd,
-    Kind.BVSub,
-    Kind.BVMult,
-    Kind.BVSdiv,
-    Kind.BVSmod,
-    Kind.BVOr,
-    Kind.BVAnd,
-    Kind.BVXor,
-    Kind.BVSdiv,
-    Kind.BVSle,
-    Kind.BVSlt,
-    Kind.BVSge,
-    Kind.BVSgt,
-    Kind.BVAshr,
-    Kind.BVShl,
+    Kind.BITVECTOR_Add,
+    Kind.BITVECTOR_Sub,
+    Kind.BITVECTOR_Mult,
+    Kind.BITVECTOR_Sdiv,
+    Kind.BITVECTOR_Smod,
+    Kind.BITVECTOR_Or,
+    Kind.BITVECTOR_And,
+    Kind.BITVECTOR_Xor,
+    Kind.BITVECTOR_Sdiv,
+    Kind.BITVECTOR_SLE,
+    Kind.BITVECTOR_SLT,
+    Kind.BITVECTOR_Sge,
+    Kind.BITVECTOR_Sgt,
+    Kind.BITVECTOR_ASHR,
+    Kind.BITVECTOR_Shl,
 ]
 
-_z3_unary = [Kind.Neg, Kind.BVNeg, Kind.BVNot]
+_z3_unary = [Kind.Neg, Kind.BITVECTOR_Neg, Kind.BITVECTOR_Not]
 
 # Precedence
 _z3_precedence = {
     Kind.Pow: 0,
     Kind.Neg: 1,
-    Kind.BVNeg: 1,
-    Kind.BVNot: 1,
+    Kind.BITVECTOR_Neg: 1,
+    Kind.BITVECTOR_Not: 1,
     Kind.Mult: 2,
     Kind.Division: 2,
     Kind.IntsDivision: 2,
     Kind.IntsModulus: 2,
-    Kind.BVMult: 2,
-    Kind.BVSdiv: 2,
-    Kind.BVSmod: 2,
+    Kind.BITVECTOR_Mult: 2,
+    Kind.BITVECTOR_Sdiv: 2,
+    Kind.BITVECTOR_Smod: 2,
     Kind.Add: 3,
     Kind.Sub: 3,
-    Kind.BVAdd: 3,
-    Kind.BVSub: 3,
-    Kind.BVAshr: 4,
-    Kind.BVShl: 4,
-    Kind.BVAnd: 5,
-    Kind.BVXor: 6,
-    Kind.BVOr: 7,
+    Kind.BITVECTOR_Add: 3,
+    Kind.BITVECTOR_Sub: 3,
+    Kind.BITVECTOR_ASHR: 4,
+    Kind.BITVECTOR_Shl: 4,
+    Kind.BITVECTOR_And: 5,
+    Kind.BITVECTOR_Xor: 6,
+    Kind.BITVECTOR_Or: 7,
     Kind.Leq: 8,
     Kind.Lt: 8,
     Kind.Geq: 8,
     Kind.Gt: 8,
     Kind.Equal: 8,
-    Kind.BVSle: 8,
-    Kind.BVSlt: 8,
-    Kind.BVSge: 8,
-    Kind.BVSgt: 8,
-    Kind.BVUle: 8,
-    Kind.BVUlt: 8,
-    Kind.BVUge: 8,
-    Kind.BVUgt: 8,
+    Kind.BITVECTOR_SLE: 8,
+    Kind.BITVECTOR_SLT: 8,
+    Kind.BITVECTOR_Sge: 8,
+    Kind.BITVECTOR_Sgt: 8,
+    Kind.BITVECTOR_ULE: 8,
+    Kind.BITVECTOR_ULT: 8,
+    Kind.BITVECTOR_Uge: 8,
+    Kind.BITVECTOR_Ugt: 8,
 }
 
 _z3_fpa_rm_strings = {
@@ -255,26 +255,26 @@ _z3_fpa_infix = [
 
 def _is_assoc(k):
     return (
-        k == Kind.BVOr
-        or k == Kind.BVXor
-        or k == Kind.BVAnd
+        k == Kind.BITVECTOR_Or
+        or k == Kind.BITVECTOR_Xor
+        or k == Kind.BITVECTOR_And
         or k == Kind.Add
-        or k == Kind.BVAdd
+        or k == Kind.BITVECTOR_Add
         or k == Kind.Mult
-        or k == Kind.BVMult
+        or k == Kind.BITVECTOR_Mult
     )
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == Kind.Sub or k == Kind.BVSub
+    return _is_assoc(k) or k == Kind.Sub or k == Kind.BITVECTOR_Sub
 
 
 def _is_add(k):
-    return k == Kind.Add or k == Kind.BVAdd
+    return k == Kind.Add or k == Kind.BITVECTOR_Add
 
 
 def _is_sub(k):
-    return k == Kind.Sub or k == Kind.BVSub
+    return k == Kind.Sub or k == Kind.BITVECTOR_Sub
 
 
 if sys.version < "3":
@@ -292,13 +292,13 @@ else:
 
 _z3_infix_compact = [
     Kind.Mult,
-    Kind.BVMult,
+    Kind.BITVECTOR_Mult,
     Kind.Division,
     Kind.Pow,
     Kind.IntsDivision,
     Kind.IntsModulus,
-    Kind.BVSdiv,
-    Kind.BVSmod,
+    Kind.BITVECTOR_Sdiv,
+    Kind.BITVECTOR_Smod,
 ]
 
 _ellipses = "..."
@@ -1104,11 +1104,11 @@ class Formatter:
                 return self.pp_distinct(a, d, xs)
             elif k == Kind.Select:
                 return self.pp_select(a, d, xs)
-            elif k in [Kind.BVSignExtend, Kind.BVZeroExtend, Kind.BVRepeat]:
+            elif k in [Kind.BITVECTOR_SignExtend, Kind.BITVECTOR_ZeroExtend, Kind.BITVECTOR_Repeat]:
                 return self.pp_unary_param(a, d, xs, False)
-            elif k in [Kind.BVRotateLeft, Kind.BVRotateRight]:
+            elif k in [Kind.BITVECTOR_RotateLeft, Kind.BITVECTOR_RotateRight]:
                 return self.pp_unary_param(a, d, xs, True)
-            elif k == Kind.BVExtract:
+            elif k == Kind.BITVECTOR_Extract:
                 return self.pp_extract(a, d, xs)
             # elif k == Z3_OP_DT_IS:
             #     return self.pp_is(a, d, xs)

@@ -3151,7 +3151,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAdd, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Add, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -3161,7 +3161,7 @@ class BitVecRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAdd, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Add, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -3174,7 +3174,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVMult, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Mult, a.ast, b.ast), self.ctx)
 
     def __rmul__(self, other):
         """Create the SMT expression `other * self`.
@@ -3184,7 +3184,7 @@ class BitVecRef(ExprRef):
         10*x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVMult, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Mult, b.ast, a.ast), self.ctx)
 
     def __sub__(self, other):
         """Create the SMT expression `self - other`.
@@ -3197,7 +3197,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSub, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sub, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -3207,7 +3207,7 @@ class BitVecRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSub, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sub, b.ast, a.ast), self.ctx)
 
     def __or__(self, other):
         """Create the SMT expression bitwise-or `self | other`.
@@ -3220,7 +3220,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVOr, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Or, a.ast, b.ast), self.ctx)
 
     def __ror__(self, other):
         """Create the SMT expression bitwise-or `other | self`.
@@ -3230,7 +3230,7 @@ class BitVecRef(ExprRef):
         10 | x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVOr, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Or, b.ast, a.ast), self.ctx)
 
     def __and__(self, other):
         """Create the SMT expression bitwise-and `self & other`.
@@ -3243,7 +3243,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAnd, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_And, a.ast, b.ast), self.ctx)
 
     def __rand__(self, other):
         """Create the SMT expression bitwise-or `other & self`.
@@ -3253,7 +3253,7 @@ class BitVecRef(ExprRef):
         10 & x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAnd, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_And, b.ast, a.ast), self.ctx)
 
     def __xor__(self, other):
         """Create the SMT expression bitwise-xor `self ^ other`.
@@ -3266,7 +3266,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVXor, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Xor, a.ast, b.ast), self.ctx)
 
     def __rxor__(self, other):
         """Create the SMT expression bitwise-xor `other ^ self`.
@@ -3276,7 +3276,7 @@ class BitVecRef(ExprRef):
         10 ^ x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVXor, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Xor, b.ast, a.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -3296,7 +3296,7 @@ class BitVecRef(ExprRef):
         >>> solve([-(-x) != x])
         no solution
         """
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVNeg, self.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Neg, self.ast), self.ctx)
 
     def __invert__(self):
         """Create the SMT expression bitwise-not `~self`.
@@ -3307,7 +3307,7 @@ class BitVecRef(ExprRef):
         >>> solve([~(~x) != x])
         no solution
         """
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVNot, self.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Not, self.ast), self.ctx)
 
     def __div__(self, other):
         """Create the SMT expression (signed) division `self / other`.
@@ -3326,7 +3326,7 @@ class BitVecRef(ExprRef):
         '(bvudiv x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSdiv, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sdiv, a.ast, b.ast), self.ctx)
 
     def __truediv__(self, other):
         """Create the SMT expression (signed) division `self / other`."""
@@ -3346,7 +3346,7 @@ class BitVecRef(ExprRef):
         '(bvudiv #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSdiv, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sdiv, b.ast, a.ast), self.ctx)
 
     def __rtruediv__(self, other):
         """Create the SMT expression (signed) division `other / self`."""
@@ -3371,7 +3371,7 @@ class BitVecRef(ExprRef):
         '(bvsrem x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSmod, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Smod, a.ast, b.ast), self.ctx)
 
     def __rmod__(self, other):
         """Create the SMT expression (signed) mod `other % self`.
@@ -3389,7 +3389,7 @@ class BitVecRef(ExprRef):
         '(bvsrem #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVSmod, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Smod, b.ast, a.ast), self.ctx)
 
     def __le__(self, other):
         """Create the SMT expression (signed) `other <= self`.
@@ -3405,7 +3405,7 @@ class BitVecRef(ExprRef):
         '(bvule x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BVSle, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx)
 
     def __lt__(self, other):
         """Create the SMT expression (signed) `other < self`.
@@ -3421,7 +3421,7 @@ class BitVecRef(ExprRef):
         '(bvult x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BVSlt, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx)
 
     def __gt__(self, other):
         """Create the SMT expression (signed) `other > self`.
@@ -3437,7 +3437,7 @@ class BitVecRef(ExprRef):
         '(bvugt x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BVSgt, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sgt, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression (signed) `other >= self`.
@@ -3453,7 +3453,7 @@ class BitVecRef(ExprRef):
         '(bvuge x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BVSge, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sge, a.ast, b.ast), self.ctx)
 
     def __rshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `self >> other`
@@ -3483,7 +3483,7 @@ class BitVecRef(ExprRef):
         1
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAshr, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, a.ast, b.ast), self.ctx)
 
     def __lshift__(self, other):
         """Create the SMT expression left shift `self << other`
@@ -3497,7 +3497,7 @@ class BitVecRef(ExprRef):
         4
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVShl, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Shl, a.ast, b.ast), self.ctx)
 
     def __rrshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `other` >> `self`.
@@ -3511,7 +3511,7 @@ class BitVecRef(ExprRef):
         '(bvashr #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVAshr, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, b.ast, a.ast), self.ctx)
 
     def __rlshift__(self, other):
         """Create the SMT expression left shift `other << self`.
@@ -3525,7 +3525,7 @@ class BitVecRef(ExprRef):
         '(bvshl #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BVShl, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Shl, b.ast, a.ast), self.ctx)
 
 
 class BitVecNumRef(BitVecRef):
@@ -3625,7 +3625,7 @@ def BV2Int(a, is_signed=False):
         nat = BV2Int(a)
         return If(a < 0, nat - (2 ** w), nat)
     else:
-        return ArithRef(ctx.solver.mkTerm(Kind.BVToNat, a.ast), ctx)
+        return ArithRef(ctx.solver.mkTerm(Kind.BITVECTOR_ToNat, a.ast), ctx)
 
 
 def Int2BV(a, num_bits):
@@ -3753,7 +3753,7 @@ def Concat(*args):
             all([is_bv(a) for a in args]),
             "All arguments must be SMT bit-vector expressions.",
         )
-    return BitVecRef(ctx.solver.mkTerm(Kind.BVConcat, *[a.ast for a in args]))
+    return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_Concat, *[a.ast for a in args]))
 
 
 def Extract(high, low, a):
@@ -3776,7 +3776,7 @@ def Extract(high, low, a):
         )
         _assert(is_bv(a), "Third argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BVExtract, high, low), a.ast), a.ctx
+        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BITVECTOR_Extract, high, low), a.ast), a.ctx
     )
 
 
@@ -3803,7 +3803,7 @@ def ULE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVUle, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_ULE, a.ast, b.ast), a.ctx)
 
 
 def ULT(a, b):
@@ -3821,7 +3821,7 @@ def ULT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVUlt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_ULT, a.ast, b.ast), a.ctx)
 
 
 def UGE(a, b):
@@ -3839,7 +3839,7 @@ def UGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVUge, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Uge, a.ast, b.ast), a.ctx)
 
 
 def UGT(a, b):
@@ -3857,7 +3857,7 @@ def UGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVUgt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Ugt, a.ast, b.ast), a.ctx)
 
 
 def SLE(a, b):
@@ -3871,7 +3871,7 @@ def SLE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSle, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), a.ctx)
 
 
 def SLT(a, b):
@@ -3885,7 +3885,7 @@ def SLT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSlt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), a.ctx)
 
 
 def SGE(a, b):
@@ -3899,7 +3899,7 @@ def SGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSge, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Sge, a.ast, b.ast), a.ctx)
 
 
 def SGT(a, b):
@@ -3913,7 +3913,7 @@ def SGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BVSgt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Sgt, a.ast, b.ast), a.ctx)
 
 
 def UDiv(a, b):
@@ -3934,7 +3934,7 @@ def UDiv(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVUdiv, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Udiv, a.ast, b.ast), a.ctx)
 
 
 def URem(a, b):
@@ -3955,7 +3955,7 @@ def URem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVUrem, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Urem, a.ast, b.ast), a.ctx)
 
 
 def SDiv(a, b):
@@ -4002,7 +4002,7 @@ def SRem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVSrem, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Srem, a.ast, b.ast), a.ctx)
 
 
 def LShR(a, b):
@@ -4034,7 +4034,7 @@ def LShR(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVLshr, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Lshr, a.ast, b.ast), a.ctx)
 
 
 def _check_rotate_args(a, b):
@@ -4057,7 +4057,7 @@ def RotateLeft(a, b):
     """
     s = a.ctx.solver
     _check_rotate_args(a, b)
-    return BitVecRef(s.mkTerm(s.mkOp(Kind.BVRotateLeft, b), a.ast), a.ctx)
+    return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_RotateLeft, b), a.ast), a.ctx)
 
 
 def RotateRight(a, b):
@@ -4073,7 +4073,7 @@ def RotateRight(a, b):
     """
     s = a.ctx.solver
     _check_rotate_args(a, b)
-    return BitVecRef(s.mkTerm(s.mkOp(Kind.BVRotateRight, b), a.ast), a.ctx)
+    return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_RotateRight, b), a.ast), a.ctx)
 
 
 def SignExt(n, a):
@@ -4104,7 +4104,7 @@ def SignExt(n, a):
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
     s = a.ctx.solver
-    return BitVecRef(s.mkTerm(s.mkOp(Kind.BVSignExtend, n), a.ast), a.ctx)
+    return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_SignExtend, n), a.ast), a.ctx)
 
 
 def ZeroExt(n, a):
@@ -4133,7 +4133,7 @@ def ZeroExt(n, a):
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
     s = a.ctx.solver
-    return BitVecRef(s.mkTerm(s.mkOp(Kind.BVZeroExtend, n), a.ast), a.ctx)
+    return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_ZeroExtend, n), a.ast), a.ctx)
 
 
 def RepeatBitVec(n, a):
@@ -4158,7 +4158,7 @@ def RepeatBitVec(n, a):
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BVRepeat, n), a.ast), a.ctx
+        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BITVECTOR_Repeat, n), a.ast), a.ctx
     )
 
 
@@ -4171,7 +4171,7 @@ def BVRedAnd(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVRedand, a.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Redand, a.ast), a.ctx)
 
 
 def BVRedOr(a):
@@ -4183,7 +4183,7 @@ def BVRedOr(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BVRedor, a.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Redor, a.ast), a.ctx)
 
 
 def BVAdd(*args):
@@ -4195,7 +4195,7 @@ def BVAdd(*args):
     >>> BVAdd(x, y, z)
     x + y + z
     """
-    return _nary_kind_builder(Kind.BVAdd, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_Add, *args)
 
 
 def BVMult(*args):
@@ -4207,7 +4207,7 @@ def BVMult(*args):
     >>> BVMult(x, y, z)
     x*y*z
     """
-    return _nary_kind_builder(Kind.BVMult, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_Mult, *args)
 
 
 def BVSub(a, b):
@@ -4231,7 +4231,7 @@ def BVOr(*args):
     >>> BVOr(x, y, z)
     x | y | z
     """
-    return _nary_kind_builder(Kind.BVOr, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_Or, *args)
 
 
 def BVAnd(*args):
@@ -4243,7 +4243,7 @@ def BVAnd(*args):
     >>> BVAnd(x, y, z)
     x & y & z
     """
-    return _nary_kind_builder(Kind.BVAnd, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_And, *args)
 
 
 def BVXor(*args):
@@ -4255,7 +4255,7 @@ def BVXor(*args):
     >>> BVXor(x, y, z)
     x ^ y ^ z
     """
-    return _nary_kind_builder(Kind.BVXor, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_Xor, *args)
 
 
 def BVNeg(a):
@@ -7022,7 +7022,7 @@ def fpFP(sgn, exp, sig, ctx=None):
     _assert(sgn.sort().size() == 1, "sort mismatch")
     ctx = _get_ctx(ctx)
     _assert(ctx == sgn.ctx == exp.ctx == sig.ctx, "context mismatch")
-    bv = BitVecRef(ctx.solver.mkTerm(Kind.BVConcat, sgn.ast, exp.ast, sig.ast), ctx)
+    bv = BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_Concat, sgn.ast, exp.ast, sig.ast), ctx)
     sort = FPSort(exp.size(), sig.size()+1)
     return fpBVToFP(bv, sort)
 
