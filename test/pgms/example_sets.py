@@ -1,4 +1,4 @@
-from cvc5_z3py_compat import *
+from cvc5_pythonic_api import *
 
 if __name__ == "__main__":
     A, B, C = [Set(name, IntSort()) for name in "ABC"]

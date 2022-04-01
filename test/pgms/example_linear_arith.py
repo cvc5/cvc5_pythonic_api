@@ -1,4 +1,4 @@
-from cvc5_z3py_compat import *
+from cvc5_pythonic_api import *
 
 slv = SolverFor('QF_LIRA')
 

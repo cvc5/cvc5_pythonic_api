@@ -1,4 +1,4 @@
-from cvc5_z3py_compat import *
+from cvc5_pythonic_api import *
 
 s = Solver()
 s.set(**{'nl-ext': "none"})
