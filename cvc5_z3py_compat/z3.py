@@ -7231,7 +7231,7 @@ def fpToReal(x, ctx=None):
     if debugging():
         _assert(is_fp(x), "First argument must be a SMT floating-point expression")
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_TOREAL, x.ast), ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_TO_REAL, x.ast), ctx)
 
 
 #########################################
