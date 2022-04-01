@@ -138,44 +138,44 @@ _z3_infix = [
     Kind.LT,
     Kind.GEQ,
     Kind.GT,
-    Kind.BITVECTOR_Add,
-    Kind.BITVECTOR_Sub,
+    Kind.BITVECTOR_ADD,
+    Kind.BITVECTOR_SUB,
     Kind.BITVECTOR_MULT,
-    Kind.BITVECTOR_Sdiv,
-    Kind.BITVECTOR_Smod,
+    Kind.BITVECTOR_SDIV,
+    Kind.BITVECTOR_SMOD,
     Kind.BITVECTOR_OR,
     Kind.BITVECTOR_AND,
     Kind.BITVECTOR_XOR,
-    Kind.BITVECTOR_Sdiv,
+    Kind.BITVECTOR_SDIV,
     Kind.BITVECTOR_SLE,
     Kind.BITVECTOR_SLT,
-    Kind.BITVECTOR_Sge,
-    Kind.BITVECTOR_Sgt,
+    Kind.BITVECTOR_SGE,
+    Kind.BITVECTOR_SGT,
     Kind.BITVECTOR_ASHR,
-    Kind.BITVECTOR_Shl,
+    Kind.BITVECTOR_SHL,
 ]
 
-_z3_unary = [Kind.NEG, Kind.BITVECTOR_Neg, Kind.BITVECTOR_NOT]
+_z3_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT]
 
 # Precedence
 _z3_precedence = {
     Kind.POW: 0,
     Kind.NEG: 1,
-    Kind.BITVECTOR_Neg: 1,
+    Kind.BITVECTOR_NEG: 1,
     Kind.BITVECTOR_NOT: 1,
     Kind.MULT: 2,
     Kind.DIVISION: 2,
     Kind.INTS_DIVISION: 2,
     Kind.INTS_MODULUS: 2,
     Kind.BITVECTOR_MULT: 2,
-    Kind.BITVECTOR_Sdiv: 2,
-    Kind.BITVECTOR_Smod: 2,
+    Kind.BITVECTOR_SDIV: 2,
+    Kind.BITVECTOR_SMOD: 2,
     Kind.ADD: 3,
     Kind.SUB: 3,
-    Kind.BITVECTOR_Add: 3,
-    Kind.BITVECTOR_Sub: 3,
+    Kind.BITVECTOR_ADD: 3,
+    Kind.BITVECTOR_SUB: 3,
     Kind.BITVECTOR_ASHR: 4,
-    Kind.BITVECTOR_Shl: 4,
+    Kind.BITVECTOR_SHL: 4,
     Kind.BITVECTOR_AND: 5,
     Kind.BITVECTOR_XOR: 6,
     Kind.BITVECTOR_OR: 7,
@@ -186,8 +186,8 @@ _z3_precedence = {
     Kind.EQUAL: 8,
     Kind.BITVECTOR_SLE: 8,
     Kind.BITVECTOR_SLT: 8,
-    Kind.BITVECTOR_Sge: 8,
-    Kind.BITVECTOR_Sgt: 8,
+    Kind.BITVECTOR_SGE: 8,
+    Kind.BITVECTOR_SGT: 8,
     Kind.BITVECTOR_ULE: 8,
     Kind.BITVECTOR_ULT: 8,
     Kind.BITVECTOR_UGE: 8,
@@ -259,22 +259,22 @@ def _is_assoc(k):
         or k == Kind.BITVECTOR_XOR
         or k == Kind.BITVECTOR_AND
         or k == Kind.ADD
-        or k == Kind.BITVECTOR_Add
+        or k == Kind.BITVECTOR_ADD
         or k == Kind.MULT
         or k == Kind.BITVECTOR_MULT
     )
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == Kind.SUB or k == Kind.BITVECTOR_Sub
+    return _is_assoc(k) or k == Kind.SUB or k == Kind.BITVECTOR_SUB
 
 
 def _is_add(k):
-    return k == Kind.ADD or k == Kind.BITVECTOR_Add
+    return k == Kind.ADD or k == Kind.BITVECTOR_ADD
 
 
 def _is_sub(k):
-    return k == Kind.SUB or k == Kind.BITVECTOR_Sub
+    return k == Kind.SUB or k == Kind.BITVECTOR_SUB
 
 
 if sys.version < "3":
@@ -297,8 +297,8 @@ _z3_infix_compact = [
     Kind.POW,
     Kind.INTS_DIVISION,
     Kind.INTS_MODULUS,
-    Kind.BITVECTOR_Sdiv,
-    Kind.BITVECTOR_Smod,
+    Kind.BITVECTOR_SDIV,
+    Kind.BITVECTOR_SMOD,
 ]
 
 _ellipses = "..."

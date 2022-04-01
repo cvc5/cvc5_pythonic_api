@@ -3151,7 +3151,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Add, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -3161,7 +3161,7 @@ class BitVecRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Add, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -3197,7 +3197,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sub, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -3207,7 +3207,7 @@ class BitVecRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sub, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx)
 
     def __or__(self, other):
         """Create the SMT expression bitwise-or `self | other`.
@@ -3296,7 +3296,7 @@ class BitVecRef(ExprRef):
         >>> solve([-(-x) != x])
         no solution
         """
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Neg, self.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_NEG, self.ast), self.ctx)
 
     def __invert__(self):
         """Create the SMT expression bitwise-not `~self`.
@@ -3326,7 +3326,7 @@ class BitVecRef(ExprRef):
         '(bvudiv x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sdiv, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, a.ast, b.ast), self.ctx)
 
     def __truediv__(self, other):
         """Create the SMT expression (signed) division `self / other`."""
@@ -3346,7 +3346,7 @@ class BitVecRef(ExprRef):
         '(bvudiv #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sdiv, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, b.ast, a.ast), self.ctx)
 
     def __rtruediv__(self, other):
         """Create the SMT expression (signed) division `other / self`."""
@@ -3371,7 +3371,7 @@ class BitVecRef(ExprRef):
         '(bvsrem x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Smod, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, a.ast, b.ast), self.ctx)
 
     def __rmod__(self, other):
         """Create the SMT expression (signed) mod `other % self`.
@@ -3389,7 +3389,7 @@ class BitVecRef(ExprRef):
         '(bvsrem #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Smod, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, b.ast, a.ast), self.ctx)
 
     def __le__(self, other):
         """Create the SMT expression (signed) `other <= self`.
@@ -3437,7 +3437,7 @@ class BitVecRef(ExprRef):
         '(bvugt x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sgt, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression (signed) `other >= self`.
@@ -3453,7 +3453,7 @@ class BitVecRef(ExprRef):
         '(bvuge x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Sge, a.ast, b.ast), self.ctx)
+        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx)
 
     def __rshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `self >> other`
@@ -3497,7 +3497,7 @@ class BitVecRef(ExprRef):
         4
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Shl, a.ast, b.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx)
 
     def __rrshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `other` >> `self`.
@@ -3525,7 +3525,7 @@ class BitVecRef(ExprRef):
         '(bvshl #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_Shl, b.ast, a.ast), self.ctx)
+        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx)
 
 
 class BitVecNumRef(BitVecRef):
@@ -3899,7 +3899,7 @@ def SGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Sge, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), a.ctx)
 
 
 def SGT(a, b):
@@ -3913,7 +3913,7 @@ def SGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Sgt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), a.ctx)
 
 
 def UDiv(a, b):
@@ -4195,7 +4195,7 @@ def BVAdd(*args):
     >>> BVAdd(x, y, z)
     x + y + z
     """
-    return _nary_kind_builder(Kind.BITVECTOR_Add, *args)
+    return _nary_kind_builder(Kind.BITVECTOR_ADD, *args)
 
 
 def BVMult(*args):
