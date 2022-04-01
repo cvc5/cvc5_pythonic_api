@@ -63,10 +63,10 @@ _z3_op_to_str = {
     Kind.BITVECTOR_UREM: "URem",
     Kind.BITVECTOR_ROTATE_LEFT: "RotateLeft",
     Kind.BITVECTOR_ROTATE_RIGHT: "RotateRight",
-    Kind.Leq: "<=",
-    Kind.Lt: "<",
-    Kind.Geq: ">=",
-    Kind.Gt: ">",
+    Kind.LEQ: "<=",
+    Kind.LT: "<",
+    Kind.GEQ: ">=",
+    Kind.GT: ">",
     Kind.BITVECTOR_SLE: "<=",
     Kind.BITVECTOR_SLT: "<",
     Kind.BITVECTOR_SGE: ">=",
@@ -126,18 +126,18 @@ _z3_op_to_str = {
 
 # List of infix operators
 _z3_infix = [
-    Kind.Equal,
-    Kind.Add,
-    Kind.Pow,
-    Kind.Sub,
-    Kind.Mult,
-    Kind.Division,
-    Kind.IntsDivision,
-    Kind.IntsModulus,
-    Kind.Leq,
-    Kind.Lt,
-    Kind.Geq,
-    Kind.Gt,
+    Kind.EQUAL,
+    Kind.ADD,
+    Kind.POW,
+    Kind.SUB,
+    Kind.MULT,
+    Kind.DIVISION,
+    Kind.INTS_DIVISION,
+    Kind.INTS_MODULUS,
+    Kind.LEQ,
+    Kind.LT,
+    Kind.GEQ,
+    Kind.GT,
     Kind.BITVECTOR_Add,
     Kind.BITVECTOR_Sub,
     Kind.BITVECTOR_MULT,
@@ -155,23 +155,23 @@ _z3_infix = [
     Kind.BITVECTOR_Shl,
 ]
 
-_z3_unary = [Kind.Neg, Kind.BITVECTOR_Neg, Kind.BITVECTOR_NOT]
+_z3_unary = [Kind.NEG, Kind.BITVECTOR_Neg, Kind.BITVECTOR_NOT]
 
 # Precedence
 _z3_precedence = {
-    Kind.Pow: 0,
-    Kind.Neg: 1,
+    Kind.POW: 0,
+    Kind.NEG: 1,
     Kind.BITVECTOR_Neg: 1,
     Kind.BITVECTOR_NOT: 1,
-    Kind.Mult: 2,
-    Kind.Division: 2,
-    Kind.IntsDivision: 2,
-    Kind.IntsModulus: 2,
+    Kind.MULT: 2,
+    Kind.DIVISION: 2,
+    Kind.INTS_DIVISION: 2,
+    Kind.INTS_MODULUS: 2,
     Kind.BITVECTOR_MULT: 2,
     Kind.BITVECTOR_Sdiv: 2,
     Kind.BITVECTOR_Smod: 2,
-    Kind.Add: 3,
-    Kind.Sub: 3,
+    Kind.ADD: 3,
+    Kind.SUB: 3,
     Kind.BITVECTOR_Add: 3,
     Kind.BITVECTOR_Sub: 3,
     Kind.BITVECTOR_ASHR: 4,
@@ -179,11 +179,11 @@ _z3_precedence = {
     Kind.BITVECTOR_AND: 5,
     Kind.BITVECTOR_XOR: 6,
     Kind.BITVECTOR_OR: 7,
-    Kind.Leq: 8,
-    Kind.Lt: 8,
-    Kind.Geq: 8,
-    Kind.Gt: 8,
-    Kind.Equal: 8,
+    Kind.LEQ: 8,
+    Kind.LT: 8,
+    Kind.GEQ: 8,
+    Kind.GT: 8,
+    Kind.EQUAL: 8,
     Kind.BITVECTOR_SLE: 8,
     Kind.BITVECTOR_SLT: 8,
     Kind.BITVECTOR_Sge: 8,
@@ -258,23 +258,23 @@ def _is_assoc(k):
         k == Kind.BITVECTOR_OR
         or k == Kind.BITVECTOR_XOR
         or k == Kind.BITVECTOR_AND
-        or k == Kind.Add
+        or k == Kind.ADD
         or k == Kind.BITVECTOR_Add
-        or k == Kind.Mult
+        or k == Kind.MULT
         or k == Kind.BITVECTOR_MULT
     )
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == Kind.Sub or k == Kind.BITVECTOR_Sub
+    return _is_assoc(k) or k == Kind.SUB or k == Kind.BITVECTOR_Sub
 
 
 def _is_add(k):
-    return k == Kind.Add or k == Kind.BITVECTOR_Add
+    return k == Kind.ADD or k == Kind.BITVECTOR_Add
 
 
 def _is_sub(k):
-    return k == Kind.Sub or k == Kind.BITVECTOR_Sub
+    return k == Kind.SUB or k == Kind.BITVECTOR_Sub
 
 
 if sys.version < "3":
@@ -291,12 +291,12 @@ else:
 
 
 _z3_infix_compact = [
-    Kind.Mult,
+    Kind.MULT,
     Kind.BITVECTOR_MULT,
-    Kind.Division,
-    Kind.Pow,
-    Kind.IntsDivision,
-    Kind.IntsModulus,
+    Kind.DIVISION,
+    Kind.POW,
+    Kind.INTS_DIVISION,
+    Kind.INTS_MODULUS,
     Kind.BITVECTOR_Sdiv,
     Kind.BITVECTOR_Smod,
 ]
@@ -1098,7 +1098,7 @@ class Formatter:
             return self.pp_const(a)
         else:
             k = a.kind()
-            if k == Kind.Pow:
+            if k == Kind.POW:
                 return self.pp_power(a, d, xs)
             if k == Kind.Distinct:
                 return self.pp_distinct(a, d, xs)

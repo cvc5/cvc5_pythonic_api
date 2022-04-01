@@ -372,7 +372,7 @@ class ExprRef(object):
             return False
         a, b = _coerce_exprs(self, other)
         c = self.ctx
-        return BoolRef(c.solver.mkTerm(Kind.Equal, a.as_ast(), b.as_ast()), c)
+        return BoolRef(c.solver.mkTerm(Kind.EQUAL, a.as_ast(), b.as_ast()), c)
 
     def __hash__(self):
         """Hash code."""
@@ -1206,9 +1206,9 @@ def is_app_of(a, k):
 
     >>> x = Int('x')
     >>> n = x + 1
-    >>> is_app_of(n, Kind.Add)
+    >>> is_app_of(n, Kind.ADD)
     True
-    >>> is_app_of(n, Kind.Mult)
+    >>> is_app_of(n, Kind.MULT)
     False
     """
     return is_expr(a) and a.ast.getKind() == k
@@ -1516,7 +1516,7 @@ def is_eq(a):
     >>> is_eq(x == y)
     True
     """
-    return is_app_of(a, Kind.Equal)
+    return is_app_of(a, Kind.EQUAL)
 
 
 def is_distinct(a):
@@ -1875,7 +1875,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Add, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.ADD, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -1885,7 +1885,7 @@ class ArithRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Add, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.ADD, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -1902,7 +1902,7 @@ class ArithRef(ExprRef):
         if isinstance(other, BoolRef):
             return other.__mul__(self)
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Mult, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.MULT, a.ast, b.ast), self.ctx)
 
     def __rmul__(self, other):
         """Create the SMT expression `other * self`.
@@ -1912,7 +1912,7 @@ class ArithRef(ExprRef):
         10*x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Mult, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.MULT, b.ast, a.ast), self.ctx)
 
     def __sub__(self, other):
         """Create the SMT expression `self - other`.
@@ -1925,7 +1925,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Sub, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.SUB, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -1935,7 +1935,7 @@ class ArithRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Sub, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.SUB, b.ast, a.ast), self.ctx)
 
     def __pow__(self, other):
         """Create the SMT expression `self**other` (** is the power operator).
@@ -1949,7 +1949,7 @@ class ArithRef(ExprRef):
         [x = 1]
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Pow, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.POW, a.ast, b.ast), self.ctx)
 
     def __rpow__(self, other):
         """Create the SMT expression `other**self` (** is the power operator).
@@ -1961,7 +1961,7 @@ class ArithRef(ExprRef):
         Real
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.Pow, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.POW, b.ast, a.ast), self.ctx)
 
     def __div__(self, other):
         """Create the SMT expression `other/self`.
@@ -1985,9 +1985,9 @@ class ArithRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         if a.sort() == IntSort(self.ctx):
-            k = Kind.IntsDivision
+            k = Kind.INTS_DIVISION
         else:
-            k = Kind.Division
+            k = Kind.DIVISION
         return ArithRef(a.ctx.solver.mkTerm(k, a.ast, b.ast), self.ctx)
 
     def __truediv__(self, other):
@@ -2010,9 +2010,9 @@ class ArithRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         if a.sort() == IntSort(self.ctx):
-            k = Kind.IntsDivision
+            k = Kind.INTS_DIVISION
         else:
-            k = Kind.Division
+            k = Kind.DIVISION
         return ArithRef(a.ctx.solver.mkTerm(k, b.ast, a.ast), self.ctx)
 
     def __rtruediv__(self, other):
@@ -2030,7 +2030,7 @@ class ArithRef(ExprRef):
         a, b = _coerce_exprs(self, other)
         if debugging():
             _assert(a.sort().is_int(), "SMT integer expression expected")
-        return ArithRef(a.ctx.solver.mkTerm(Kind.IntsModulus, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.INTS_MODULUS, a.ast, b.ast), self.ctx)
 
     def __rmod__(self, other):
         """Create the SMT expression `other%self`.
@@ -2042,7 +2042,7 @@ class ArithRef(ExprRef):
         a, b = _coerce_exprs(self, other)
         if debugging():
             _assert(a.sort().is_int(), "SMT integer expression expected")
-        return ArithRef(a.ctx.solver.mkTerm(Kind.IntsModulus, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.solver.mkTerm(Kind.INTS_MODULUS, b.ast, a.ast), self.ctx)
 
     def __neg__(self):
         """Return an expression representing `-self`.
@@ -2051,7 +2051,7 @@ class ArithRef(ExprRef):
         >>> -x
         -x
         """
-        return ArithRef(self.ctx.solver.mkTerm(Kind.Neg, self.ast), self.ctx)
+        return ArithRef(self.ctx.solver.mkTerm(Kind.NEG, self.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -2073,7 +2073,7 @@ class ArithRef(ExprRef):
         ToReal(x) <= y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.Leq, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.solver.mkTerm(Kind.LEQ, a.ast, b.ast), self.ctx)
 
     def __lt__(self, other):
         """Create the SMT expression `other < self`.
@@ -2086,7 +2086,7 @@ class ArithRef(ExprRef):
         ToReal(x) < y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.Lt, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.solver.mkTerm(Kind.LT, a.ast, b.ast), self.ctx)
 
     def __gt__(self, other):
         """Create the SMT expression `other > self`.
@@ -2099,7 +2099,7 @@ class ArithRef(ExprRef):
         ToReal(x) > y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.Gt, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.solver.mkTerm(Kind.GT, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression `other >= self`.
@@ -2112,7 +2112,7 @@ class ArithRef(ExprRef):
         ToReal(x) >= y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.Geq, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.solver.mkTerm(Kind.GEQ, a.ast, b.ast), self.ctx)
 
 
 def is_arith(a):
@@ -2246,7 +2246,7 @@ def is_add(a):
     >>> is_add(x - y)
     False
     """
-    return is_app_of(a, Kind.Add)
+    return is_app_of(a, Kind.ADD)
 
 
 def is_mul(a):
@@ -2258,7 +2258,7 @@ def is_mul(a):
     >>> is_mul(x - y)
     False
     """
-    return is_app_of(a, Kind.Mult)
+    return is_app_of(a, Kind.MULT)
 
 
 def is_sub(a):
@@ -2270,7 +2270,7 @@ def is_sub(a):
     >>> is_sub(x + y)
     False
     """
-    return is_app_of(a, Kind.Sub)
+    return is_app_of(a, Kind.SUB)
 
 
 def is_div(a):
@@ -2289,7 +2289,7 @@ def is_div(a):
     >>> is_idiv(x / y)
     True
     """
-    return is_app_of(a, Kind.Division)
+    return is_app_of(a, Kind.DIVISION)
 
 
 def is_idiv(a):
@@ -2301,7 +2301,7 @@ def is_idiv(a):
     >>> is_idiv(x + y)
     False
     """
-    return is_app_of(a, Kind.IntsDivision)
+    return is_app_of(a, Kind.INTS_DIVISION)
 
 
 def is_mod(a):
@@ -2313,7 +2313,7 @@ def is_mod(a):
     >>> is_mod(x + y)
     False
     """
-    return is_app_of(a, Kind.IntsModulus)
+    return is_app_of(a, Kind.INTS_MODULUS)
 
 
 def is_le(a):
@@ -2325,7 +2325,7 @@ def is_le(a):
     >>> is_le(x < y)
     False
     """
-    return is_app_of(a, Kind.Leq)
+    return is_app_of(a, Kind.LEQ)
 
 
 def is_lt(a):
@@ -2337,7 +2337,7 @@ def is_lt(a):
     >>> is_lt(x == y)
     False
     """
-    return is_app_of(a, Kind.Lt)
+    return is_app_of(a, Kind.LT)
 
 
 def is_ge(a):
@@ -2349,7 +2349,7 @@ def is_ge(a):
     >>> is_ge(x == y)
     False
     """
-    return is_app_of(a, Kind.Geq)
+    return is_app_of(a, Kind.GEQ)
 
 
 def is_gt(a):
@@ -2361,7 +2361,7 @@ def is_gt(a):
     >>> is_gt(x == y)
     False
     """
-    return is_app_of(a, Kind.Gt)
+    return is_app_of(a, Kind.GT)
 
 
 def is_is_int(a):
@@ -2919,7 +2919,7 @@ def Add(*args):
     >>> Add(x, x, y, main_ctx())
     x + x + y
     """
-    return _nary_kind_builder(Kind.Add, *args)
+    return _nary_kind_builder(Kind.ADD, *args)
 
 
 def Mult(*args):
@@ -2933,7 +2933,7 @@ def Mult(*args):
     >>> Mult(x, x, y, main_ctx())
     x*x*y
     """
-    return _nary_kind_builder(Kind.Mult, *args)
+    return _nary_kind_builder(Kind.MULT, *args)
 
 
 def Sub(a, b):
