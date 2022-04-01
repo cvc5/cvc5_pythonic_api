@@ -11,7 +11,7 @@
 """
 cvc5 is an SMT solver.
 
-This is its (as much as possible) Z3-compatible python interface.
+This is its pythonic API that is (as much as possible) Z3-compatible.
 
 Several online tutorials for Z3Py are available at:
 http://rise4fun.com/Z3Py/tutorial/guide
@@ -7060,7 +7060,7 @@ def fpToFP(a1, a2=None, a3=None, ctx=None):
     elif is_fprm(a1) and is_bv(a2) and is_fp_sort(a3):
         return fpSignedToFP(a1, a2, a3, ctx)
     else:
-        raise Z3Exception("Unsupported combination of arguments for conversion to floating-point term.")
+        raise SMTException("Unsupported combination of arguments for conversion to floating-point term.")
 
 
 def fpBVToFP(v, sort, ctx=None):
@@ -7250,13 +7250,13 @@ def _valid_accessor(acc):
 
 
 class Datatype:
-    """Helper class for declaring Z3 datatypes.
+    """Helper class for declaring datatypes.
 
     >>> List = Datatype('List')
     >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
     >>> List.declare('nil')
     >>> List = List.create()
-    >>> # List is now a Z3 declaration
+    >>> # List is now a declaration
     >>> List.nil
     nil
     >>> List.cons(10, List.nil)
@@ -7413,7 +7413,7 @@ def CreateDatatypes(*ds):
                     ftype = uninterp_sorts[ftype.name]
                 else:
                     if debugging():
-                        _assert(is_sort(ftype), "Z3 sort expected")
+                        _assert(is_sort(ftype), "sort expected")
                     ftype = ftype.ast
                 con.addSelector(fname, ftype)
             decl.addConstructor(con)
@@ -7448,13 +7448,13 @@ class DatatypeSortRef(SortRef):
         self.dt = ast.getDatatype()
 
     def num_constructors(self):
-        """Return the number of constructors in the given Z3 datatype.
+        """Return the number of constructors in the given datatype.
 
         >>> List = Datatype('List')
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
         >>> List = List.create()
-        >>> # List is now a Z3 declaration
+        >>> # List is now a declaration
         >>> List.num_constructors()
         2
         """
@@ -7467,7 +7467,7 @@ class DatatypeSortRef(SortRef):
         >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
         >>> List.declare('nil')
         >>> List = List.create()
-        >>> # List is now a Z3 declaration
+        >>> # List is now a declaration
         >>> List.num_constructors()
         2
         >>> List.constructor(0)
@@ -7704,7 +7704,7 @@ class DatatypeRef(ExprRef):
 
     def sort(self):
         """Return the datatype sort of the datatype expression `self`."""
-        return DatatypeSortRef(Z3_get_sort(self.ctx_ref(), self.as_ast()), self.ctx)
+        return DatatypeSortRef(self.as_ast().getSort(), self.ctx)
 
 
 def TupleSort(name, sorts, ctx=None):
