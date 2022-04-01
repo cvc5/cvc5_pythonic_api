@@ -3640,7 +3640,7 @@ def Int2BV(a, num_bits):
     no solution
     """
     ctx = a.ctx
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BV, num_bits), a.ast), ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BITVECTOR, num_bits), a.ast), ctx)
 
 
 def BitVecSort(sz, ctx=None):
@@ -4183,7 +4183,7 @@ def BVRedOr(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Redor, a.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_REDOR, a.ast), a.ctx)
 
 
 def BVAdd(*args):
@@ -7906,7 +7906,7 @@ def _mk_quant(vs, body, kind):
     consts = [v.ast for v in vs]
     vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    ast = s.mkTerm(kind, s.mkTerm(Kind.VARIABLEList, *vars_), subbed_body)
+    ast = s.mkTerm(kind, s.mkTerm(Kind.VARIABLE_LIST, *vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
