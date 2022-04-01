@@ -962,26 +962,26 @@ def _to_expr_ref(a, ctx, r=None):
         ast = a
     else:
         raise SMTException("Non-term/expression given to _to_expr_ref")
-    if ast.getKind() in [Kind.Forall, Kind.Exists, Kind.Lambda]:
+    if ast.getKind() in [Kind.FORALL, Kind.EXISTS, Kind.LAMBDA]:
         return QuantifierRef(ast, ctx, r)
     sort = ast.getSort()
     if sort.isBoolean():
         return BoolRef(ast, ctx, r)
     if sort.isInteger():
-        if ast.getKind() == Kind.ConstRational:
+        if ast.getKind() == Kind.CONST_RATIONAL:
             return IntNumRef(ast, ctx, r)
         return ArithRef(ast, ctx, r)
     if sort.isReal():
-        if ast.getKind() == Kind.ConstRational:
+        if ast.getKind() == Kind.CONST_RATIONAL:
             return RatNumRef(ast, ctx, r)
         return ArithRef(ast, ctx, r)
     if sort.isBitVector():
-        if ast.getKind() == Kind.ConstBV:
+        if ast.getKind() == Kind.CONST_BV:
             return BitVecNumRef(ast, ctx, r)
         else:
             return BitVecRef(ast, ctx, r)
     if sort.isFloatingPoint():
-        if ast.getKind() == Kind.ConstFP:
+        if ast.getKind() == Kind.CONST_FP:
             return FPNumRef(a, ctx)
         else:
             return FPRef(a, ctx)
@@ -1174,13 +1174,13 @@ def is_const(a):
     >>> x = Int('x')
     """
     return is_expr(a) and a.ast.getKind() in [
-        Kind.ConstBoolean,
-        Kind.ConstBV,
-        Kind.ConstFP,
-        Kind.ConstRational,
+        Kind.CONST_BOOLEAN,
+        Kind.CONST_BV,
+        Kind.CONST_FP,
+        Kind.CONST_RATIONAL,
         Kind.SetEmpty,
         Kind.SetUniverse,
-        Kind.Constant,
+        Kind.CONSTANT,
     ]
 
 
@@ -1432,7 +1432,7 @@ def is_true(a):
     >>> is_true(True)
     False
     """
-    return is_app_of(a, Kind.ConstBoolean) and a.ast == a.ctx.solver.mkTrue()
+    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.solver.mkTrue()
 
 
 def is_false(a):
@@ -1446,7 +1446,7 @@ def is_false(a):
     >>> is_false(BoolVal(False))
     True
     """
-    return is_app_of(a, Kind.ConstBoolean) and a.ast == a.ctx.solver.mkFalse()
+    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.solver.mkFalse()
 
 
 def is_and(a):
@@ -1458,7 +1458,7 @@ def is_and(a):
     >>> is_and(Or(p, q))
     False
     """
-    return is_app_of(a, Kind.And)
+    return is_app_of(a, Kind.AND)
 
 
 def is_or(a):
@@ -1698,7 +1698,7 @@ def And(*args):
     >>> And(P)
     And(p__0, p__1, p__2, p__3, p__4)
     """
-    return _nary_kind_builder(Kind.And, *args)
+    return _nary_kind_builder(Kind.AND, *args)
 
 
 def Or(*args):
@@ -2175,7 +2175,7 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [Kind.ConstRational, Kind.ConstBV, Kind.ConstBoolean, Kind.ConstRoundingmode, Kind.ConstFP]
+    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BV, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FP]
 
 
 def is_int_value(a):
@@ -2388,7 +2388,7 @@ def is_to_real(a):
     >>> is_to_real(x)
     False
     """
-    return is_app_of(a, Kind.ToReal)
+    return is_app_of(a, Kind.TO_REAL)
 
 
 def is_to_int(a):
@@ -2670,7 +2670,7 @@ def ToReal(a):
     if debugging():
         _assert(a.is_int(), "SMT integer expression expected.")
     ctx = a.ctx
-    return ArithRef(ctx.solver.mkTerm(Kind.ToReal, a.ast), ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.TO_REAL, a.ast), ctx)
 
 
 def ToInt(a):
@@ -5580,7 +5580,7 @@ class ModelRef:
         vars_ = set()
         while len(q) > 0:
             a = q.pop()
-            if a.ast.getKind() == Kind.Constant:
+            if a.ast.getKind() == Kind.CONSTANT:
                 vars_.add(a)
             else:
                 for c in a.children():
@@ -7781,7 +7781,7 @@ class QuantifierRef(BoolRef):
         >>> q.is_forall()
         False
         """
-        return self.ast.getKind() == Kind.Forall
+        return self.ast.getKind() == Kind.FORALL
 
     def is_exists(self):
         """Return `True` if `self` is an existential quantifier.
@@ -7795,7 +7795,7 @@ class QuantifierRef(BoolRef):
         >>> q.is_exists()
         True
         """
-        return self.ast.getKind() == Kind.Exists
+        return self.ast.getKind() == Kind.EXISTS
 
     def is_lambda(self):
         """Return `True` if `self` is a lambda expression.
@@ -7809,7 +7809,7 @@ class QuantifierRef(BoolRef):
         >>> q.is_lambda()
         False
         """
-        return self.ast.getKind() == Kind.Lambda
+        return self.ast.getKind() == Kind.LAMBDA
 
     def body(self):
         """Return the expression being quantified.
@@ -7919,7 +7919,7 @@ def ForAll(vs, body):
     >>> ForAll([x, y], f(x, y) >= x)
     ForAll([x, y], f(x, y) >= x)
     """
-    return _mk_quant(vs, body, Kind.Forall)
+    return _mk_quant(vs, body, Kind.FORALL)
 
 
 def Exists(vs, body):
@@ -7932,7 +7932,7 @@ def Exists(vs, body):
     >>> q
     Exists([x, y], f(x, y) >= x)
     """
-    return _mk_quant(vs, body, Kind.Exists)
+    return _mk_quant(vs, body, Kind.EXISTS)
 
 
 def Lambda(vs, body):
@@ -7945,4 +7945,4 @@ def Lambda(vs, body):
     >>> mem1
     Lambda(i, If(And(lo <= i, i <= hi), e, mem0[i]))
     """
-    return _mk_quant(vs, body, Kind.Lambda)
+    return _mk_quant(vs, body, Kind.LAMBDA)
