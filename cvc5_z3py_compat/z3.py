@@ -1252,7 +1252,7 @@ def Distinct(*args):
             ctx is not None, "At least one of the arguments must be an SMT expression"
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.Distinct, [a.ast for a in args]), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.Distinct, *[a.ast for a in args]), ctx)
 
 
 def Const(name, sort):
@@ -4779,7 +4779,7 @@ def SetUnion(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SetUnion, [a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SetUnion, *[a.ast for a in args]), ctx)
 
 
 def SetIntersect(*args):
@@ -4792,7 +4792,7 @@ def SetIntersect(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SetInter, [a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SetInter, *[a.ast for a in args]), ctx)
 
 
 def SetAdd(s, e):
