@@ -1117,7 +1117,7 @@ class Formatter:
             elif k == Kind.CONSTARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind.CASE).
-            elif k in [Kind.CONSTANT, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue]:
+            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
                 return self.pp_name(a)
             # elif k == Z3_OP_PB_AT_MOST:
             #     return self.pp_atmost(a, d, f, xs)
