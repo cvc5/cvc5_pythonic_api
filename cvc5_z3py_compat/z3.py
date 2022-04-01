@@ -6058,7 +6058,7 @@ def RoundNearestTiesToEven(ctx=None):
     fpMul(RNE(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.RoundNearestTiesToEven), ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_EVEN), ctx)
 
 
 def RNE(ctx=None):
@@ -6087,7 +6087,7 @@ def RoundNearestTiesToAway(ctx=None):
     fpMul(RNA(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.RoundNearestTiesToAway), ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_AWAY), ctx)
 
 
 def RNA(ctx=None):
@@ -6116,7 +6116,7 @@ def RoundTowardPositive(ctx=None):
     fpMul(RTP(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.RoundTowardPositive), ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx)
 
 
 def RTP(ctx=None):
@@ -6145,7 +6145,7 @@ def RoundTowardNegative(ctx=None):
     fpMul(RTN(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.RoundTowardNegative), ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx)
 
 
 def RTN(ctx=None):
@@ -6174,7 +6174,7 @@ def RoundTowardZero(ctx=None):
     x * y
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.RoundTowardZero), ctx)
+    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_ZERO), ctx)
 
 
 def RTZ(ctx=None):
@@ -6210,7 +6210,7 @@ def is_fprm_value(a):
 
 
 # Global default rounding mode
-_dflt_rounding_mode = pc.RoundingMode.RoundTowardZero
+_dflt_rounding_mode = pc.RoundingMode.ROUND_TOWARD_ZERO
 _dflt_fpsort_ebits = 11
 _dflt_fpsort_sbits = 53
 
