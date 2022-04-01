@@ -83,10 +83,10 @@ _z3_op_to_str = {
     Kind.BITVECTOR_LSHR: "LShR",
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
-    Kind.BITVECTOR_TONAT: "BV2Int",
+    Kind.BITVECTOR_TO_NAT: "BV2Int",
     Kind.SELECT: "Select",
     Kind.STORE: "Store",
-    Kind.CONSTARRAY: "ConstArray",
+    Kind.CONST_ARRAY: "ConstArray",
     Kind.SEQ_CONCAT: "Concat",
     Kind.SEQ_PREFIX: "PrefixOf",
     Kind.SEQ_SUFFIX: "SuffixOf",
@@ -346,9 +346,9 @@ def _op_name(a):
     k = a.kind()
     n = _z3_op_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedSortValue]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
             return str(a.ast)
-        if k == Kind.INTERNALKIND:
+        if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
             return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
@@ -1133,9 +1133,9 @@ class Formatter:
                 return self.pp_infix(a, d, xs)
             elif self.is_unary(k):
                 return self.pp_unary(a, d, xs)
-            elif k == Kind.APPLYUF:
+            elif k == Kind.APPLY_UF:
                 return self.pp_uf_apply(a, d, xs)
-            elif k in [Kind.APPLYCONSTRUCTOR, Kind.ApplySelector, Kind.ApplyTester]:
+            elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
