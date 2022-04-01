@@ -115,13 +115,13 @@ _z3_op_to_str = {
     Kind.RegexpRange: "Range",
     Kind.RegexpInter: "Intersect",
     Kind.RegexpComplement: "Complement",
-    Kind.FPIsNan: "fpIsNaN",
-    Kind.FPIsInf: "fpIsInf",
-    Kind.FPIsZero: "fpIsZero",
-    Kind.FPIsNormal: "fpIsNormal",
-    Kind.FPIsSubnormal: "fpIsMinusnormal",
-    Kind.FPIsNeg: "fpIsNegative",
-    Kind.FPIsPos: "fpIsPositive",
+    Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
+    Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
+    Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
+    Kind.FLOATINGPOINT_IS_NORMAL: "fpIsNormal",
+    Kind.FLOATINGPOINT_IS_SUBNORMAL: "fpIsMinusnormal",
+    Kind.FLOATINGPOINT_IS_NEG: "fpIsNegative",
+    Kind.FLOATINGPOINT_IS_POS: "fpIsPositive",
 }
 
 # List of infix operators
@@ -211,46 +211,46 @@ _z3_fpa_rm_short_strings = {
 
 # FPA operators
 _z3_op_to_fpa_normal_str = {
-    Kind.FPAdd: "fpAdd",
-    Kind.FPSub: "fpSub",
-    Kind.FPNeg: "fpNeg",
-    Kind.FPMult: "fpMul",
-    Kind.FPDiv: "fpDiv",
-    Kind.FPRem: "fpRem",
-    Kind.FPAbs: "fpAbs",
-    Kind.FPMin: "fpMin",
-    Kind.FPMax: "fpMax",
-    Kind.FPFma: "fpFMA",
-    Kind.FPSqrt: "fpSqrt",
-    Kind.FPRti: "fpRoundToIntegral",
+    Kind.FLOATINGPOINT_ADD: "fpAdd",
+    Kind.FLOATINGPOINT_SUB: "fpSub",
+    Kind.FLOATINGPOINT_NEG: "fpNeg",
+    Kind.FLOATINGPOINT_MULT: "fpMul",
+    Kind.FLOATINGPOINT_DIV: "fpDiv",
+    Kind.FLOATINGPOINT_REM: "fpRem",
+    Kind.FLOATINGPOINT_ABS: "fpAbs",
+    Kind.FLOATINGPOINT_MIN: "fpMin",
+    Kind.FLOATINGPOINT_MAX: "fpMax",
+    Kind.FLOATINGPOINT_FMA: "fpFMA",
+    Kind.FLOATINGPOINT_SQRT: "fpSqrt",
+    Kind.FLOATINGPOINT_RTI: "fpRoundToIntegral",
 
-    Kind.FPEq: "fpEQ",
-    Kind.FPLt: "fpLT",
-    Kind.FPGt: "fpGT",
-    Kind.FPLeq: "fpLEQ",
-    Kind.FPGeq: "fpGEQ",
+    Kind.FLOATINGPOINT_EQ: "fpEQ",
+    Kind.FLOATINGPOINT_LT: "fpLT",
+    Kind.FLOATINGPOINT_GT: "fpGT",
+    Kind.FLOATINGPOINT_LEQ: "fpLEQ",
+    Kind.FLOATINGPOINT_GEQ: "fpGEQ",
 
-    Kind.FPToFpFromFp: "fpToFP",
-    Kind.FPToFpFromUbv: "fpToFP",
-    Kind.FPToFpFromSbv: "fpToFP",
-    Kind.FPToFpFromReal: "fpToFP",
-    Kind.FPToFpFromIeeeBv: "fpToFP",
-    Kind.FPToUbv: "fpToUBV",
-    Kind.FPToSbv: "fpToSBV",
-    Kind.FPToReal: "fpToReal",
+    Kind.FLOATINGPOINT_TO_FP_FROM_FP: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_UBV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_SBV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_REAL: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_UBV: "fpToUBV",
+    Kind.FLOATINGPOINT_TO_SBV: "fpToSBV",
+    Kind.FLOATINGPOINT_TO_REAL: "fpToReal",
 }
 
 _z3_op_to_fpa_pretty_str = {
-    Kind.FPAdd: "+", Kind.FPSub: "-", Kind.FPMult: "*", Kind.FPDiv: "/",
-    Kind.FPRem: "%", Kind.FPNeg: "-",
+    Kind.FLOATINGPOINT_ADD: "+", Kind.FLOATINGPOINT_SUB: "-", Kind.FLOATINGPOINT_MULT: "*", Kind.FLOATINGPOINT_DIV: "/",
+    Kind.FLOATINGPOINT_REM: "%", Kind.FLOATINGPOINT_NEG: "-",
 
-    Kind.FPEq: "fpEQ", Kind.FPLt: "<", Kind.FPGt: ">", Kind.FPLeq: "<=",
-    Kind.FPGeq: ">="
+    Kind.FLOATINGPOINT_EQ: "fpEQ", Kind.FLOATINGPOINT_LT: "<", Kind.FLOATINGPOINT_GT: ">", Kind.FLOATINGPOINT_LEQ: "<=",
+    Kind.FLOATINGPOINT_GEQ: ">="
 }
 
 _z3_fpa_infix = [
-    Kind.FPAdd, Kind.FPSub, Kind.FPMult, Kind.FPDiv, Kind.FPRem,
-    Kind.FPLt, Kind.FPGt, Kind.FPLeq, Kind.FPGeq
+    Kind.FLOATINGPOINT_ADD, Kind.FLOATINGPOINT_SUB, Kind.FLOATINGPOINT_MULT, Kind.FLOATINGPOINT_DIV, Kind.FLOATINGPOINT_REM,
+    Kind.FLOATINGPOINT_LT, Kind.FLOATINGPOINT_GT, Kind.FLOATINGPOINT_LEQ, Kind.FLOATINGPOINT_GEQ
 ]
 
 def _is_assoc(k):
@@ -852,7 +852,7 @@ class Formatter:
                     r.append(to_format(" "))
                     r.append(arg2)
                     return compose(r)
-            elif k == Kind.FPNeg:
+            elif k == Kind.FLOATINGPOINT_NEG:
                 return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
 
         if k in _z3_op_to_fpa_normal_str:

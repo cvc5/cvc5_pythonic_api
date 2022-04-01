@@ -6597,7 +6597,7 @@ def FPVal(val, exp=None, fps=None, ctx=None):
         dub = Float64(ctx)
         bv = ctx.solver.mkBitVector(len(bv_str), bv_str, 2)
         fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
-        fp_to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromFp, fps.ebits(), fps.sbits())
+        fp_to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, fps.ebits(), fps.sbits())
         fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
         presimp = FPNumRef(fp, ctx)
         post = simplify(presimp)
@@ -6671,7 +6671,7 @@ def fpAbs(a, ctx=None):
     """
     ctx = _get_ctx(ctx)
     [a] = _coerce_fp_expr_list([a], ctx)
-    return FPRef(ctx.solver.mkTerm(Kind.FPAbs, a.ast), ctx)
+    return FPRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_ABS, a.ast), ctx)
 
 
 def fpNeg(a, ctx=None):
@@ -6687,7 +6687,7 @@ def fpNeg(a, ctx=None):
     """
     ctx = _get_ctx(ctx)
     [a] = _coerce_fp_expr_list([a], ctx)
-    return FPRef(ctx.solver.mkTerm(Kind.FPNeg, a.ast), ctx)
+    return FPRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_NEG, a.ast), ctx)
 
 
 def _mk_fp_unary(kind, rm, a, ctx):
@@ -6756,7 +6756,7 @@ def fpAdd(rm, a, b, ctx=None):
     >>> fpAdd(rm, x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin(Kind.FPAdd, rm, a, b, ctx)
+    return _mk_fp_bin(Kind.FLOATINGPOINT_ADD, rm, a, b, ctx)
 
 
 def fpSub(rm, a, b, ctx=None):
@@ -6771,7 +6771,7 @@ def fpSub(rm, a, b, ctx=None):
     >>> fpSub(rm, x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin(Kind.FPSub, rm, a, b, ctx)
+    return _mk_fp_bin(Kind.FLOATINGPOINT_SUB, rm, a, b, ctx)
 
 
 def fpMul(rm, a, b, ctx=None):
@@ -6786,7 +6786,7 @@ def fpMul(rm, a, b, ctx=None):
     >>> fpMul(rm, x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin(Kind.FPMult, rm, a, b, ctx)
+    return _mk_fp_bin(Kind.FLOATINGPOINT_MULT, rm, a, b, ctx)
 
 
 def fpDiv(rm, a, b, ctx=None):
@@ -6801,7 +6801,7 @@ def fpDiv(rm, a, b, ctx=None):
     >>> fpDiv(rm, x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin(Kind.FPDiv, rm, a, b, ctx)
+    return _mk_fp_bin(Kind.FLOATINGPOINT_DIV, rm, a, b, ctx)
 
 
 def fpRem(a, b, ctx=None):
@@ -6815,7 +6815,7 @@ def fpRem(a, b, ctx=None):
     >>> fpRem(x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin_norm(Kind.FPRem, a, b, ctx)
+    return _mk_fp_bin_norm(Kind.FLOATINGPOINT_REM, a, b, ctx)
 
 
 def fpMin(a, b, ctx=None):
@@ -6830,7 +6830,7 @@ def fpMin(a, b, ctx=None):
     >>> fpMin(x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin_norm(Kind.FPMin, a, b, ctx)
+    return _mk_fp_bin_norm(Kind.FLOATINGPOINT_MIN, a, b, ctx)
 
 
 def fpMax(a, b, ctx=None):
@@ -6845,25 +6845,25 @@ def fpMax(a, b, ctx=None):
     >>> fpMax(x, y).sort()
     FPSort(8, 24)
     """
-    return _mk_fp_bin_norm(Kind.FPMax, a, b, ctx)
+    return _mk_fp_bin_norm(Kind.FLOATINGPOINT_MAX, a, b, ctx)
 
 
 def fpFMA(rm, a, b, c, ctx=None):
     """Create a SMT floating-point fused multiply-add expression.
     """
-    return _mk_fp_tern(Kind.FPFma, rm, a, b, c, ctx)
+    return _mk_fp_tern(Kind.FLOATINGPOINT_FMA, rm, a, b, c, ctx)
 
 
 def fpSqrt(rm, a, ctx=None):
     """Create a SMT floating-point square root expression.
     """
-    return _mk_fp_unary(Kind.FPSqrt, rm, a, ctx)
+    return _mk_fp_unary(Kind.FLOATINGPOINT_SQRT, rm, a, ctx)
 
 
 def fpRoundToIntegral(rm, a, ctx=None):
     """Create a SMT floating-point roundToIntegral expression.
     """
-    return _mk_fp_unary(Kind.FPRti, rm, a, ctx)
+    return _mk_fp_unary(Kind.FLOATINGPOINT_RTI, rm, a, ctx)
 
 
 def fpIsNaN(a, ctx=None):
@@ -6875,7 +6875,7 @@ def fpIsNaN(a, ctx=None):
     >>> fpIsNaN(x)
     fpIsNaN(x)
     """
-    return _mk_fp_unary_pred(Kind.FPIsNan, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_NAN, a, ctx)
 
 
 def fpIsInf(a, ctx=None):
@@ -6886,7 +6886,7 @@ def fpIsInf(a, ctx=None):
     >>> fpIsInf(x)
     fpIsInf(x)
     """
-    return _mk_fp_unary_pred(Kind.FPIsInf, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_INF, a, ctx)
 
 
 def fpIsZero(a, ctx=None):
@@ -6910,13 +6910,13 @@ def fpIsSubnormal(a, ctx=None):
 def fpIsNegative(a, ctx=None):
     """Create a SMT floating-point isNegative expression.
     """
-    return _mk_fp_unary_pred(Kind.FPIsNeg, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_NEG, a, ctx)
 
 
 def fpIsPositive(a, ctx=None):
     """Create a SMT floating-point isPositive expression.
     """
-    return _mk_fp_unary_pred(Kind.FPIsPos, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_POS, a, ctx)
 
 
 def _check_fp_args(a, b):
@@ -6933,7 +6933,7 @@ def fpLT(a, b, ctx=None):
     >>> (x < y).sexpr()
     '(fp.lt x y)'
     """
-    return _mk_fp_bin_pred(Kind.FPLt, a, b, ctx)
+    return _mk_fp_bin_pred(Kind.FLOATINGPOINT_LT, a, b, ctx)
 
 
 def fpLEQ(a, b, ctx=None):
@@ -6945,7 +6945,7 @@ def fpLEQ(a, b, ctx=None):
     >>> (x <= y).sexpr()
     '(fp.leq x y)'
     """
-    return _mk_fp_bin_pred(Kind.FPLeq, a, b, ctx)
+    return _mk_fp_bin_pred(Kind.FLOATINGPOINT_LEQ, a, b, ctx)
 
 
 def fpGT(a, b, ctx=None):
@@ -6957,7 +6957,7 @@ def fpGT(a, b, ctx=None):
     >>> (x > y).sexpr()
     '(fp.gt x y)'
     """
-    return _mk_fp_bin_pred(Kind.FPGt, a, b, ctx)
+    return _mk_fp_bin_pred(Kind.FLOATINGPOINT_GT, a, b, ctx)
 
 
 def fpGEQ(a, b, ctx=None):
@@ -6969,7 +6969,7 @@ def fpGEQ(a, b, ctx=None):
     >>> (x >= y).sexpr()
     '(fp.geq x y)'
     """
-    return _mk_fp_bin_pred(Kind.FPGeq, a, b, ctx)
+    return _mk_fp_bin_pred(Kind.FLOATINGPOINT_GEQ, a, b, ctx)
 
 
 def fpEQ(a, b, ctx=None):
@@ -6981,7 +6981,7 @@ def fpEQ(a, b, ctx=None):
     >>> fpEQ(x, y).sexpr()
     '(fp.eq x y)'
     """
-    return _mk_fp_bin_pred(Kind.FPEq, a, b, ctx)
+    return _mk_fp_bin_pred(Kind.FLOATINGPOINT_EQ, a, b, ctx)
 
 
 def fpNEQ(a, b, ctx=None):
@@ -7077,7 +7077,7 @@ def fpBVToFP(v, sort, ctx=None):
     _assert(is_bv(v), "First argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Second argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromIeeeBv, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, v.ast), ctx)
 
 
@@ -7098,7 +7098,7 @@ def fpFPToFP(rm, v, sort, ctx=None):
     _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromFp, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7117,7 +7117,7 @@ def fpRealToFP(rm, v, sort, ctx=None):
     _assert(is_real(v), "Second argument must be a SMT expression or real sort.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromReal, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_REAL, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7136,7 +7136,7 @@ def fpSignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromSbv, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_SBV, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7155,7 +7155,7 @@ def fpUnsignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromUbv, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_UBV, sort.ebits(), sort.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -7166,7 +7166,7 @@ def fpToFPUnsigned(rm, x, s, ctx=None):
         _assert(is_bv(x), "Second argument must be a SMT bit-vector expression")
         _assert(is_fp_sort(s), "Third argument must be SMT floating-point sort")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FPToFpFromUbv, s.ebits(), s.sbits())
+    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_UBV, s.ebits(), s.sbits())
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, x.ast), ctx)
 
 
@@ -7189,7 +7189,7 @@ def fpToSBV(rm, x, s, ctx=None):
         _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FPToSbv, s.size()), rm.ast, x.ast), ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast), ctx)
 
 
 def fpToUBV(rm, x, s, ctx=None):
@@ -7211,7 +7211,7 @@ def fpToUBV(rm, x, s, ctx=None):
         _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FPToUbv, s.size()), rm.ast, x.ast), ctx)
+    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast), ctx)
 
 
 def fpToReal(x, ctx=None):
@@ -7231,7 +7231,7 @@ def fpToReal(x, ctx=None):
     if debugging():
         _assert(is_fp(x), "First argument must be a SMT floating-point expression")
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.FPToReal, x.ast), ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_TO_REAL, x.ast), ctx)
 
 
 #########################################
