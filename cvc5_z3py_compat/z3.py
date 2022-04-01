@@ -7553,7 +7553,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         >>> List.constructor(0).domain(0)
         Int
         """
-        return _to_sort_ref(self.ast.getSort().getConstructorDomainSorts()[i], self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeConstructorDomainSorts()[i], self.ctx)
 
     def range(self):
         """Return the sort of the range of a function declaration.
