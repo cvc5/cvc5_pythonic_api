@@ -73,8 +73,8 @@ _z3_op_to_str = {
     Kind.BITVECTOR_SGT: ">",
     Kind.BITVECTOR_ULE: "ULE",
     Kind.BITVECTOR_ULT: "ULT",
-    Kind.BITVECTOR_Uge: "UGE",
-    Kind.BITVECTOR_Ugt: "UGT",
+    Kind.BITVECTOR_UGE: "UGE",
+    Kind.BITVECTOR_UGT: "UGT",
     Kind.BITVECTOR_SIGN_EXTEND: "SignExt",
     Kind.BITVECTOR_ZERO_EXTEND: "ZeroExt",
     Kind.BITVECTOR_REPEAT: "RepeatBitVec",
@@ -190,8 +190,8 @@ _z3_precedence = {
     Kind.BITVECTOR_Sgt: 8,
     Kind.BITVECTOR_ULE: 8,
     Kind.BITVECTOR_ULT: 8,
-    Kind.BITVECTOR_Uge: 8,
-    Kind.BITVECTOR_Ugt: 8,
+    Kind.BITVECTOR_UGE: 8,
+    Kind.BITVECTOR_UGT: 8,
 }
 
 _z3_fpa_rm_strings = {

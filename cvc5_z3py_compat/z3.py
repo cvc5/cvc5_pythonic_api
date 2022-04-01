@@ -3839,7 +3839,7 @@ def UGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Uge, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UGE, a.ast, b.ast), a.ctx)
 
 
 def UGT(a, b):
@@ -3857,7 +3857,7 @@ def UGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Ugt, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UGT, a.ast, b.ast), a.ctx)
 
 
 def SLE(a, b):
