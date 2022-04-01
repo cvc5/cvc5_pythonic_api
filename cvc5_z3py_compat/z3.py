@@ -63,7 +63,6 @@ Differences with Z3py:
   * FiniteDomainSort
   * Fixedpoint API
   * SMT2 file support
-  * Statistics
 * Not missing, but different
   * Options
     * as expected
@@ -5284,6 +5283,25 @@ class Solver(object):
         >>> main_ctx().reset()
         """
         return self.solver.getOptionInfo(name)
+
+    def statistics(self):
+        """Return the statistics of this solver.
+
+        >>> c = Context()
+        >>> s = Solver(ctx=c)
+        >>> a = Int('a', c)
+        >>> s.add(a == 0)
+        >>> s.check()
+        sat
+        >>> stats = s.statistics()
+        >>> stats['cvc5::CONSTANT']
+        {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
+        >>> len(stats.get()) < 10
+        True
+        >>> len(stats.get(True, True)) > 30
+        True
+        """
+        return self.solver.getStatistics()
 
 
 def SolverFor(logic, ctx=None, logFile=None):
