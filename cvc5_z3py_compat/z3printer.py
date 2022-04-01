@@ -50,19 +50,19 @@ _z3_op_to_str = {
     Kind.IS_INTEGER: "IsInt",
     Kind.BITVECTOR_ADD: "+",
     Kind.BITVECTOR_SUB: "-",
-    Kind.BITVECTOR_Mult: "*",
-    Kind.BITVECTOR_Or: "|",
-    Kind.BITVECTOR_And: "&",
-    Kind.BITVECTOR_Not: "~",
-    Kind.BITVECTOR_Xor: "^",
+    Kind.BITVECTOR_MULT: "*",
+    Kind.BITVECTOR_OR: "|",
+    Kind.BITVECTOR_AND: "&",
+    Kind.BITVECTOR_NOT: "~",
+    Kind.BITVECTOR_XOR: "^",
     Kind.BITVECTOR_NEG: "-",
     Kind.BITVECTOR_UDIV: "UDiv",
     Kind.BITVECTOR_SDIV: "/",
     Kind.BITVECTOR_SMOD: "%",
     Kind.BITVECTOR_SREM: "SRem",
     Kind.BITVECTOR_UREM: "URem",
-    Kind.BITVECTOR_RotateLeft: "RotateLeft",
-    Kind.BITVECTOR_RotateRight: "RotateRight",
+    Kind.BITVECTOR_ROTATE_LEFT: "RotateLeft",
+    Kind.BITVECTOR_ROTATE_RIGHT: "RotateRight",
     Kind.Leq: "<=",
     Kind.Lt: "<",
     Kind.Geq: ">=",
@@ -75,15 +75,15 @@ _z3_op_to_str = {
     Kind.BITVECTOR_ULT: "ULT",
     Kind.BITVECTOR_Uge: "UGE",
     Kind.BITVECTOR_Ugt: "UGT",
-    Kind.BITVECTOR_SignExtend: "SignExt",
-    Kind.BITVECTOR_ZeroExtend: "ZeroExt",
-    Kind.BITVECTOR_Repeat: "RepeatBitVec",
+    Kind.BITVECTOR_SIGN_EXTEND: "SignExt",
+    Kind.BITVECTOR_ZERO_EXTEND: "ZeroExt",
+    Kind.BITVECTOR_REPEAT: "RepeatBitVec",
     Kind.BITVECTOR_ASHR: ">>",
     Kind.BITVECTOR_SHL: "<<",
     Kind.BITVECTOR_LSHR: "LShR",
-    Kind.BITVECTOR_Concat: "Concat",
-    Kind.BITVECTOR_Extract: "Extract",
-    Kind.BITVECTOR_ToNat: "BV2Int",
+    Kind.BITVECTOR_CONCAT: "Concat",
+    Kind.BITVECTOR_EXTRACT: "Extract",
+    Kind.BITVECTOR_TO_NAT: "BV2Int",
     Kind.Select: "Select",
     Kind.Store: "Store",
     Kind.ConstArray: "ConstArray",
@@ -140,12 +140,12 @@ _z3_infix = [
     Kind.Gt,
     Kind.BITVECTOR_Add,
     Kind.BITVECTOR_Sub,
-    Kind.BITVECTOR_Mult,
+    Kind.BITVECTOR_MULT,
     Kind.BITVECTOR_Sdiv,
     Kind.BITVECTOR_Smod,
-    Kind.BITVECTOR_Or,
-    Kind.BITVECTOR_And,
-    Kind.BITVECTOR_Xor,
+    Kind.BITVECTOR_OR,
+    Kind.BITVECTOR_AND,
+    Kind.BITVECTOR_XOR,
     Kind.BITVECTOR_Sdiv,
     Kind.BITVECTOR_SLE,
     Kind.BITVECTOR_SLT,
@@ -155,19 +155,19 @@ _z3_infix = [
     Kind.BITVECTOR_Shl,
 ]
 
-_z3_unary = [Kind.Neg, Kind.BITVECTOR_Neg, Kind.BITVECTOR_Not]
+_z3_unary = [Kind.Neg, Kind.BITVECTOR_Neg, Kind.BITVECTOR_NOT]
 
 # Precedence
 _z3_precedence = {
     Kind.Pow: 0,
     Kind.Neg: 1,
     Kind.BITVECTOR_Neg: 1,
-    Kind.BITVECTOR_Not: 1,
+    Kind.BITVECTOR_NOT: 1,
     Kind.Mult: 2,
     Kind.Division: 2,
     Kind.IntsDivision: 2,
     Kind.IntsModulus: 2,
-    Kind.BITVECTOR_Mult: 2,
+    Kind.BITVECTOR_MULT: 2,
     Kind.BITVECTOR_Sdiv: 2,
     Kind.BITVECTOR_Smod: 2,
     Kind.Add: 3,
@@ -176,9 +176,9 @@ _z3_precedence = {
     Kind.BITVECTOR_Sub: 3,
     Kind.BITVECTOR_ASHR: 4,
     Kind.BITVECTOR_Shl: 4,
-    Kind.BITVECTOR_And: 5,
-    Kind.BITVECTOR_Xor: 6,
-    Kind.BITVECTOR_Or: 7,
+    Kind.BITVECTOR_AND: 5,
+    Kind.BITVECTOR_XOR: 6,
+    Kind.BITVECTOR_OR: 7,
     Kind.Leq: 8,
     Kind.Lt: 8,
     Kind.Geq: 8,
@@ -255,13 +255,13 @@ _z3_fpa_infix = [
 
 def _is_assoc(k):
     return (
-        k == Kind.BITVECTOR_Or
-        or k == Kind.BITVECTOR_Xor
-        or k == Kind.BITVECTOR_And
+        k == Kind.BITVECTOR_OR
+        or k == Kind.BITVECTOR_XOR
+        or k == Kind.BITVECTOR_AND
         or k == Kind.Add
         or k == Kind.BITVECTOR_Add
         or k == Kind.Mult
-        or k == Kind.BITVECTOR_Mult
+        or k == Kind.BITVECTOR_MULT
     )
 
 
@@ -292,7 +292,7 @@ else:
 
 _z3_infix_compact = [
     Kind.Mult,
-    Kind.BITVECTOR_Mult,
+    Kind.BITVECTOR_MULT,
     Kind.Division,
     Kind.Pow,
     Kind.IntsDivision,
@@ -1104,11 +1104,11 @@ class Formatter:
                 return self.pp_distinct(a, d, xs)
             elif k == Kind.Select:
                 return self.pp_select(a, d, xs)
-            elif k in [Kind.BITVECTOR_SignExtend, Kind.BITVECTOR_ZeroExtend, Kind.BITVECTOR_Repeat]:
+            elif k in [Kind.BITVECTOR_SIGN_EXTEND, Kind.BITVECTOR_ZERO_EXTEND, Kind.BITVECTOR_REPEAT]:
                 return self.pp_unary_param(a, d, xs, False)
-            elif k in [Kind.BITVECTOR_RotateLeft, Kind.BITVECTOR_RotateRight]:
+            elif k in [Kind.BITVECTOR_ROTATE_LEFT, Kind.BITVECTOR_ROTATE_RIGHT]:
                 return self.pp_unary_param(a, d, xs, True)
-            elif k == Kind.BITVECTOR_Extract:
+            elif k == Kind.BITVECTOR_EXTRACT:
                 return self.pp_extract(a, d, xs)
             # elif k == Z3_OP_DT_IS:
             #     return self.pp_is(a, d, xs)
