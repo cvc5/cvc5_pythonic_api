@@ -84,37 +84,37 @@ _z3_op_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
-    Kind.Select: "Select",
-    Kind.Store: "Store",
-    Kind.ConstArray: "ConstArray",
-    Kind.SeqConcat: "Concat",
-    Kind.SeqPrefix: "PrefixOf",
-    Kind.SeqSuffix: "SuffixOf",
-    Kind.SeqUnit: "Unit",
-    Kind.SeqContains: "Contains",
-    Kind.SeqReplace: "Replace",
-    Kind.SeqAt: "At",
-    Kind.SeqNth: "Nth",
-    Kind.SeqIndexof: "IndexOf",
-    Kind.SeqLength: "Length",
-    Kind.SetSubset: "IsSubset",
-    Kind.SetMinus: "SetDifference",
-    Kind.SetComplement: "SetComplement",
-    Kind.SetSingleton: "Singleton",
-    Kind.SetInsert: "SetAdd",
-    Kind.SetInter: "SetIntersect",
-    Kind.SetUnion: "SetUnion",
-    Kind.SetMember: "IsMember",
-    Kind.StringToInt: "StrToInt",
-    Kind.StringFromInt: "IntToStr",
+    Kind.SELECT: "Select",
+    Kind.STORE: "Store",
+    Kind.CONST_ARRAY: "ConstArray",
+    Kind.SEQ_CONCAT: "Concat",
+    Kind.SEQ_PREFIX: "PrefixOf",
+    Kind.SEQ_SUFFIX: "SuffixOf",
+    Kind.SEQ_UNIT: "Unit",
+    Kind.SEQ_CONTAINS: "Contains",
+    Kind.SEQ_REPLACE: "Replace",
+    Kind.SEQ_AT: "At",
+    Kind.SEQ_NTH: "Nth",
+    Kind.SEQ_INDEXOF: "IndexOf",
+    Kind.SEQ_LENGTH: "Length",
+    Kind.SET_SUBSET: "IsSubset",
+    Kind.SET_MINUS: "SetDifference",
+    Kind.SET_COMPLEMENT: "SetComplement",
+    Kind.SET_SINGLETON: "Singleton",
+    Kind.SET_INSERT: "SetAdd",
+    Kind.SET_INTER: "SetIntersect",
+    Kind.SET_UNION: "SetUnion",
+    Kind.SET_MEMBER: "IsMember",
+    Kind.STRING_TO_INT: "StrToInt",
+    Kind.STRING_FROM_INT: "IntToStr",
     # Kind.Seq_in_re: "InRe",
     # Kind.Seq_to_re: "Re",
-    Kind.RegexpPlus: "Plus",
-    Kind.RegexpStar: "Star",
-    Kind.RegexpUnion: "Union",
-    Kind.RegexpRange: "Range",
-    Kind.RegexpInter: "Intersect",
-    Kind.RegexpComplement: "Complement",
+    Kind.REGEXP_PLUS: "Plus",
+    Kind.REGEXP_STAR: "Star",
+    Kind.REGEXP_UNION: "Union",
+    Kind.REGEXP_RANGE: "Range",
+    Kind.REGEXP_INTER: "Intersect",
+    Kind.REGEXP_COMPLEMENT: "Complement",
     Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
     Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
     Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
@@ -1102,7 +1102,7 @@ class Formatter:
                 return self.pp_power(a, d, xs)
             if k == Kind.Distinct:
                 return self.pp_distinct(a, d, xs)
-            elif k == Kind.Select:
+            elif k == Kind.SELECT:
                 return self.pp_select(a, d, xs)
             elif k in [Kind.BITVECTOR_SIGN_EXTEND, Kind.BITVECTOR_ZERO_EXTEND, Kind.BITVECTOR_REPEAT]:
                 return self.pp_unary_param(a, d, xs, False)
@@ -1114,7 +1114,7 @@ class Formatter:
             #     return self.pp_is(a, d, xs)
             # elif k == Z3_OP_ARRAY_MAP:
             #     return self.pp_map(a, d, xs)
-            elif k == Kind.ConstArray:
+            elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
             elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue]:

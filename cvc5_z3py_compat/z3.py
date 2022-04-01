@@ -4355,7 +4355,7 @@ class ArrayRef(ExprRef):
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
-            self.ctx.solver.mkTerm(Kind.Select, self.ast, arg.ast), self.ctx
+            self.ctx.solver.mkTerm(Kind.SELECT, self.ast, arg.ast), self.ctx
         )
 
     def arg(self, idx):
@@ -4418,7 +4418,7 @@ def is_const_array(a):
     >>> is_const_array(a)
     False
     """
-    return is_app_of(a, Kind.ConstArray)
+    return is_app_of(a, Kind.CONST_ARRAY)
 
 
 def is_K(a):
@@ -4523,7 +4523,7 @@ def Store(a, i, v):
     i = a.sort().domain().cast(i)
     v = a.sort().range().cast(v)
     ctx = a.ctx
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.Store, a.ast, i.ast, v.ast), ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(Kind.STORE, a.ast, i.ast, v.ast), ctx)
 
 
 def Select(a, i):
@@ -4591,7 +4591,7 @@ def is_select(a):
     >>> is_select(a[i])
     True
     """
-    return is_app_of(a, Kind.Select)
+    return is_app_of(a, Kind.SELECT)
 
 
 def is_store(a):
@@ -4603,7 +4603,7 @@ def is_store(a):
     >>> is_store(Store(a, 0, 1))
     True
     """
-    return is_app_of(a, Kind.Store)
+    return is_app_of(a, Kind.STORE)
 
 
 def is_update(a):
@@ -4693,7 +4693,7 @@ class SetRef(ExprRef):
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
-            self.ctx.solver.mkTerm(Kind.SetMember, arg.ast, self.ast), self.ctx
+            self.ctx.solver.mkTerm(Kind.SET_MEMBER, arg.ast, self.ast), self.ctx
         )
 
     def default(self):
@@ -4779,7 +4779,7 @@ def SetUnion(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SetUnion, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SET_UNION, *[a.ast for a in args]), ctx)
 
 
 def SetIntersect(*args):
@@ -4792,7 +4792,7 @@ def SetIntersect(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SetInter, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SET_INTER, *[a.ast for a in args]), ctx)
 
 
 def SetAdd(s, e):
@@ -4806,7 +4806,7 @@ def SetAdd(s, e):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     e = _py2expr(e, ctx)
-    return SetRef(ctx.solver.mkTerm(Kind.SetInsert, e.ast, s.ast), ctx, True)
+    return SetRef(ctx.solver.mkTerm(Kind.SET_INSERT, e.ast, s.ast), ctx, True)
 
 
 def SetDel(s, e):
@@ -4827,7 +4827,7 @@ def SetComplement(s):
     SetComplement(a)
     """
     ctx = s.ctx
-    return ArrayRef(ctx.solver.mkTerm(Kind.SetComplement, s.ast), ctx)
+    return ArrayRef(ctx.solver.mkTerm(Kind.SET_COMPLEMENT, s.ast), ctx)
 
 
 def Singleton(s):
@@ -4838,7 +4838,7 @@ def Singleton(s):
     """
     s = _py2expr(s)
     ctx = s.ctx
-    return SetRef(ctx.solver.mkTerm(Kind.SetSingleton, s.ast), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SET_SINGLETON, s.ast), ctx)
 
 
 def SetDifference(a, b):
@@ -4850,7 +4850,7 @@ def SetDifference(a, b):
     SetDifference(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return SetRef(ctx.solver.mkTerm(Kind.SetMinus, a.ast, b.ast), ctx)
+    return SetRef(ctx.solver.mkTerm(Kind.SET_MINUS, a.ast, b.ast), ctx)
 
 
 def SetMinus(a, b):
@@ -4873,7 +4873,7 @@ def IsMember(e, s):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     arg = s.domain().cast(e)
-    return BoolRef(ctx.solver.mkTerm(Kind.SetMember, arg.ast, s.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SET_MEMBER, arg.ast, s.ast), ctx)
 
 
 def IsSubset(a, b):
@@ -4885,7 +4885,7 @@ def IsSubset(a, b):
     IsSubset(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return BoolRef(ctx.solver.mkTerm(Kind.SetSubset, a.ast, b.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SET_SUBSET, a.ast, b.ast), ctx)
 
 
 #########################################
