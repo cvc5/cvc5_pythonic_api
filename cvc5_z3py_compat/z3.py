@@ -7385,7 +7385,7 @@ def CreateDatatypes(*ds):
     num = len(ds)
     uninterp_sorts = {}
     for d in ds:
-        uninterp_sorts[d.name] = s.mkUninterpretedSort(d.name)
+        uninterp_sorts[d.name] = s.mkUnresolvedDatatypeSort(d.name)
     dt_decls = []
     for i in range(num):
         d = ds[i]
@@ -7417,8 +7417,7 @@ def CreateDatatypes(*ds):
                     ftype = ftype.ast
                 con.addSelector(fname, ftype)
             decl.addConstructor(con)
-    uninterp_sort_set = { sort for _name, sort in uninterp_sorts.items() }
-    dt_sorts = s.mkDatatypeSorts(dt_decls, uninterp_sort_set)
+    dt_sorts = s.mkDatatypeSorts(dt_decls)
     # Create a field for every constructor, recognizer and accessor
     result = []
     for i in range(num):
@@ -7704,7 +7703,7 @@ class DatatypeRef(ExprRef):
 
     def sort(self):
         """Return the datatype sort of the datatype expression `self`."""
-        return DatatypeSortRef(Z3_get_sort(self.ctx_ref(), self.as_ast()), self.ctx)
+        return DatatypeSortRef(self.as_ast(), self.ctx)
 
 
 def TupleSort(name, sorts, ctx=None):
