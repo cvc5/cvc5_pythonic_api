@@ -63,7 +63,6 @@ Differences with Z3py:
   * FiniteDomainSort
   * Fixedpoint API
   * SMT2 file support
-  * Statistics
 * Not missing, but different
   * Options
     * as expected
@@ -5285,6 +5284,25 @@ class Solver(object):
         """
         return self.solver.getOptionInfo(name)
 
+    def statistics(self):
+        """Return the statistics of this solver.
+
+        >>> c = Context()
+        >>> s = Solver(ctx=c)
+        >>> a = Int('a', c)
+        >>> s.add(a == 0)
+        >>> s.check()
+        sat
+        >>> stats = s.statistics()
+        >>> stats['cvc5::CONSTANT']
+        {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
+        >>> len(stats.get()) < 10
+        True
+        >>> len(stats.get(True, True)) > 30
+        True
+        """
+        return self.solver.getStatistics()
+
 
 def SolverFor(logic, ctx=None, logFile=None):
     """Create a solver customized for the given logic.
@@ -7553,7 +7571,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         >>> List.constructor(0).domain(0)
         Int
         """
-        return _to_sort_ref(self.ast.getSort().getConstructorDomainSorts()[i], self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeConstructorDomainSorts()[i], self.ctx)
 
     def range(self):
         """Return the sort of the range of a function declaration.
@@ -7568,7 +7586,7 @@ class DatatypeConstructorRef(FuncDeclRef):
         >>> List.constructor(0).range()
         List
         """
-        return _to_sort_ref(self.ast.getSort().getConstructorCodomainSort(), self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeConstructorCodomainSort(), self.ctx)
 
     def __call__(self, *args):
         """Apply this constructor.
@@ -7607,13 +7625,13 @@ class DatatypeSelectorRef(FuncDeclRef):
         This method assumes that `0 <= i < self.arity()`.
         """
         _assert(i == 0, "Selectors take 1 argument")
-        return _to_sort_ref(self.ast.getSort().getSelectorDomainSort(), self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeSelectorDomainSort(), self.ctx)
 
     def range(self):
         """Return the sort of the range of a function declaration.
         For constants, this is the sort of the constant.
         """
-        return _to_sort_ref(self.ast.getSort().getSelectorCodomainSort(), self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeSelectorCodomainSort(), self.ctx)
 
     def __call__(self, *args):
         """Apply this selector.
@@ -7651,7 +7669,7 @@ class DatatypeRecognizerRef(FuncDeclRef):
         This method assumes that `0 <= i < self.arity()`.
         """
         _assert(i == 0, "Recognizers take 1 argument")
-        return _to_sort_ref(self.ast.getSort().getTesterDomainSort(), self.ctx)
+        return _to_sort_ref(self.ast.getSort().getDatatypeTesterDomainSort(), self.ctx)
 
     def range(self):
         """Return the sort of the range of a function declaration.
