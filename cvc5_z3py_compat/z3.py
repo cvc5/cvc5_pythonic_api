@@ -396,7 +396,7 @@ class ExprRef(object):
             return True
         a, b = _coerce_exprs(self, other)
         c = self.ctx
-        return BoolRef(c.solver.mkTerm(Kind.Distinct, a.as_ast(), b.as_ast()), c)
+        return BoolRef(c.solver.mkTerm(Kind.DISTINCT, a.as_ast(), b.as_ast()), c)
 
     def decl(self):
         """Return the SMT function declaration associated with an SMT application.
@@ -412,7 +412,7 @@ class ExprRef(object):
         ...   print("failed: %s" % ex)
         failed: Declarations for non-function applications
         """
-        if is_app_of(self, Kind.ApplyUf):
+        if is_app_of(self, Kind.APPLY_UF):
             return _to_expr_ref(list(self.ast)[0], self.ctx)  # type: ignore
         else:
             raise SMTException("Declarations for non-function applications")
@@ -423,7 +423,7 @@ class ExprRef(object):
         >>> f = Function('f', IntSort(), IntSort())
         >>> a = Int('a')
         >>> t = f(a)
-        >>> t.kind() == Kind.ApplyUf
+        >>> t.kind() == Kind.APPLY_UF
         True
         """
         return self.ast.getKind()
@@ -442,7 +442,7 @@ class ExprRef(object):
         """
         if debugging():
             _assert(is_app(self), "SMT application expected")
-        if is_app_of(self, Kind.ApplyUf):
+        if is_app_of(self, Kind.APPLY_UF):
             return len(list(self.as_ast())) - 1  # type: ignore
         else:
             return len(list(self.as_ast()))  # type: ignore
@@ -467,7 +467,7 @@ class ExprRef(object):
         if debugging():
             _assert(is_app(self), "SMT application expected")
             _assert(idx < self.num_args(), "Invalid argument index")
-        if is_app_of(self, Kind.ApplyUf):
+        if is_app_of(self, Kind.APPLY_UF):
             return _to_expr_ref(self.as_ast()[idx + 1], self.ctx)
         elif self.reverse_children:
             return _to_expr_ref(self.as_ast()[self.num_args() - (idx + 1)], self.ctx)
@@ -484,7 +484,7 @@ class ExprRef(object):
         >>> t.children()
         [a, b, 0]
         """
-        if is_app_of(self, Kind.ApplyUf):
+        if is_app_of(self, Kind.APPLY_UF):
             return [_to_expr_ref(a, self.ctx) for a in list(self.ast)[1:]]  # type: ignore
         else:
             if is_app(self):
@@ -861,7 +861,7 @@ class FuncDeclRef(ExprRef):
         >>> f(x, x)
         f(x, ToReal(x))
         """
-        return _higherorder_apply(self, args, Kind.ApplyUf)
+        return _higherorder_apply(self, args, Kind.APPLY_UF)
 
 
 def _higherorder_apply(func, args, kind):
@@ -976,7 +976,7 @@ def _to_expr_ref(a, ctx, r=None):
             return RatNumRef(ast, ctx, r)
         return ArithRef(ast, ctx, r)
     if sort.isBitVector():
-        if ast.getKind() == Kind.CONST_BV:
+        if ast.getKind() == Kind.CONST_BITVECTOR:
             return BitVecNumRef(ast, ctx, r)
         else:
             return BitVecRef(ast, ctx, r)
@@ -1175,7 +1175,7 @@ def is_const(a):
     """
     return is_expr(a) and a.ast.getKind() in [
         Kind.CONST_BOOLEAN,
-        Kind.CONST_BV,
+        Kind.CONST_BITVECTOR,
         Kind.CONST_FP,
         Kind.CONST_RATIONAL,
         Kind.SetEmpty,
@@ -1231,7 +1231,7 @@ def If(a, b, c, ctx=None):
     b, c = _coerce_exprs(b, c, ctx)
     if debugging():
         _assert(a.ctx == b.ctx, "Context mismatch")
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.Ite, a.ast, b.ast, c.ast), ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(Kind.ITE, a.ast, b.ast, c.ast), ctx)
 
 
 def Distinct(*args):
@@ -1252,7 +1252,7 @@ def Distinct(*args):
             ctx is not None, "At least one of the arguments must be an SMT expression"
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.Distinct, *[a.ast for a in args]), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.DISTINCT, *[a.ast for a in args]), ctx)
 
 
 def Const(name, sort):
@@ -1528,7 +1528,7 @@ def is_distinct(a):
     >>> is_distinct(Distinct(x, y, z))
     True
     """
-    return is_app_of(a, Kind.Distinct)
+    return is_app_of(a, Kind.DISTINCT)
 
 
 def BoolSort(ctx=None):
@@ -2175,7 +2175,7 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BV, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FP]
+    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FP]
 
 
 def is_int_value(a):
@@ -3934,7 +3934,7 @@ def UDiv(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Udiv, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UDIV, a.ast, b.ast), a.ctx)
 
 
 def URem(a, b):
@@ -3955,7 +3955,7 @@ def URem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Urem, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UREM, a.ast, b.ast), a.ctx)
 
 
 def SDiv(a, b):
@@ -4002,7 +4002,7 @@ def SRem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Srem, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SREM, a.ast, b.ast), a.ctx)
 
 
 def LShR(a, b):
@@ -4034,7 +4034,7 @@ def LShR(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Lshr, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_LSHR, a.ast, b.ast), a.ctx)
 
 
 def _check_rotate_args(a, b):
@@ -4171,7 +4171,7 @@ def BVRedAnd(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_Redand, a.ast), a.ctx)
+    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_REDAND, a.ast), a.ctx)
 
 
 def BVRedOr(a):
@@ -5587,7 +5587,7 @@ class ModelRef:
                     if c not in visit:
                         visit[c] = True
                         q.append(c)
-                if a.kind() == Kind.ApplyUf:
+                if a.kind() == Kind.APPLY_UF:
                     c = a.decl()
                     if c not in visit:
                         visit[c] = True

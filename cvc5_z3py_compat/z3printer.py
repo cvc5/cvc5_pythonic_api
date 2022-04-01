@@ -1100,7 +1100,7 @@ class Formatter:
             k = a.kind()
             if k == Kind.POW:
                 return self.pp_power(a, d, xs)
-            if k == Kind.Distinct:
+            if k == Kind.DISTINCT:
                 return self.pp_distinct(a, d, xs)
             elif k == Kind.SELECT:
                 return self.pp_select(a, d, xs)
@@ -1133,7 +1133,7 @@ class Formatter:
                 return self.pp_infix(a, d, xs)
             elif self.is_unary(k):
                 return self.pp_unary(a, d, xs)
-            elif k == Kind.ApplyUf:
+            elif k == Kind.APPLY_UF:
                 return self.pp_uf_apply(a, d, xs)
             elif k in [Kind.ApplyConstructor, Kind.ApplySelector, Kind.ApplyTester]:
                 return self.pp_dt_apply(a, d, xs)
