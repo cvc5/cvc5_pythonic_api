@@ -68,7 +68,7 @@ Differences with Z3py:
     * as expected
   * Some pretty printing
 """
-from .z3printer import *
+from .cvc5_pythonic_printer import *
 from fractions import Fraction
 from decimal import Decimal
 import ctypes

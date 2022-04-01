@@ -12,7 +12,7 @@ import io
 
 import itertools as it
 
-from . import z3 as cvc
+from . import cvc5_pythonic as cvc
 import cvc5 as pc
 from cvc5 import Kind
 

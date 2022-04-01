@@ -1,13 +1,13 @@
 .PHONY: test check fmt coverage
 
 test:
-	./z3doc_test.py && ./z3test.py
+	./test_doc.py && ./test_unit.py
 
 check:
-	pyright ./cvc5_z3py_compat
+	pyright ./cvc5_pythonic_api
 
 fmt:
-	black ./cvc5_z3py_compat
+	black ./cvc5_pythonic_api
 
 coverage:
-	coverage run z3test.py && coverage report && coverage html
+	coverage run test_unit.py && coverage report && coverage html

@@ -1,12 +1,12 @@
-cvc5_z3py_compat is copyright (C) 2021 by its authors and contributors and
+cvc5_pythonic_api is copyright (C) 2021 by its authors and contributors and
 their institutional affiliations.  All rights reserved.
 
-The source code of cvc5_z3py_compat is open and available to students,
+The source code of cvc5_pythonic_api is open and available to students,
 researchers, software companies, and everyone else to study, to modify, and to
 redistribute original or modified versions; distribution is under the terms of
 the modified BSD license (reproduced below). Note that the underlying
 software, cvc5, includes it own license and restrictions. See
-https://github.com/cvc5/cvc5 for details. Note that cvc5_z3py_compat includes
+https://github.com/cvc5/cvc5 for details. Note that cvc5_pythonic_api includes
 source from Z3Py; see `license/z3.txt` for its license.
 
 Redistribution and use in source and binary forms, with or without
