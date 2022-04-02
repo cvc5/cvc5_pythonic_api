@@ -2,7 +2,7 @@
 # Copyright (c) 2021 The CVC5 Developers
 #               2012 The Microsoft Corporation
 #
-# cvc5's Z3-compatible Python interface
+# cvc5's pythonic interface, based on z3Py
 #
 # Author: Alex Ozdemir (aozdemir)
 # pyz3 Author: Leonardo de Moura (leonardo)
@@ -12,7 +12,7 @@ import io
 
 import itertools as it
 
-from . import z3 as cvc
+from . import cvc5_pythonic as cvc
 import cvc5 as pc
 from cvc5 import Kind
 
@@ -27,8 +27,8 @@ def _assert(cond, msg):
 #
 ##############################
 
-# Z3 operator names to Z3Py
-_z3_op_to_str = {
+# cvc5 kind names to string
+_cvc5_kinds_to_str = {
     Kind.EQUAL: "==",
     Kind.DISTINCT: "Distinct",
     Kind.ITE: "If",
@@ -125,7 +125,7 @@ _z3_op_to_str = {
 }
 
 # List of infix operators
-_z3_infix = [
+_cvc5_infix = [
     Kind.EQUAL,
     Kind.ADD,
     Kind.POW,
@@ -155,10 +155,10 @@ _z3_infix = [
     Kind.BITVECTOR_SHL,
 ]
 
-_z3_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT]
+_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT]
 
 # Precedence
-_z3_precedence = {
+_cvc5_precedence = {
     Kind.POW: 0,
     Kind.NEG: 1,
     Kind.BITVECTOR_NEG: 1,
@@ -194,14 +194,14 @@ _z3_precedence = {
     Kind.BITVECTOR_UGT: 8,
 }
 
-_z3_fpa_rm_strings = {
+_cvc5_fp_rm_strings = {
     "roundNearestTiesToEven": "RoundNearestTiesToEven()",
     "roundNearestTiesToAway": "RoundNearestTiesToAway()",
     "roundTowardPositive": "RoundTowardPositive()",
     "roundTowardNegative": "RoundTowardNegative()",
     "roundTowardZero": "RoundTowardZero()",
 }
-_z3_fpa_rm_short_strings = {
+_cvc5_fp_rm_short_strings = {
     "roundNearestTiesToEven": "RNE()",
     "roundNearestTiesToAway": "RNA()",
     "roundTowardPositive": "RTP()",
@@ -210,7 +210,7 @@ _z3_fpa_rm_short_strings = {
 }
 
 # FPA operators
-_z3_op_to_fpa_normal_str = {
+_cvc5_kind_to_fp_normal_str = {
     Kind.FLOATINGPOINT_ADD: "fpAdd",
     Kind.FLOATINGPOINT_SUB: "fpSub",
     Kind.FLOATINGPOINT_NEG: "fpNeg",
@@ -240,7 +240,7 @@ _z3_op_to_fpa_normal_str = {
     Kind.FLOATINGPOINT_TO_REAL: "fpToReal",
 }
 
-_z3_op_to_fpa_pretty_str = {
+_cvc5_kind_to_fp_pretty_str = {
     Kind.FLOATINGPOINT_ADD: "+", Kind.FLOATINGPOINT_SUB: "-", Kind.FLOATINGPOINT_MULT: "*", Kind.FLOATINGPOINT_DIV: "/",
     Kind.FLOATINGPOINT_REM: "%", Kind.FLOATINGPOINT_NEG: "-",
 
@@ -248,7 +248,7 @@ _z3_op_to_fpa_pretty_str = {
     Kind.FLOATINGPOINT_GEQ: ">="
 }
 
-_z3_fpa_infix = [
+_cvc5_fp_infix = [
     Kind.FLOATINGPOINT_ADD, Kind.FLOATINGPOINT_SUB, Kind.FLOATINGPOINT_MULT, Kind.FLOATINGPOINT_DIV, Kind.FLOATINGPOINT_REM,
     Kind.FLOATINGPOINT_LT, Kind.FLOATINGPOINT_GT, Kind.FLOATINGPOINT_LEQ, Kind.FLOATINGPOINT_GEQ
 ]
@@ -290,7 +290,7 @@ else:
         return x
 
 
-_z3_infix_compact = [
+_cvc5_infix_compact = [
     Kind.MULT,
     Kind.BITVECTOR_MULT,
     Kind.DIVISION,
@@ -318,12 +318,12 @@ _infix_map = {}
 _unary_map = {}
 _infix_compact_map = {}
 
-for _k in _z3_infix:
+for _k in _cvc5_infix:
     _infix_map[_k] = True
-for _k in _z3_unary:
+for _k in _cvc5_unary:
     _unary_map[_k] = True
 
-for _k in _z3_infix_compact:
+for _k in _cvc5_infix_compact:
     _infix_compact_map[_k] = True
 
 
@@ -344,7 +344,7 @@ def _is_unary(k):
 
 def _op_name(a):
     k = a.kind()
-    n = _z3_op_to_str.get(k, None)
+    n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
         if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
             return str(a.ast)
@@ -361,8 +361,8 @@ def _op_name(a):
 
 
 def _get_precedence(k):
-    global _z3_precedence
-    return _z3_precedence.get(k, 100000)
+    global _cvc5_precedence
+    return _cvc5_precedence.get(k, 100000)
 
 
 class FormatObject:
@@ -714,8 +714,6 @@ class Formatter:
         k = a.kind()
         if k == Kind.SET_EMPTY:
             return self.pp_set("Empty", a)
-        # elif k == Z3_OP_SEQ_EMPTY:
-        #     return self.pp_set("Empty", a)
         elif k == Kind.SET_UNIVERSE:
             return self.pp_set("Full", a)
         return self.pp_name(a)
@@ -749,9 +747,9 @@ class Formatter:
         _assert(cvc.is_fprm_value(a), "expected FPRMNumRef")
         ast_str = str(a.ast)
         if self.fpa_pretty:
-            return to_format(_z3_fpa_rm_short_strings.get(ast_str))
+            return to_format(_cvc5_fp_rm_short_strings.get(ast_str))
         else:
-            return to_format(_z3_fpa_rm_strings.get(ast_str))
+            return to_format(_cvc5_fp_rm_strings.get(ast_str))
 
     def pp_fp_value(self, a):
         _assert(isinstance(a, cvc.FPNumRef), "type mismatch")
@@ -830,12 +828,12 @@ class Formatter:
         _assert(isinstance(a, cvc.FPRef), "type mismatch")
         k = a.kind()
         op = "?"
-        if (self.fpa_pretty and k in _z3_op_to_fpa_pretty_str):
-            op = _z3_op_to_fpa_pretty_str[k]
-        elif k in _z3_op_to_fpa_normal_str:
-            op = _z3_op_to_fpa_normal_str[k]
-        elif k in _z3_op_to_str:
-            op = _z3_op_to_str[k]
+        if (self.fpa_pretty and k in _cvc5_kind_to_fp_pretty_str):
+            op = _cvc5_kind_to_fp_pretty_str[k]
+        elif k in _cvc5_kind_to_fp_normal_str:
+            op = _cvc5_kind_to_fp_normal_str[k]
+        elif k in _cvc5_kinds_to_str:
+            op = _cvc5_kinds_to_str[k]
 
         n = a.num_args()
 
@@ -855,8 +853,8 @@ class Formatter:
             elif k == Kind.FLOATINGPOINT_NEG:
                 return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
 
-        if k in _z3_op_to_fpa_normal_str:
-            op = _z3_op_to_fpa_normal_str[k]
+        if k in _cvc5_kind_to_fp_normal_str:
+            op = _cvc5_kind_to_fp_normal_str[k]
 
         r = []
         r.append(to_format(op))
@@ -1015,14 +1013,6 @@ class Formatter:
         arg = self.pp_expr(a.arg(0), d + 1, xs)
         return seq1(self.pp_name(a), [to_format(h), to_format(l), arg])
 
-    def pp_loop(self, a, d, xs):
-        l = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        arg = self.pp_expr(a.arg(0), d + 1, xs)
-        if Z3_get_decl_num_parameters(a.ctx_ref(), a.decl().ast) > 1:
-            h = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 1)
-            return seq1("Loop", [arg, to_format(l), to_format(h)])
-        return seq1("Loop", [arg, to_format(l)])
-
     def pp_set(self, id, a):
         return seq1(id, [self.pp_sort(a.sort())])
 
@@ -1060,21 +1050,6 @@ class Formatter:
             [self.pp_sort(a.domain()), self.pp_expr(a.arg(0), d + 1, xs)],
         )
 
-    def pp_atmost(self, a, d, f, xs):
-        k = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        return seq1(
-            self.pp_name(a),
-            [seq3([self.pp_expr(ch, d + 1, xs) for ch in a.children()]), to_format(k)],
-        )
-
-    def pp_pbcmp(self, a, d, f, xs):
-        chs = a.children()
-        rchs = range(len(chs))
-        k = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        ks = [Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, i + 1) for i in rchs]
-        ls = [seq3([self.pp_expr(chs[i], d + 1, xs), to_format(ks[i])]) for i in rchs]
-        return seq1(self.pp_name(a), [seq3(ls), to_format(k)])
-
     def pp_app(self, a, d, xs):
         if cvc.is_int_value(a):
             return self.pp_int(a)
@@ -1110,23 +1085,11 @@ class Formatter:
                 return self.pp_unary_param(a, d, xs, True)
             elif k == Kind.BITVECTOR_EXTRACT:
                 return self.pp_extract(a, d, xs)
-            # elif k == Z3_OP_DT_IS:
-            #     return self.pp_is(a, d, xs)
-            # elif k == Z3_OP_ARRAY_MAP:
-            #     return self.pp_map(a, d, xs)
             elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
             elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
                 return self.pp_name(a)
-            # elif k == Z3_OP_PB_AT_MOST:
-            #     return self.pp_atmost(a, d, f, xs)
-            # elif k == Z3_OP_PB_LE:
-            #     return self.pp_pbcmp(a, d, f, xs)
-            # elif k == Z3_OP_PB_GE:
-            #     return self.pp_pbcmp(a, d, f, xs)
-            # elif k == Z3_OP_PB_EQ:
-            #     return self.pp_pbcmp(a, d, f, xs)
             # elif cvc.is_pattern(a):
             #     return self.pp_pattern(a, d, xs)
             elif self.is_infix(k):
@@ -1205,11 +1168,6 @@ class Formatter:
             return to_format(self.pp_unknown())
 
     def pp_decl(self, f):
-        k = f.kind()
-        if k == Z3_OP_DT_IS or k == Z3_OP_ARRAY_MAP:
-            g = f.params()[0]
-            r = [to_format(g.name())]
-            return seq1(self.pp_name(f), r)
         return self.pp_name(f)
 
     def pp_seq_core(self, f, a, d, xs):
@@ -1350,17 +1308,17 @@ def obj_to_string(a):
 
 def set_fpa_pretty(flag=True):
     global _Formatter
-    global _z3_op_to_str
+    global _cvc5_kinds_to_str
     _Formatter.fpa_pretty = flag
     if flag:
-        for (_k, _v) in _z3_op_to_fpa_pretty_str.items():
-            _z3_op_to_str[_k] = _v
-        for _k in _z3_fpa_infix:
+        for (_k, _v) in _cvc5_kind_to_fp_pretty_str.items():
+            _cvc5_kinds_to_str[_k] = _v
+        for _k in _cvc5_fp_infix:
             _infix_map[_k] = True
     else:
-        for (_k, _v) in _z3_op_to_fpa_normal_str.items():
-            _z3_op_to_str[_k] = _v
-        for _k in _z3_fpa_infix:
+        for (_k, _v) in _cvc5_kind_to_fp_normal_str.items():
+            _cvc5_kinds_to_str[_k] = _v
+        for _k in _cvc5_fp_infix:
             _infix_map[_k] = False
 
 
