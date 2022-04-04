@@ -2,7 +2,7 @@
 # Copyright (c) 2021 The CVC5 Developers
 #               2012 The Microsoft Corporation
 #
-# cvc5's Z3-compatible Python interface
+# cvc5's pythonic interface, based on z3Py
 #
 # Author: Alex Ozdemir (aozdemir)
 # pyz3 Author: Leonardo de Moura (leonardo)
@@ -12,7 +12,7 @@ import io
 
 import itertools as it
 
-from . import z3 as cvc
+from . import cvc5_pythonic as cvc
 import cvc5 as pc
 from cvc5 import Kind
 
@@ -27,196 +27,196 @@ def _assert(cond, msg):
 #
 ##############################
 
-# Z3 operator names to Z3Py
-_z3_op_to_str = {
-    Kind.Equal: "==",
-    Kind.Distinct: "Distinct",
-    Kind.Ite: "If",
-    Kind.And: "And",
-    Kind.Or: "Or",
-    Kind.Xor: "Xor",
-    Kind.Not: "Not",
-    Kind.Add: "+",
-    Kind.Sub: "-",
-    Kind.Pow: "**",
-    Kind.Neg: "-",
-    Kind.Mult: "*",
-    Kind.Implies: "Implies",
-    Kind.IntsDivision: "/",
-    Kind.Division: "/",
-    Kind.IntsModulus: "%",
-    Kind.ToReal: "ToReal",
-    Kind.ToInteger: "ToInt",
-    Kind.IsInteger: "IsInt",
-    Kind.BVAdd: "+",
-    Kind.BVSub: "-",
-    Kind.BVMult: "*",
-    Kind.BVOr: "|",
-    Kind.BVAnd: "&",
-    Kind.BVNot: "~",
-    Kind.BVXor: "^",
-    Kind.BVNeg: "-",
-    Kind.BVUdiv: "UDiv",
-    Kind.BVSdiv: "/",
-    Kind.BVSmod: "%",
-    Kind.BVSrem: "SRem",
-    Kind.BVUrem: "URem",
-    Kind.BVRotateLeft: "RotateLeft",
-    Kind.BVRotateRight: "RotateRight",
-    Kind.Leq: "<=",
-    Kind.Lt: "<",
-    Kind.Geq: ">=",
-    Kind.Gt: ">",
-    Kind.BVSle: "<=",
-    Kind.BVSlt: "<",
-    Kind.BVSge: ">=",
-    Kind.BVSgt: ">",
-    Kind.BVUle: "ULE",
-    Kind.BVUlt: "ULT",
-    Kind.BVUge: "UGE",
-    Kind.BVUgt: "UGT",
-    Kind.BVSignExtend: "SignExt",
-    Kind.BVZeroExtend: "ZeroExt",
-    Kind.BVRepeat: "RepeatBitVec",
-    Kind.BVAshr: ">>",
-    Kind.BVShl: "<<",
-    Kind.BVLshr: "LShR",
-    Kind.BVConcat: "Concat",
-    Kind.BVExtract: "Extract",
-    Kind.BVToNat: "BV2Int",
-    Kind.Select: "Select",
-    Kind.Store: "Store",
-    Kind.ConstArray: "ConstArray",
-    Kind.SeqConcat: "Concat",
-    Kind.SeqPrefix: "PrefixOf",
-    Kind.SeqSuffix: "SuffixOf",
-    Kind.SeqUnit: "Unit",
-    Kind.SeqContains: "Contains",
-    Kind.SeqReplace: "Replace",
-    Kind.SeqAt: "At",
-    Kind.SeqNth: "Nth",
-    Kind.SeqIndexof: "IndexOf",
-    Kind.SeqLength: "Length",
-    Kind.SetSubset: "IsSubset",
-    Kind.SetMinus: "SetDifference",
-    Kind.SetComplement: "SetComplement",
-    Kind.SetSingleton: "Singleton",
-    Kind.SetInsert: "SetAdd",
-    Kind.SetInter: "SetIntersect",
-    Kind.SetUnion: "SetUnion",
-    Kind.SetMember: "IsMember",
-    Kind.StringToInt: "StrToInt",
-    Kind.StringFromInt: "IntToStr",
+# cvc5 kind names to string
+_cvc5_kinds_to_str = {
+    Kind.EQUAL: "==",
+    Kind.DISTINCT: "Distinct",
+    Kind.ITE: "If",
+    Kind.AND: "And",
+    Kind.OR: "Or",
+    Kind.XOR: "Xor",
+    Kind.NOT: "Not",
+    Kind.ADD: "+",
+    Kind.SUB: "-",
+    Kind.POW: "**",
+    Kind.NEG: "-",
+    Kind.MULT: "*",
+    Kind.IMPLIES: "Implies",
+    Kind.INTS_DIVISION: "/",
+    Kind.DIVISION: "/",
+    Kind.INTS_MODULUS: "%",
+    Kind.TO_REAL: "ToReal",
+    Kind.TO_INTEGER: "ToInt",
+    Kind.IS_INTEGER: "IsInt",
+    Kind.BITVECTOR_ADD: "+",
+    Kind.BITVECTOR_SUB: "-",
+    Kind.BITVECTOR_MULT: "*",
+    Kind.BITVECTOR_OR: "|",
+    Kind.BITVECTOR_AND: "&",
+    Kind.BITVECTOR_NOT: "~",
+    Kind.BITVECTOR_XOR: "^",
+    Kind.BITVECTOR_NEG: "-",
+    Kind.BITVECTOR_UDIV: "UDiv",
+    Kind.BITVECTOR_SDIV: "/",
+    Kind.BITVECTOR_SMOD: "%",
+    Kind.BITVECTOR_SREM: "SRem",
+    Kind.BITVECTOR_UREM: "URem",
+    Kind.BITVECTOR_ROTATE_LEFT: "RotateLeft",
+    Kind.BITVECTOR_ROTATE_RIGHT: "RotateRight",
+    Kind.LEQ: "<=",
+    Kind.LT: "<",
+    Kind.GEQ: ">=",
+    Kind.GT: ">",
+    Kind.BITVECTOR_SLE: "<=",
+    Kind.BITVECTOR_SLT: "<",
+    Kind.BITVECTOR_SGE: ">=",
+    Kind.BITVECTOR_SGT: ">",
+    Kind.BITVECTOR_ULE: "ULE",
+    Kind.BITVECTOR_ULT: "ULT",
+    Kind.BITVECTOR_UGE: "UGE",
+    Kind.BITVECTOR_UGT: "UGT",
+    Kind.BITVECTOR_SIGN_EXTEND: "SignExt",
+    Kind.BITVECTOR_ZERO_EXTEND: "ZeroExt",
+    Kind.BITVECTOR_REPEAT: "RepeatBitVec",
+    Kind.BITVECTOR_ASHR: ">>",
+    Kind.BITVECTOR_SHL: "<<",
+    Kind.BITVECTOR_LSHR: "LShR",
+    Kind.BITVECTOR_CONCAT: "Concat",
+    Kind.BITVECTOR_EXTRACT: "Extract",
+    Kind.BITVECTOR_TO_NAT: "BV2Int",
+    Kind.SELECT: "Select",
+    Kind.STORE: "Store",
+    Kind.CONST_ARRAY: "ConstArray",
+    Kind.SEQ_CONCAT: "Concat",
+    Kind.SEQ_PREFIX: "PrefixOf",
+    Kind.SEQ_SUFFIX: "SuffixOf",
+    Kind.SEQ_UNIT: "Unit",
+    Kind.SEQ_CONTAINS: "Contains",
+    Kind.SEQ_REPLACE: "Replace",
+    Kind.SEQ_AT: "At",
+    Kind.SEQ_NTH: "Nth",
+    Kind.SEQ_INDEXOF: "IndexOf",
+    Kind.SEQ_LENGTH: "Length",
+    Kind.SET_SUBSET: "IsSubset",
+    Kind.SET_MINUS: "SetDifference",
+    Kind.SET_COMPLEMENT: "SetComplement",
+    Kind.SET_SINGLETON: "Singleton",
+    Kind.SET_INSERT: "SetAdd",
+    Kind.SET_INTER: "SetIntersect",
+    Kind.SET_UNION: "SetUnion",
+    Kind.SET_MEMBER: "IsMember",
+    Kind.STRING_TO_INT: "StrToInt",
+    Kind.STRING_FROM_INT: "IntToStr",
     # Kind.Seq_in_re: "InRe",
     # Kind.Seq_to_re: "Re",
-    Kind.RegexpPlus: "Plus",
-    Kind.RegexpStar: "Star",
-    Kind.RegexpUnion: "Union",
-    Kind.RegexpRange: "Range",
-    Kind.RegexpInter: "Intersect",
-    Kind.RegexpComplement: "Complement",
-    Kind.FPIsNan: "fpIsNaN",
-    Kind.FPIsInf: "fpIsInf",
-    Kind.FPIsZero: "fpIsZero",
-    Kind.FPIsNormal: "fpIsNormal",
-    Kind.FPIsSubnormal: "fpIsMinusnormal",
-    Kind.FPIsNeg: "fpIsNegative",
-    Kind.FPIsPos: "fpIsPositive",
+    Kind.REGEXP_PLUS: "Plus",
+    Kind.REGEXP_STAR: "Star",
+    Kind.REGEXP_UNION: "Union",
+    Kind.REGEXP_RANGE: "Range",
+    Kind.REGEXP_INTER: "Intersect",
+    Kind.REGEXP_COMPLEMENT: "Complement",
+    Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
+    Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
+    Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
+    Kind.FLOATINGPOINT_IS_NORMAL: "fpIsNormal",
+    Kind.FLOATINGPOINT_IS_SUBNORMAL: "fpIsMinusnormal",
+    Kind.FLOATINGPOINT_IS_NEG: "fpIsNegative",
+    Kind.FLOATINGPOINT_IS_POS: "fpIsPositive",
     # Transcendental
-    Kind.Sine: "Sine",
-    Kind.Cosine: "Cosine",
-    Kind.Tangent: "Tangent",
-    Kind.Secant: "Secant",
-    Kind.Cosecant: "Cosecant",
-    Kind.Cotangent: "Cotangent",
-    Kind.Arcsine: "Arcsine",
-    Kind.Arccosine: "Arccosine",
-    Kind.Arctangent: "Arctangent",
-    Kind.Arcsecant: "Arcsecant",
-    Kind.Arccosecant: "Arccosecant",
-    Kind.Arccotangent: "Arccotangent",
-    Kind.Pi: "Pi",
-    Kind.Exponential: "Exponential",
+    Kind.SINE: "Sine",
+    Kind.COSINE: "Cosine",
+    Kind.TANGENT: "Tangent",
+    Kind.SECANT: "Secant",
+    Kind.COSECANT: "Cosecant",
+    Kind.COTANGENT: "Cotangent",
+    Kind.ARCSINE: "Arcsine",
+    Kind.ARCCOSINE: "Arccosine",
+    Kind.ARCTANGENT: "Arctangent",
+    Kind.ARCSECANT: "Arcsecant",
+    Kind.ARCCOSECANT: "Arccosecant",
+    Kind.ARCCOTANGENT: "Arccotangent",
+    Kind.PI: "Pi",
+    Kind.EXPONENTIAL: "Exponential",
 }
 
 # List of infix operators
-_z3_infix = [
-    Kind.Equal,
-    Kind.Add,
-    Kind.Pow,
-    Kind.Sub,
-    Kind.Mult,
-    Kind.Division,
-    Kind.IntsDivision,
-    Kind.IntsModulus,
-    Kind.Leq,
-    Kind.Lt,
-    Kind.Geq,
-    Kind.Gt,
-    Kind.BVAdd,
-    Kind.BVSub,
-    Kind.BVMult,
-    Kind.BVSdiv,
-    Kind.BVSmod,
-    Kind.BVOr,
-    Kind.BVAnd,
-    Kind.BVXor,
-    Kind.BVSdiv,
-    Kind.BVSle,
-    Kind.BVSlt,
-    Kind.BVSge,
-    Kind.BVSgt,
-    Kind.BVAshr,
-    Kind.BVShl,
+_cvc5_infix = [
+    Kind.EQUAL,
+    Kind.ADD,
+    Kind.POW,
+    Kind.SUB,
+    Kind.MULT,
+    Kind.DIVISION,
+    Kind.INTS_DIVISION,
+    Kind.INTS_MODULUS,
+    Kind.LEQ,
+    Kind.LT,
+    Kind.GEQ,
+    Kind.GT,
+    Kind.BITVECTOR_ADD,
+    Kind.BITVECTOR_SUB,
+    Kind.BITVECTOR_MULT,
+    Kind.BITVECTOR_SDIV,
+    Kind.BITVECTOR_SMOD,
+    Kind.BITVECTOR_OR,
+    Kind.BITVECTOR_AND,
+    Kind.BITVECTOR_XOR,
+    Kind.BITVECTOR_SDIV,
+    Kind.BITVECTOR_SLE,
+    Kind.BITVECTOR_SLT,
+    Kind.BITVECTOR_SGE,
+    Kind.BITVECTOR_SGT,
+    Kind.BITVECTOR_ASHR,
+    Kind.BITVECTOR_SHL,
 ]
 
-_z3_unary = [Kind.Neg, Kind.BVNeg, Kind.BVNot]
+_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT]
 
 # Precedence
-_z3_precedence = {
-    Kind.Pow: 0,
-    Kind.Neg: 1,
-    Kind.BVNeg: 1,
-    Kind.BVNot: 1,
-    Kind.Mult: 2,
-    Kind.Division: 2,
-    Kind.IntsDivision: 2,
-    Kind.IntsModulus: 2,
-    Kind.BVMult: 2,
-    Kind.BVSdiv: 2,
-    Kind.BVSmod: 2,
-    Kind.Add: 3,
-    Kind.Sub: 3,
-    Kind.BVAdd: 3,
-    Kind.BVSub: 3,
-    Kind.BVAshr: 4,
-    Kind.BVShl: 4,
-    Kind.BVAnd: 5,
-    Kind.BVXor: 6,
-    Kind.BVOr: 7,
-    Kind.Leq: 8,
-    Kind.Lt: 8,
-    Kind.Geq: 8,
-    Kind.Gt: 8,
-    Kind.Equal: 8,
-    Kind.BVSle: 8,
-    Kind.BVSlt: 8,
-    Kind.BVSge: 8,
-    Kind.BVSgt: 8,
-    Kind.BVUle: 8,
-    Kind.BVUlt: 8,
-    Kind.BVUge: 8,
-    Kind.BVUgt: 8,
+_cvc5_precedence = {
+    Kind.POW: 0,
+    Kind.NEG: 1,
+    Kind.BITVECTOR_NEG: 1,
+    Kind.BITVECTOR_NOT: 1,
+    Kind.MULT: 2,
+    Kind.DIVISION: 2,
+    Kind.INTS_DIVISION: 2,
+    Kind.INTS_MODULUS: 2,
+    Kind.BITVECTOR_MULT: 2,
+    Kind.BITVECTOR_SDIV: 2,
+    Kind.BITVECTOR_SMOD: 2,
+    Kind.ADD: 3,
+    Kind.SUB: 3,
+    Kind.BITVECTOR_ADD: 3,
+    Kind.BITVECTOR_SUB: 3,
+    Kind.BITVECTOR_ASHR: 4,
+    Kind.BITVECTOR_SHL: 4,
+    Kind.BITVECTOR_AND: 5,
+    Kind.BITVECTOR_XOR: 6,
+    Kind.BITVECTOR_OR: 7,
+    Kind.LEQ: 8,
+    Kind.LT: 8,
+    Kind.GEQ: 8,
+    Kind.GT: 8,
+    Kind.EQUAL: 8,
+    Kind.BITVECTOR_SLE: 8,
+    Kind.BITVECTOR_SLT: 8,
+    Kind.BITVECTOR_SGE: 8,
+    Kind.BITVECTOR_SGT: 8,
+    Kind.BITVECTOR_ULE: 8,
+    Kind.BITVECTOR_ULT: 8,
+    Kind.BITVECTOR_UGE: 8,
+    Kind.BITVECTOR_UGT: 8,
 }
 
-_z3_fpa_rm_strings = {
+_cvc5_fp_rm_strings = {
     "roundNearestTiesToEven": "RoundNearestTiesToEven()",
     "roundNearestTiesToAway": "RoundNearestTiesToAway()",
     "roundTowardPositive": "RoundTowardPositive()",
     "roundTowardNegative": "RoundTowardNegative()",
     "roundTowardZero": "RoundTowardZero()",
 }
-_z3_fpa_rm_short_strings = {
+_cvc5_fp_rm_short_strings = {
     "roundNearestTiesToEven": "RNE()",
     "roundNearestTiesToAway": "RNA()",
     "roundTowardPositive": "RTP()",
@@ -225,71 +225,71 @@ _z3_fpa_rm_short_strings = {
 }
 
 # FPA operators
-_z3_op_to_fpa_normal_str = {
-    Kind.FPAdd: "fpAdd",
-    Kind.FPSub: "fpSub",
-    Kind.FPNeg: "fpNeg",
-    Kind.FPMult: "fpMul",
-    Kind.FPDiv: "fpDiv",
-    Kind.FPRem: "fpRem",
-    Kind.FPAbs: "fpAbs",
-    Kind.FPMin: "fpMin",
-    Kind.FPMax: "fpMax",
-    Kind.FPFma: "fpFMA",
-    Kind.FPSqrt: "fpSqrt",
-    Kind.FPRti: "fpRoundToIntegral",
+_cvc5_kind_to_fp_normal_str = {
+    Kind.FLOATINGPOINT_ADD: "fpAdd",
+    Kind.FLOATINGPOINT_SUB: "fpSub",
+    Kind.FLOATINGPOINT_NEG: "fpNeg",
+    Kind.FLOATINGPOINT_MULT: "fpMul",
+    Kind.FLOATINGPOINT_DIV: "fpDiv",
+    Kind.FLOATINGPOINT_REM: "fpRem",
+    Kind.FLOATINGPOINT_ABS: "fpAbs",
+    Kind.FLOATINGPOINT_MIN: "fpMin",
+    Kind.FLOATINGPOINT_MAX: "fpMax",
+    Kind.FLOATINGPOINT_FMA: "fpFMA",
+    Kind.FLOATINGPOINT_SQRT: "fpSqrt",
+    Kind.FLOATINGPOINT_RTI: "fpRoundToIntegral",
 
-    Kind.FPEq: "fpEQ",
-    Kind.FPLt: "fpLT",
-    Kind.FPGt: "fpGT",
-    Kind.FPLeq: "fpLEQ",
-    Kind.FPGeq: "fpGEQ",
+    Kind.FLOATINGPOINT_EQ: "fpEQ",
+    Kind.FLOATINGPOINT_LT: "fpLT",
+    Kind.FLOATINGPOINT_GT: "fpGT",
+    Kind.FLOATINGPOINT_LEQ: "fpLEQ",
+    Kind.FLOATINGPOINT_GEQ: "fpGEQ",
 
-    Kind.FPToFpFromFp: "fpToFP",
-    Kind.FPToFpFromUbv: "fpToFP",
-    Kind.FPToFpFromSbv: "fpToFP",
-    Kind.FPToFpFromReal: "fpToFP",
-    Kind.FPToFpFromIeeeBv: "fpToFP",
-    Kind.FPToUbv: "fpToUBV",
-    Kind.FPToSbv: "fpToSBV",
-    Kind.FPToReal: "fpToReal",
+    Kind.FLOATINGPOINT_TO_FP_FROM_FP: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_UBV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_SBV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_REAL: "fpToFP",
+    Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV: "fpToFP",
+    Kind.FLOATINGPOINT_TO_UBV: "fpToUBV",
+    Kind.FLOATINGPOINT_TO_SBV: "fpToSBV",
+    Kind.FLOATINGPOINT_TO_REAL: "fpToReal",
 }
 
-_z3_op_to_fpa_pretty_str = {
-    Kind.FPAdd: "+", Kind.FPSub: "-", Kind.FPMult: "*", Kind.FPDiv: "/",
-    Kind.FPRem: "%", Kind.FPNeg: "-",
+_cvc5_kind_to_fp_pretty_str = {
+    Kind.FLOATINGPOINT_ADD: "+", Kind.FLOATINGPOINT_SUB: "-", Kind.FLOATINGPOINT_MULT: "*", Kind.FLOATINGPOINT_DIV: "/",
+    Kind.FLOATINGPOINT_REM: "%", Kind.FLOATINGPOINT_NEG: "-",
 
-    Kind.FPEq: "fpEQ", Kind.FPLt: "<", Kind.FPGt: ">", Kind.FPLeq: "<=",
-    Kind.FPGeq: ">="
+    Kind.FLOATINGPOINT_EQ: "fpEQ", Kind.FLOATINGPOINT_LT: "<", Kind.FLOATINGPOINT_GT: ">", Kind.FLOATINGPOINT_LEQ: "<=",
+    Kind.FLOATINGPOINT_GEQ: ">="
 }
 
-_z3_fpa_infix = [
-    Kind.FPAdd, Kind.FPSub, Kind.FPMult, Kind.FPDiv, Kind.FPRem,
-    Kind.FPLt, Kind.FPGt, Kind.FPLeq, Kind.FPGeq
+_cvc5_fp_infix = [
+    Kind.FLOATINGPOINT_ADD, Kind.FLOATINGPOINT_SUB, Kind.FLOATINGPOINT_MULT, Kind.FLOATINGPOINT_DIV, Kind.FLOATINGPOINT_REM,
+    Kind.FLOATINGPOINT_LT, Kind.FLOATINGPOINT_GT, Kind.FLOATINGPOINT_LEQ, Kind.FLOATINGPOINT_GEQ
 ]
 
 def _is_assoc(k):
     return (
-        k == Kind.BVOr
-        or k == Kind.BVXor
-        or k == Kind.BVAnd
-        or k == Kind.Add
-        or k == Kind.BVAdd
-        or k == Kind.Mult
-        or k == Kind.BVMult
+        k == Kind.BITVECTOR_OR
+        or k == Kind.BITVECTOR_XOR
+        or k == Kind.BITVECTOR_AND
+        or k == Kind.ADD
+        or k == Kind.BITVECTOR_ADD
+        or k == Kind.MULT
+        or k == Kind.BITVECTOR_MULT
     )
 
 
 def _is_left_assoc(k):
-    return _is_assoc(k) or k == Kind.Sub or k == Kind.BVSub
+    return _is_assoc(k) or k == Kind.SUB or k == Kind.BITVECTOR_SUB
 
 
 def _is_add(k):
-    return k == Kind.Add or k == Kind.BVAdd
+    return k == Kind.ADD or k == Kind.BITVECTOR_ADD
 
 
 def _is_sub(k):
-    return k == Kind.Sub or k == Kind.BVSub
+    return k == Kind.SUB or k == Kind.BITVECTOR_SUB
 
 
 if sys.version < "3":
@@ -305,15 +305,15 @@ else:
         return x
 
 
-_z3_infix_compact = [
-    Kind.Mult,
-    Kind.BVMult,
-    Kind.Division,
-    Kind.Pow,
-    Kind.IntsDivision,
-    Kind.IntsModulus,
-    Kind.BVSdiv,
-    Kind.BVSmod,
+_cvc5_infix_compact = [
+    Kind.MULT,
+    Kind.BITVECTOR_MULT,
+    Kind.DIVISION,
+    Kind.POW,
+    Kind.INTS_DIVISION,
+    Kind.INTS_MODULUS,
+    Kind.BITVECTOR_SDIV,
+    Kind.BITVECTOR_SMOD,
 ]
 
 _ellipses = "..."
@@ -333,12 +333,12 @@ _infix_map = {}
 _unary_map = {}
 _infix_compact_map = {}
 
-for _k in _z3_infix:
+for _k in _cvc5_infix:
     _infix_map[_k] = True
-for _k in _z3_unary:
+for _k in _cvc5_unary:
     _unary_map[_k] = True
 
-for _k in _z3_infix_compact:
+for _k in _cvc5_infix_compact:
     _infix_compact_map[_k] = True
 
 
@@ -359,11 +359,11 @@ def _is_unary(k):
 
 def _op_name(a):
     k = a.kind()
-    n = _z3_op_to_str.get(k, None)
+    n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.Constant, Kind.ConstFP, Kind.ConstRoundingmode, Kind.Variable, Kind.UninterpretedSortValue, Kind.Pi]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
             return str(a.ast)
-        if k == Kind.InternalKind:
+        if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
             return str(a.ast)
         if isinstance(a, cvc.FuncDeclRef):
@@ -376,8 +376,8 @@ def _op_name(a):
 
 
 def _get_precedence(k):
-    global _z3_precedence
-    return _z3_precedence.get(k, 100000)
+    global _cvc5_precedence
+    return _cvc5_precedence.get(k, 100000)
 
 
 class FormatObject:
@@ -727,11 +727,9 @@ class Formatter:
 
     def pp_const(self, a):
         k = a.kind()
-        if k == Kind.SetEmpty:
+        if k == Kind.SET_EMPTY:
             return self.pp_set("Empty", a)
-        # elif k == Z3_OP_SEQ_EMPTY:
-        #     return self.pp_set("Empty", a)
-        elif k == Kind.SetUniverse:
+        elif k == Kind.SET_UNIVERSE:
             return self.pp_set("Full", a)
         return self.pp_name(a)
 
@@ -764,9 +762,9 @@ class Formatter:
         _assert(cvc.is_fprm_value(a), "expected FPRMNumRef")
         ast_str = str(a.ast)
         if self.fpa_pretty:
-            return to_format(_z3_fpa_rm_short_strings.get(ast_str))
+            return to_format(_cvc5_fp_rm_short_strings.get(ast_str))
         else:
-            return to_format(_z3_fpa_rm_strings.get(ast_str))
+            return to_format(_cvc5_fp_rm_strings.get(ast_str))
 
     def pp_fp_value(self, a):
         _assert(isinstance(a, cvc.FPNumRef), "type mismatch")
@@ -845,12 +843,12 @@ class Formatter:
         _assert(isinstance(a, cvc.FPRef), "type mismatch")
         k = a.kind()
         op = "?"
-        if (self.fpa_pretty and k in _z3_op_to_fpa_pretty_str):
-            op = _z3_op_to_fpa_pretty_str[k]
-        elif k in _z3_op_to_fpa_normal_str:
-            op = _z3_op_to_fpa_normal_str[k]
-        elif k in _z3_op_to_str:
-            op = _z3_op_to_str[k]
+        if (self.fpa_pretty and k in _cvc5_kind_to_fp_pretty_str):
+            op = _cvc5_kind_to_fp_pretty_str[k]
+        elif k in _cvc5_kind_to_fp_normal_str:
+            op = _cvc5_kind_to_fp_normal_str[k]
+        elif k in _cvc5_kinds_to_str:
+            op = _cvc5_kinds_to_str[k]
 
         n = a.num_args()
 
@@ -867,11 +865,11 @@ class Formatter:
                     r.append(to_format(" "))
                     r.append(arg2)
                     return compose(r)
-            elif k == Kind.FPNeg:
+            elif k == Kind.FLOATINGPOINT_NEG:
                 return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
 
-        if k in _z3_op_to_fpa_normal_str:
-            op = _z3_op_to_fpa_normal_str[k]
+        if k in _cvc5_kind_to_fp_normal_str:
+            op = _cvc5_kind_to_fp_normal_str[k]
 
         r = []
         r.append(to_format(op))
@@ -1030,14 +1028,6 @@ class Formatter:
         arg = self.pp_expr(a.arg(0), d + 1, xs)
         return seq1(self.pp_name(a), [to_format(h), to_format(l), arg])
 
-    def pp_loop(self, a, d, xs):
-        l = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        arg = self.pp_expr(a.arg(0), d + 1, xs)
-        if Z3_get_decl_num_parameters(a.ctx_ref(), a.decl().ast) > 1:
-            h = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 1)
-            return seq1("Loop", [arg, to_format(l), to_format(h)])
-        return seq1("Loop", [arg, to_format(l)])
-
     def pp_set(self, id, a):
         return seq1(id, [self.pp_sort(a.sort())])
 
@@ -1075,21 +1065,6 @@ class Formatter:
             [self.pp_sort(a.domain()), self.pp_expr(a.arg(0), d + 1, xs)],
         )
 
-    def pp_atmost(self, a, d, f, xs):
-        k = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        return seq1(
-            self.pp_name(a),
-            [seq3([self.pp_expr(ch, d + 1, xs) for ch in a.children()]), to_format(k)],
-        )
-
-    def pp_pbcmp(self, a, d, f, xs):
-        chs = a.children()
-        rchs = range(len(chs))
-        k = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
-        ks = [Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, i + 1) for i in rchs]
-        ls = [seq3([self.pp_expr(chs[i], d + 1, xs), to_format(ks[i])]) for i in rchs]
-        return seq1(self.pp_name(a), [seq3(ls), to_format(k)])
-
     def pp_app(self, a, d, xs):
         if cvc.is_int_value(a):
             return self.pp_int(a)
@@ -1113,44 +1088,32 @@ class Formatter:
             return self.pp_const(a)
         else:
             k = a.kind()
-            if k == Kind.Pow:
+            if k == Kind.POW:
                 return self.pp_power(a, d, xs)
-            if k == Kind.Distinct:
+            if k == Kind.DISTINCT:
                 return self.pp_distinct(a, d, xs)
-            elif k == Kind.Select:
+            elif k == Kind.SELECT:
                 return self.pp_select(a, d, xs)
-            elif k in [Kind.BVSignExtend, Kind.BVZeroExtend, Kind.BVRepeat]:
+            elif k in [Kind.BITVECTOR_SIGN_EXTEND, Kind.BITVECTOR_ZERO_EXTEND, Kind.BITVECTOR_REPEAT]:
                 return self.pp_unary_param(a, d, xs, False)
-            elif k in [Kind.BVRotateLeft, Kind.BVRotateRight]:
+            elif k in [Kind.BITVECTOR_ROTATE_LEFT, Kind.BITVECTOR_ROTATE_RIGHT]:
                 return self.pp_unary_param(a, d, xs, True)
-            elif k == Kind.BVExtract:
+            elif k == Kind.BITVECTOR_EXTRACT:
                 return self.pp_extract(a, d, xs)
-            # elif k == Z3_OP_DT_IS:
-            #     return self.pp_is(a, d, xs)
-            # elif k == Z3_OP_ARRAY_MAP:
-            #     return self.pp_map(a, d, xs)
-            elif k == Kind.ConstArray:
+            elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.Constant, Kind.InternalKind, Kind.Variable, Kind.UninterpretedSortValue, Kind.Pi]:
+            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
                 return self.pp_name(a)
-            # elif k == Z3_OP_PB_AT_MOST:
-            #     return self.pp_atmost(a, d, f, xs)
-            # elif k == Z3_OP_PB_LE:
-            #     return self.pp_pbcmp(a, d, f, xs)
-            # elif k == Z3_OP_PB_GE:
-            #     return self.pp_pbcmp(a, d, f, xs)
-            # elif k == Z3_OP_PB_EQ:
-            #     return self.pp_pbcmp(a, d, f, xs)
             # elif cvc.is_pattern(a):
             #     return self.pp_pattern(a, d, xs)
             elif self.is_infix(k):
                 return self.pp_infix(a, d, xs)
             elif self.is_unary(k):
                 return self.pp_unary(a, d, xs)
-            elif k == Kind.ApplyUf:
+            elif k == Kind.APPLY_UF:
                 return self.pp_uf_apply(a, d, xs)
-            elif k in [Kind.ApplyConstructor, Kind.ApplySelector, Kind.ApplyTester]:
+            elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
@@ -1220,11 +1183,6 @@ class Formatter:
             return to_format(self.pp_unknown())
 
     def pp_decl(self, f):
-        k = f.kind()
-        if k == Z3_OP_DT_IS or k == Z3_OP_ARRAY_MAP:
-            g = f.params()[0]
-            r = [to_format(g.name())]
-            return seq1(self.pp_name(f), r)
         return self.pp_name(f)
 
     def pp_seq_core(self, f, a, d, xs):
@@ -1365,17 +1323,17 @@ def obj_to_string(a):
 
 def set_fpa_pretty(flag=True):
     global _Formatter
-    global _z3_op_to_str
+    global _cvc5_kinds_to_str
     _Formatter.fpa_pretty = flag
     if flag:
-        for (_k, _v) in _z3_op_to_fpa_pretty_str.items():
-            _z3_op_to_str[_k] = _v
-        for _k in _z3_fpa_infix:
+        for (_k, _v) in _cvc5_kind_to_fp_pretty_str.items():
+            _cvc5_kinds_to_str[_k] = _v
+        for _k in _cvc5_fp_infix:
             _infix_map[_k] = True
     else:
-        for (_k, _v) in _z3_op_to_fpa_normal_str.items():
-            _z3_op_to_str[_k] = _v
-        for _k in _z3_fpa_infix:
+        for (_k, _v) in _cvc5_kind_to_fp_normal_str.items():
+            _cvc5_kinds_to_str[_k] = _v
+        for _k in _cvc5_fp_infix:
             _infix_map[_k] = False
 
 

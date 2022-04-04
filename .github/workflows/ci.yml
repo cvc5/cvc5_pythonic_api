@@ -5,6 +5,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # cancel already running jobs for the same branch/pr/tag
+    concurrency:
+      group: build-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
 
     - uses: actions/checkout@v2
@@ -24,8 +29,8 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ccache-dir
-        key: cvc5-z3py-compat-ccache-${{ github.sha }}
-        restore-keys: cvc5-z3py-compat-ccache-
+        key: cvc5-pythonic-api-ccache-${{ github.sha }}
+        restore-keys: cvc5-pythonic-api-ccache-
 
     - name: Configure ccache
       shell: bash
@@ -40,7 +45,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: cvc5/build/deps
-        key: cvc5-z3py-compat-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
+        key: cvc5-pythonic-api-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
 
     - name: Build cvc5
       run: |
@@ -49,7 +54,7 @@ jobs:
         cd build/
         make -j${{ env.num_proc }}
 
-    - name: Test z3py compatibility API
+    - name: Test cvc5 pythonic API
       run: |
         make test
       env:

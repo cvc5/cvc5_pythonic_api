@@ -1,4 +1,4 @@
-# cvc5's Z3Py compatibility layer
+# cvc5's pythonic API
 
 ## Development requirements
 

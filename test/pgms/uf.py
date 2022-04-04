@@ -1,5 +1,5 @@
-from cvc5_z3py_compat import *
-#from z3 import *
+from cvc5_pythonic_api import *
+
 x = Int('x')
 y = Int('y')
 f = Function('f', IntSort(), IntSort())
