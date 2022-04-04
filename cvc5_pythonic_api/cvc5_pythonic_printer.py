@@ -122,6 +122,21 @@ _cvc5_kinds_to_str = {
     Kind.FLOATINGPOINT_IS_SUBNORMAL: "fpIsMinusnormal",
     Kind.FLOATINGPOINT_IS_NEG: "fpIsNegative",
     Kind.FLOATINGPOINT_IS_POS: "fpIsPositive",
+    # Transcendental
+    Kind.SINE: "Sine",
+    Kind.COSINE: "Cosine",
+    Kind.TANGENT: "Tangent",
+    Kind.SECANT: "Secant",
+    Kind.COSECANT: "Cosecant",
+    Kind.COTANGENT: "Cotangent",
+    Kind.ARCSINE: "Arcsine",
+    Kind.ARCCOSINE: "Arccosine",
+    Kind.ARCTANGENT: "Arctangent",
+    Kind.ARCSECANT: "Arcsecant",
+    Kind.ARCCOSECANT: "Arccosecant",
+    Kind.ARCCOTANGENT: "Arccotangent",
+    Kind.PI: "Pi",
+    Kind.EXPONENTIAL: "Exponential",
 }
 
 # List of infix operators
@@ -346,7 +361,7 @@ def _op_name(a):
     k = a.kind()
     n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
@@ -1088,7 +1103,7 @@ class Formatter:
             elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE]:
+            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
                 return self.pp_name(a)
             # elif cvc.is_pattern(a):
             #     return self.pp_pattern(a, d, xs)
