@@ -3077,7 +3077,7 @@ def Pi(ctx=None):
     Pi
     """
     ctx = get_ctx(ctx)
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.Pi, []), ctx)
+    return _to_expr_ref(ctx.solver.mkTerm(Kind.PI), ctx)
 
 
 def Exponential(x):
@@ -3087,7 +3087,7 @@ def Exponential(x):
     >>> solve(Exponential(x) == 1)
     [x = 0]
     """
-    return _nary_kind_builder(Kind.Exponential, RealSort().cast(x))
+    return _nary_kind_builder(Kind.EXPONENTIAL, RealSort().cast(x))
 
 
 def Sine(x):
@@ -3100,7 +3100,7 @@ def Sine(x):
     >>> prove(Sine(i) < 2)
     proved
     """
-    return _nary_kind_builder(Kind.Sine, RealSort().cast(x))
+    return _nary_kind_builder(Kind.SINE, RealSort().cast(x))
 
 
 def Cosine(x):
@@ -3113,7 +3113,7 @@ def Cosine(x):
     >>> prove(Cosine(i) < 2)
     proved
     """
-    return _nary_kind_builder(Kind.Cosine, RealSort().cast(x))
+    return _nary_kind_builder(Kind.COSINE, RealSort().cast(x))
 
 
 def Tangent(x):
@@ -3122,7 +3122,7 @@ def Tangent(x):
     >>> Tangent(Real('x'))
     Tangent(x)
     """
-    return _nary_kind_builder(Kind.Tangent, RealSort().cast(x))
+    return _nary_kind_builder(Kind.TANGENT, RealSort().cast(x))
 
 
 def Arcsine(x):
@@ -3131,7 +3131,7 @@ def Arcsine(x):
     >>> Arcsine(Real('x'))
     Arcsine(x)
     """
-    return _nary_kind_builder(Kind.Arcsine, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCSINE, RealSort().cast(x))
 
 
 def Arccosine(x):
@@ -3140,7 +3140,7 @@ def Arccosine(x):
     >>> Arccosine(Real('x'))
     Arccosine(x)
     """
-    return _nary_kind_builder(Kind.Arccosine, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCCOSINE, RealSort().cast(x))
 
 
 def Arctangent(x):
@@ -3149,7 +3149,7 @@ def Arctangent(x):
     >>> Arctangent(Real('x'))
     Arctangent(x)
     """
-    return _nary_kind_builder(Kind.Arctangent, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCTANGENT, RealSort().cast(x))
 
 
 def Secant(x):
@@ -3158,7 +3158,7 @@ def Secant(x):
     >>> Secant(Real('x'))
     Secant(x)
     """
-    return _nary_kind_builder(Kind.Secant, RealSort().cast(x))
+    return _nary_kind_builder(Kind.SECANT, RealSort().cast(x))
 
 
 def Cosecant(x):
@@ -3167,7 +3167,7 @@ def Cosecant(x):
     >>> Cosecant(Real('x'))
     Cosecant(x)
     """
-    return _nary_kind_builder(Kind.Cosecant, RealSort().cast(x))
+    return _nary_kind_builder(Kind.COSECANT, RealSort().cast(x))
 
 
 def Cotangent(x):
@@ -3176,7 +3176,7 @@ def Cotangent(x):
     >>> Cotangent(Real('x'))
     Cotangent(x)
     """
-    return _nary_kind_builder(Kind.Cotangent, RealSort().cast(x))
+    return _nary_kind_builder(Kind.COTANGENT, RealSort().cast(x))
 
 
 def Arcsecant(x):
@@ -3185,7 +3185,7 @@ def Arcsecant(x):
     >>> Arcsecant(Real('x'))
     Arcsecant(x)
     """
-    return _nary_kind_builder(Kind.Arcsecant, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCSECANT, RealSort().cast(x))
 
 
 def Arccosecant(x):
@@ -3194,7 +3194,7 @@ def Arccosecant(x):
     >>> Arccosecant(Real('x'))
     Arccosecant(x)
     """
-    return _nary_kind_builder(Kind.Arccosecant, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCCOSECANT, RealSort().cast(x))
 
 
 def Arccotangent(x):
@@ -3203,7 +3203,7 @@ def Arccotangent(x):
     >>> Arccotangent(Real('x'))
     Arccotangent(x)
     """
-    return _nary_kind_builder(Kind.Arccotangent, RealSort().cast(x))
+    return _nary_kind_builder(Kind.ARCCOTANGENT, RealSort().cast(x))
 
 
 #########################################
@@ -7035,19 +7035,19 @@ def fpIsInf(a, ctx=None):
 def fpIsZero(a, ctx=None):
     """Create a SMT floating-point isZero expression.
     """
-    return _mk_fp_unary_pred(Kind.FPIsZ, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_ZERO, a, ctx)
 
 
 def fpIsNormal(a, ctx=None):
     """Create a SMT floating-point isNormal expression.
     """
-    return _mk_fp_unary_pred(Kind.FPIsN, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_NORMAL, a, ctx)
 
 
 def fpIsSubnormal(a, ctx=None):
     """Create a SMT floating-point isSubnormal expression.
     """
-    return _mk_fp_unary_pred(Kind.FPIsSn, a, ctx)
+    return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_SUBNORMAL, a, ctx)
 
 
 def fpIsNegative(a, ctx=None):
@@ -7681,7 +7681,7 @@ class DatatypeSortRef(SortRef):
 
 class DatatypeConstructorRef(FuncDeclRef):
     def __init__(self, datatype, ctx=None, r=False):
-        super().__init__(datatype.getConstructorTerm(), ctx, r)
+        super().__init__(datatype.getTerm(), ctx, r)
         self.dt = datatype
 
     def arity(self):
@@ -7754,7 +7754,7 @@ class DatatypeConstructorRef(FuncDeclRef):
 
 class DatatypeSelectorRef(FuncDeclRef):
     def __init__(self, datatype, ctx=None, r=False):
-        super().__init__(datatype.getSelectorTerm(), ctx, r)
+        super().__init__(datatype.getTerm(), ctx, r)
         self.dt = datatype
 
     def arity(self):
