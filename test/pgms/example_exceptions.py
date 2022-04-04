@@ -2,10 +2,10 @@ from cvc5_pythonic_api import *
 
 if __name__ == '__main__':
     s = Solver()
-    s.set(**{"produce-models": "true"})
+    s.set("produce-models", True)
     try:
         # invalid option
-        s.set(**{"non-existing-option": "true"})
+        s.set("non-existing-option", True)
     except:
         pass
 
