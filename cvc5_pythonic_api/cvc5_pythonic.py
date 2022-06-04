@@ -733,7 +733,7 @@ def DeclareSort(name, ctx=None):
     >>> a == b
     a == b
     >>> solve(a == b)
-    [a = (as @a0 A), b = (as @a0 A)]
+    [a = (as @A_0 A), b = (as @A_0 A)]
     """
     ctx = _get_ctx(ctx)
     return SortRef(ctx.solver.mkUninterpretedSort(name), ctx)
@@ -772,6 +772,8 @@ def _to_sort_ref(s, ctx):
         return ArithSortRef(s, ctx)
     elif s.isBitVector():
         return BitVecSortRef(s, ctx)
+    elif s.isFiniteField():
+        return FiniteFieldSortRef(s, ctx)
     elif s.isArray():
         return ArraySortRef(s, ctx)
     elif s.isSet():
@@ -968,7 +970,7 @@ def _to_expr_ref(a, ctx, r=None):
     if sort.isBoolean():
         return BoolRef(ast, ctx, r)
     if sort.isInteger():
-        if ast.getKind() == Kind.CONST_RATIONAL:
+        if ast.getKind() == Kind.CONST_INTEGER:
             return IntNumRef(ast, ctx, r)
         return ArithRef(ast, ctx, r)
     if sort.isReal():
@@ -980,6 +982,11 @@ def _to_expr_ref(a, ctx, r=None):
             return BitVecNumRef(ast, ctx, r)
         else:
             return BitVecRef(ast, ctx, r)
+    if sort.isFiniteField():
+        if ast.getKind() == Kind.CONST_FINITE_FIELD:
+            return FiniteFieldNumRef(ast, ctx, r)
+        else:
+            return FiniteFieldRef(ast, ctx, r)
     if sort.isFloatingPoint():
         if ast.getKind() == Kind.CONST_FLOATINGPOINT:
             return FPNumRef(a, ctx)
@@ -1178,6 +1185,7 @@ def is_const(a):
         Kind.CONST_BITVECTOR,
         Kind.CONST_FLOATINGPOINT,
         Kind.CONST_RATIONAL,
+        Kind.CONST_INTEGER,
         Kind.SET_EMPTY,
         Kind.SET_UNIVERSE,
         Kind.CONSTANT,
@@ -1331,6 +1339,9 @@ class BoolSortRef(SortRef):
         """
         if isinstance(val, bool):
             return BoolVal(val, self.ctx)
+        # cast length-1 bit-vectors to booleans
+        if is_bv(val) and val.size() == 1:
+            return val == BitVecVal(1, 1, self.ctx)
         if debugging():
             if not is_expr(val):
                 _assert(
@@ -2175,7 +2186,7 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FLOATINGPOINT]
+    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FLOATINGPOINT, Kind.CONST_FINITE_FIELD, Kind.CONST_INTEGER]
 
 
 def is_int_value(a):
@@ -5409,8 +5420,8 @@ class Solver(object):
         ``setOption()`` and ``getOptionInfo()``.
 
         >>> s = Solver()
-        >>> s.getOptionNames()[:3]
-        ['abstract-values', 'ackermann', 'approx-branch-depth']
+        >>> s.getOptionNames()[:2]
+        ['abstract-values', 'ackermann']
         """
         return self.solver.getOptionNames()
 
@@ -8088,3 +8099,358 @@ def Lambda(vs, body):
     Lambda(i, If(And(lo <= i, i <= hi), e, mem0[i]))
     """
     return _mk_quant(vs, body, Kind.LAMBDA)
+
+
+#########################################
+#
+# Finite Fields
+#
+#########################################
+
+
+class FiniteFieldSortRef(SortRef):
+    """Bit-vector sort."""
+
+    def size(self):
+        """Return the size (number of elements) of the finite field sort `self`.
+
+        >>> b = FiniteFieldSort(17)
+        >>> b.size()
+        17
+        """
+        return self.ast.getFiniteFieldSize()
+
+    def cast(self, val):
+        """Try to cast `val` as a finite field
+
+        >>> b = FiniteFieldSort(31)
+        >>> b.cast(10)
+        10
+        >>> b.cast(10).sexpr()
+        '#f10m31'
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            # Idea: use sign_extend if sort of val is a bitvector of smaller size
+            return val
+        else:
+            return FiniteFieldVal(val, self)
+
+
+def is_ff_sort(s):
+    """Return True if `s` is an SMT finite field sort.
+
+    >>> is_ff_sort(FiniteFieldSort(29))
+    True
+    >>> is_ff_sort(IntSort())
+    False
+    """
+    return isinstance(s, FiniteFieldSortRef)
+
+
+class FiniteFieldRef(ExprRef):
+    """Bit-vector expressions."""
+
+    def sort(self):
+        """Return the sort of the finite field expression `self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> x.sort()
+        FiniteField(29)
+        >>> x.sort() == FiniteFieldSort(29)
+        True
+        """
+        return _sort(self.ctx, self.ast)
+
+    def size(self):
+        """Return the number of bits of the finite field expression `self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> (x + 1).size()
+        29
+        """
+        # safe b/c will always yield a FiniteFieldSortRef
+        return self.sort().size()  # type: ignore
+
+    def __add__(self, other):
+        """Create the SMT expression `self + other`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> y = FiniteFieldElem('y', 29)
+        >>> x + y
+        x + y
+        >>> (x + y).sort()
+        FiniteField(29)
+        """
+        return FFAdd(self, other)
+
+    def __radd__(self, other):
+        """Create the SMT expression `other + self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> 10 + x
+        10 + x
+        """
+        return FFAdd(other, self)
+
+    def __mul__(self, other):
+        """Create the SMT expression `self * other`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> y = FiniteFieldElem('y', 29)
+        >>> x * y
+        x*y
+        >>> (x * y).sort()
+        FiniteField(29)
+        """
+        return FFMult(self, other)
+
+    def __rmul__(self, other):
+        """Create the SMT expression `other * self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> 10 * x
+        10*x
+        """
+        return FFMult(other, self)
+
+    def __sub__(self, other):
+        """Create the SMT expression `self - other`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> y = FiniteFieldElem('y', 29)
+        >>> x - y
+        x + -y
+        >>> (x - y).sort()
+        FiniteField(29)
+        """
+        return FFSub(self, other)
+
+    def __rsub__(self, other):
+        """Create the SMT expression `other - self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> 10 - x
+        10 + -x
+        >>> 10 + -x
+        10 + -x
+        """
+        return FFSub(other, self)
+
+    def __pos__(self):
+        """Return `self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> +x
+        x
+        """
+        return self
+
+    def __neg__(self):
+        """Return an expression representing `-self`.
+
+        >>> x = FiniteFieldElem('x', 29)
+        >>> -x
+        -x
+        >>> solve([-(-x) != x])
+        no solution
+        """
+        return FiniteFieldRef(self.ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, self.ast), self.ctx)
+
+
+class FiniteFieldNumRef(FiniteFieldRef):
+    """Bit-vector values."""
+
+    def as_long(self):
+        """Return an SMT finite field numeral as a positive Python long (bignum) numeral.
+
+        >>> v = FiniteFieldVal(28, 29)
+        >>> v
+        -1
+        >>> v.as_long()
+        28
+        """
+        return (self.as_signed_long() + self.size()) % self.size()
+
+    def as_signed_long(self):
+        """Return an SMT finite field numeral as a Python long (bignum) numeral.
+
+        Returns the numeral of minimum absolute value, so the additive inverse of 1 is "-1".
+
+        >>> FiniteFieldVal(4, 3).as_signed_long()
+        1
+        >>> FiniteFieldVal(7, 3).as_signed_long()
+        1
+        >>> FiniteFieldVal(3, 3).as_signed_long()
+        0
+        >>> FiniteFieldVal(28, 29).as_signed_long()
+        -1
+        """
+        return self.ast.getFiniteFieldValue()
+
+    def as_string(self):
+        return str(self.as_signed_long())
+
+
+def is_ff(a):
+    """Return `True` if `a` is an SMT finite field expression.
+
+    >>> b = FiniteFieldElem('b', 29)
+    >>> is_ff(b)
+    True
+    >>> is_ff(b + 10)
+    True
+    >>> is_ff(Int('x'))
+    False
+    """
+    return isinstance(a, FiniteFieldRef)
+
+
+def is_ff_value(a):
+    """Return `True` if `a` is an SMT finite field numeral value.
+
+    >>> b = FiniteFieldElem('b', 29)
+    >>> is_ff_value(b)
+    False
+    >>> b = FiniteFieldVal(10, 29)
+    >>> b
+    10
+    >>> is_ff_value(b)
+    True
+    """
+    return is_ff(a) and _is_numeral(a.ctx, a.as_ast())
+
+
+def FiniteFieldSort(sz, ctx=None):
+    """Return an SMT finite field sort of the given size. If `ctx=None`, then the global context is used.
+
+    >>> f7 = FiniteFieldSort(7)
+    >>> f7
+    FiniteField(7)
+    >>> x = Const('x', f7)
+    >>> eq(x, FiniteFieldElem('x', 7))
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return FiniteFieldSortRef(ctx.solver.mkFiniteFieldSort(sz), ctx)
+
+
+def FiniteFieldVal(val, ff, ctx=None):
+    """Return a finite field value with the given number of bits. If `ctx=None`, then the global context is used.
+    The second argument can be a number of bits (integer) or a finite field sort.
+
+    >>> v = FiniteFieldVal(10, 29)
+    >>> v
+    10
+    >>> print("0x%.8x" % v.as_long())
+    0x0000000a
+    >>> s = FiniteFieldSort(3)
+    >>> u = FiniteFieldVal(10, s)
+    >>> u
+    1
+    """
+    if is_ff_sort(ff):
+        ctx = ff.ctx
+        sort = ff.ast
+    else:
+        if debugging():
+            _assert(isinstance(ff, int), "non-integer in FiniteFieldVal")
+        ctx = _get_ctx(ctx)
+        sort = ctx.solver.mkFiniteFieldSort(ff)
+    return FiniteFieldNumRef(ctx.solver.mkFiniteFieldElem(val, sort), ctx)
+
+
+def FiniteFieldElem(name, ff, ctx=None):
+    """Return a finite field constant named `name`. `ff` may be the number of bits of a finite field sort.
+    If `ctx=None`, then the global context is used.
+
+    >>> x  = FiniteFieldElem('x', 17)
+    >>> is_ff(x)
+    True
+    >>> x.size()
+    17
+    >>> x.sort()
+    FiniteField(17)
+    >>> word = FiniteFieldSort(17)
+    >>> x2 = FiniteFieldElem('x', word)
+    >>> eq(x, x2)
+    True
+    """
+    if isinstance(ff, FiniteFieldSortRef):
+        ctx = ff.ctx
+    else:
+        ctx = _get_ctx(ctx)
+        ff = FiniteFieldSort(ff, ctx)
+    e = ctx.get_var(name, ff)
+    return FiniteFieldRef(e, ctx)
+
+
+def FiniteFieldElems(names, ff, ctx=None):
+    """Return a tuple of finite field constants of size ff.
+
+    >>> x, y, z = FiniteFieldElems('x y z', 17)
+    >>> x.size()
+    17
+    >>> x.sort()
+    FiniteField(17)
+    >>> Sum(x, y, z)
+    x + y + z
+    >>> Product(x, y, z)
+    x*y*z
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [FiniteFieldElem(name, ff, ctx) for name in names]
+
+
+def FFAdd(*args):
+    """ Create a sum of finite fields.
+
+    See also the __add__ overload (+ operator) for FiniteFieldRef.
+
+    >>> x, y, z = FiniteFieldElems('x y z', 29)
+    >>> FFAdd(x, y, z)
+    x + y + z
+    """
+    return _nary_kind_builder(Kind.FINITE_FIELD_ADD, *args)
+
+
+def FFMult(*args):
+    """ Create a product of finite fields.
+
+    See also the __mul__ overload (* operator) for FiniteFieldRef.
+
+    >>> x, y, z = FiniteFieldElems('x y z', 29)
+    >>> FFMult(x, y, z)
+    x*y*z
+    """
+    return _nary_kind_builder(Kind.FINITE_FIELD_MULT, *args)
+
+
+def FFSub(a, b):
+    """ Create a difference of finite fields.
+
+    See also the __sub__ overload (- operator) for FiniteFieldRef.
+
+    >>> x, y = FiniteFieldElems('x y', 29)
+    >>> FFSub(x, y)
+    x + -y
+    """
+    a, b = _coerce_exprs(a, b)
+    ctx = a.ctx
+    neg_b = ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, b.ast)
+    return FiniteFieldRef(ctx.solver.mkTerm(Kind.FINITE_FIELD_ADD, a.ast, neg_b), ctx)
+
+
+def FFNeg(a):
+    """ Create a negation of a finite field elemetn
+
+    See also the __neg__ overload (unary - operator) for FiniteFieldRef.
+
+    >>> x = FiniteFieldElem('x', 29)
+    >>> FFNeg(x)
+    -x
+    """
+    return -a

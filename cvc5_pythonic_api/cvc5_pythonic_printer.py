@@ -84,6 +84,9 @@ _cvc5_kinds_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
+    Kind.FINITE_FIELD_ADD: "+",
+    Kind.FINITE_FIELD_MULT: "*",
+    Kind.FINITE_FIELD_NEG: "-",
     Kind.SELECT: "Select",
     Kind.STORE: "Store",
     Kind.CONST_ARRAY: "ConstArray",
@@ -168,9 +171,12 @@ _cvc5_infix = [
     Kind.BITVECTOR_SGT,
     Kind.BITVECTOR_ASHR,
     Kind.BITVECTOR_SHL,
+    Kind.FINITE_FIELD_ADD,
+    Kind.FINITE_FIELD_MULT,
 ]
 
-_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT]
+_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
+               Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
 
 # Precedence
 _cvc5_precedence = {
@@ -178,6 +184,7 @@ _cvc5_precedence = {
     Kind.NEG: 1,
     Kind.BITVECTOR_NEG: 1,
     Kind.BITVECTOR_NOT: 1,
+    Kind.FINITE_FIELD_NEG: 1,
     Kind.MULT: 2,
     Kind.DIVISION: 2,
     Kind.INTS_DIVISION: 2,
@@ -185,10 +192,12 @@ _cvc5_precedence = {
     Kind.BITVECTOR_MULT: 2,
     Kind.BITVECTOR_SDIV: 2,
     Kind.BITVECTOR_SMOD: 2,
+    Kind.FINITE_FIELD_MULT: 2,
     Kind.ADD: 3,
     Kind.SUB: 3,
     Kind.BITVECTOR_ADD: 3,
     Kind.BITVECTOR_SUB: 3,
+    Kind.FINITE_FIELD_ADD: 3,
     Kind.BITVECTOR_ASHR: 4,
     Kind.BITVECTOR_SHL: 4,
     Kind.BITVECTOR_AND: 5,
@@ -268,16 +277,18 @@ _cvc5_fp_infix = [
     Kind.FLOATINGPOINT_LT, Kind.FLOATINGPOINT_GT, Kind.FLOATINGPOINT_LEQ, Kind.FLOATINGPOINT_GEQ
 ]
 
+
 def _is_assoc(k):
-    return (
-        k == Kind.BITVECTOR_OR
-        or k == Kind.BITVECTOR_XOR
-        or k == Kind.BITVECTOR_AND
-        or k == Kind.ADD
-        or k == Kind.BITVECTOR_ADD
-        or k == Kind.MULT
-        or k == Kind.BITVECTOR_MULT
-    )
+    return k in {
+            Kind.BITVECTOR_OR,
+            Kind.BITVECTOR_XOR,
+            Kind.BITVECTOR_AND,
+            Kind.ADD,
+            Kind.BITVECTOR_ADD,
+            Kind.MULT,
+            Kind.FINITE_FIELD_ADD,
+            Kind.FINITE_FIELD_MULT,
+            Kind.BITVECTOR_MULT}
 
 
 def _is_left_assoc(k):
@@ -308,6 +319,7 @@ else:
 _cvc5_infix_compact = [
     Kind.MULT,
     Kind.BITVECTOR_MULT,
+    Kind.FINITE_FIELD_MULT,
     Kind.DIVISION,
     Kind.POW,
     Kind.INTS_DIVISION,
@@ -361,7 +373,7 @@ def _op_name(a):
     k = a.kind()
     n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
@@ -712,6 +724,8 @@ class Formatter:
             return seq1("Array", (self.pp_sort(s.domain()), self.pp_sort(s.range())))
         elif isinstance(s, cvc.BitVecSortRef):
             return seq1("BitVec", (to_format(s.size()),))
+        elif isinstance(s, cvc.FiniteFieldSortRef):
+            return seq1("FiniteField", (to_format(s.size()),))
         elif isinstance(s, cvc.SetSortRef):
             return seq1("Set", (self.pp_sort(s.domain()), ))
         elif isinstance(s, cvc.FPSortRef):
@@ -753,6 +767,9 @@ class Formatter:
         return to_format('"' + a.as_string() + '"')
 
     def pp_bv(self, a):
+        return to_format(a.as_string())
+
+    def pp_ff(self, a):
         return to_format(a.as_string())
 
     def pp_fd(self, a):
@@ -1011,7 +1028,8 @@ class Formatter:
             arg1_pp = self.pp_expr(a.arg(0), d + 1, xs)
             arg2_pp = self.pp_expr(a.arg(1), d + 1, xs)
             return compose(
-                arg1_pp, indent(2, compose(to_format("["), arg2_pp, to_format("]")))
+                arg1_pp, indent(2, compose(
+                    to_format("["), arg2_pp, to_format("]")))
             )
 
     def pp_unary_param(self, a, d, xs, param_on_right):
@@ -1036,7 +1054,8 @@ class Formatter:
             return self.pp_expr(a.arg(0), d, xs)
         else:
             return seq1(
-                "MultiPattern", [self.pp_expr(arg, d + 1, xs) for arg in a.children()]
+                "MultiPattern", [self.pp_expr(arg, d + 1, xs)
+                                 for arg in a.children()]
             )
 
     def pp_is(self, a, d, xs):
@@ -1074,6 +1093,8 @@ class Formatter:
             return self.pp_bool(a)
         # elif cvc.is_algebraic_value(a):
         #     return self.pp_algebraic(a)
+        elif cvc.is_ff_value(a):
+            return self.pp_ff(a)
         elif cvc.is_bv_value(a):
             return self.pp_bv(a)
         elif cvc.is_fprm_value(a):
@@ -1103,7 +1124,7 @@ class Formatter:
             elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI]:
+            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER]:
                 return self.pp_name(a)
             # elif cvc.is_pattern(a):
             #     return self.pp_pattern(a, d, xs)
@@ -1215,7 +1236,8 @@ class Formatter:
             else:
                 i_pp = self.pp_expr(i, 0, [])
             name = self.pp_name(d)
-            r.append(compose(name, to_format(" = "), indent(_len(name) + 3, i_pp)))
+            r.append(compose(name, to_format(" = "),
+                     indent(_len(name) + 3, i_pp)))
             sz = sz + 1
             if sz > self.max_args:
                 r.append(self.pp_ellipses())

@@ -11,22 +11,22 @@ And(f(x) >= 0,
     p(f(y))): True
 f(x) >= 0: True
 f(x): 0
-x: (as @a0 U)
+x: (as @U_0 U)
 0: 0
 f(y) >= 0: True
 f(y): 1
-y: (as @a1 U)
+y: (as @U_1 U)
 0: 0
 f(x) + f(y) <= 1: True
 f(x) + f(y): 1
 f(x): 0
-x: (as @a0 U)
+x: (as @U_0 U)
 f(y): 1
-y: (as @a1 U)
+y: (as @U_1 U)
 1: 1
 Not(p(0)): True
 p(0): False
 0: 0
 p(f(y)): True
 f(y): 1
-y: (as @a1 U)
+y: (as @U_1 U)
