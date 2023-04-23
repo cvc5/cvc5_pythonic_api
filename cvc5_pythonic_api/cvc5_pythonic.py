@@ -1729,6 +1729,91 @@ def Or(*args):
 
 #########################################
 #
+# String
+#
+#########################################
+class StringSortRef(SortRef):
+    """String sort."""
+
+
+
+class StringRef(ExprRef):
+    """String expressions"""
+
+    def __add__(self, other):
+        """Create the SMT expression `self + other`.
+
+        >>> x = String('x')
+        >>> y = String('y')
+        >>> x + y
+        x + y
+        >>> (x + y).sort()
+        String
+        """
+        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, self.ast,other.ast), self.ctx)
+
+    def __radd__(self, other):
+        """Create the SMT expression `other + self`.
+
+        >>> x = String('x')
+        >>> 10 + x
+        10 + x
+        """
+        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, other.ast,self.ast), self.ctx)
+
+
+def StringSort(ctx=None):
+    """Return the string sort in the given context. If `ctx=None`, then the global context is used.
+
+    >>> StringSort()
+    String
+    >>> a = Const('a', StringSort())
+    >>> a.sort() == StringSort()
+    True
+    """
+    ctx = _get_ctx(ctx)
+    return StringSortRef(ctx.solver.getStringSort(), ctx)
+
+
+def String(name,ctx=None):
+
+    ctx = _get_ctx(ctx)
+    e = ctx.get_var(name, StringSort(ctx))
+    return StringRef(e, ctx)
+
+def is_string(a):
+    """Return `True` if `a` is a string expression.
+
+    >>> x = Int('x')
+    >>> a = String('a')
+    >>> is_string(x)
+    False
+    >>> is_string(a)
+    True
+    """
+    return isinstance(a, StringRef)
+
+def StringVal(val, ctx=None):
+    """Return an SMT String value.
+
+    `val` may be a Python int, long, float or string representing a number in decimal or rational notation.
+    If `ctx=None`, then the global context is used.
+
+    >>> RealVal(1)
+    1
+    >>> RealVal(1).sort()
+    Real
+    >>> RealVal("3/5")
+    3/5
+    >>> RealVal("1.5")
+    3/2
+    """
+    ctx = _get_ctx(ctx)
+    return StringRef(ctx.solver.mkString(str(val)), ctx)
+
+
+#########################################
+#
 # Arithmetic
 #
 #########################################
