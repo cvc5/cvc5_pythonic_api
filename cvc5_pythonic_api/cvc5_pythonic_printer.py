@@ -84,9 +84,9 @@ _cvc5_kinds_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
-    Kind.FINITE_FIELD_ADD: "+",
-    Kind.FINITE_FIELD_MULT: "*",
-    Kind.FINITE_FIELD_NEG: "-",
+    #Kind.FINITE_FIELD_ADD: "+",
+    #Kind.FINITE_FIELD_MULT: "*",
+    #Kind.FINITE_FIELD_NEG: "-",
     Kind.SELECT: "Select",
     Kind.STORE: "Store",
     Kind.CONST_ARRAY: "ConstArray",
@@ -171,12 +171,12 @@ _cvc5_infix = [
     Kind.BITVECTOR_SGT,
     Kind.BITVECTOR_ASHR,
     Kind.BITVECTOR_SHL,
-    Kind.FINITE_FIELD_ADD,
-    Kind.FINITE_FIELD_MULT,
+    #Kind.FINITE_FIELD_ADD,
+    #Kind.FINITE_FIELD_MULT,
 ]
 
 _cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
-               Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
+               Kind.BITVECTOR_NOT ]#, Kind.FINITE_FIELD_NEG]
 
 # Precedence
 _cvc5_precedence = {
@@ -184,7 +184,7 @@ _cvc5_precedence = {
     Kind.NEG: 1,
     Kind.BITVECTOR_NEG: 1,
     Kind.BITVECTOR_NOT: 1,
-    Kind.FINITE_FIELD_NEG: 1,
+    #Kind.FINITE_FIELD_NEG: 1,
     Kind.MULT: 2,
     Kind.DIVISION: 2,
     Kind.INTS_DIVISION: 2,
@@ -192,12 +192,12 @@ _cvc5_precedence = {
     Kind.BITVECTOR_MULT: 2,
     Kind.BITVECTOR_SDIV: 2,
     Kind.BITVECTOR_SMOD: 2,
-    Kind.FINITE_FIELD_MULT: 2,
+    #Kind.FINITE_FIELD_MULT: 2,
     Kind.ADD: 3,
     Kind.SUB: 3,
     Kind.BITVECTOR_ADD: 3,
     Kind.BITVECTOR_SUB: 3,
-    Kind.FINITE_FIELD_ADD: 3,
+    #Kind.FINITE_FIELD_ADD: 3,
     Kind.BITVECTOR_ASHR: 4,
     Kind.BITVECTOR_SHL: 4,
     Kind.BITVECTOR_AND: 5,
@@ -279,16 +279,25 @@ _cvc5_fp_infix = [
 
 
 def _is_assoc(k):
-    return k in {
-            Kind.BITVECTOR_OR,
-            Kind.BITVECTOR_XOR,
-            Kind.BITVECTOR_AND,
-            Kind.ADD,
-            Kind.BITVECTOR_ADD,
-            Kind.MULT,
-            Kind.FINITE_FIELD_ADD,
-            Kind.FINITE_FIELD_MULT,
-            Kind.BITVECTOR_MULT}
+    # return k in {
+    #         Kind.BITVECTOR_OR,
+    #         Kind.BITVECTOR_XOR,
+    #         Kind.BITVECTOR_AND,
+    #         Kind.ADD,
+    #         Kind.BITVECTOR_ADD,
+    #         Kind.MULT,
+    #         Kind.FINITE_FIELD_ADD,
+    #         Kind.FINITE_FIELD_MULT,
+    #         Kind.BITVECTOR_MULT}
+    return (
+        k == Kind.BITVECTOR_OR
+        or k == Kind.BITVECTOR_XOR
+        or k == Kind.BITVECTOR_AND
+        or k == Kind.ADD
+        or k == Kind.BITVECTOR_ADD
+        or k == Kind.MULT
+        or k == Kind.BITVECTOR_MULT
+    )
 
 
 def _is_left_assoc(k):
@@ -319,7 +328,7 @@ else:
 _cvc5_infix_compact = [
     Kind.MULT,
     Kind.BITVECTOR_MULT,
-    Kind.FINITE_FIELD_MULT,
+    #Kind.FINITE_FIELD_MULT,
     Kind.DIVISION,
     Kind.POW,
     Kind.INTS_DIVISION,
