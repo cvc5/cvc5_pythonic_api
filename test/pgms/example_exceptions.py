@@ -1,4 +1,4 @@
-from cvc5_pythonic_api import *
+from cvc5.pythonic import *
 
 if __name__ == '__main__':
     s = Solver()
