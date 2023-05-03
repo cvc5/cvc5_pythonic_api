@@ -1739,6 +1739,7 @@ class StringSortRef(SortRef):
 
 class StringRef(ExprRef):
     """String expressions"""
+    
 
     def __add__(self, other):
         """Create the SMT expression `self + other`.
@@ -1760,7 +1761,11 @@ class StringRef(ExprRef):
         10 + x
         """
         return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, other.ast,self.ast), self.ctx)
-
+    
+    def __getitem__(self,i):
+        if isinstance(i,int):
+            i = IntVal(i,self.ctx)
+        return 
 
 def StringSort(ctx=None):
     """Return the string sort in the given context. If `ctx=None`, then the global context is used.
@@ -1780,6 +1785,20 @@ def String(name,ctx=None):
     ctx = _get_ctx(ctx)
     e = ctx.get_var(name, StringSort(ctx))
     return StringRef(e, ctx)
+
+def Strings(names,ctx = None):
+    """Return a tuple of strings constants.
+
+    >>> x, y, z = Reals('x y z')
+    >>> Sum(x, y, z)
+    x + y + z
+    >>> Sum(x, y, z).sort()
+    Real
+    """
+    ctx = _get_ctx(ctx)
+    if isinstance(names, str):
+        names = names.split(" ")
+    return [String(name, ctx) for name in names]
 
 def is_string(a):
     """Return `True` if `a` is a string expression.
@@ -1811,6 +1830,91 @@ def StringVal(val, ctx=None):
     ctx = _get_ctx(ctx)
     return StringRef(ctx.solver.mkString(str(val)), ctx)
 
+def Length(s,ctx=None):
+    """obtain the length of a string s 
+    >>> s = StringVal('s')
+    >>> l = Length(s)
+    >>> simplify(l)
+    1
+    """
+    s = _py2expr(s)
+    ctx = _get_ctx(ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.STRING_LENGTH,s.ast),ctx)
+
+def SubString(s,offset,length,ctx=None):
+    """Extract substring or subsequence starting at offset"""
+    ctx = _get_ctx(ctx)
+    s = _py2expr(s)
+    offset = _py2expr(offset)
+    length = _py2expr(length)
+    return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
+
+def Contains(a,b,ctx=None):
+    """check if a contains b
+    >>> simplify(Contains('ab','a'))
+    True
+    >>> a,b,c = Strings("a b c")
+    >>> s = Contains(a+b+c,b)
+    >>> simplify(s)
+    True
+    """
+    ctx = _get_ctx(ctx)
+    a = _py2expr(a)
+    b = _py2expr(b)
+    return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS,a.ast,b.ast),ctx)
+
+def PrefixOf(a,b,ctx=None):
+    """check if a is a prefix of b
+    >>> s1 = PrefixOf("ab","abc")
+    >>> simplify(s1)
+    True
+    >>> s2 = PrefixOf("bc","abc")
+    >>> simplify(s2)
+    False
+    """
+    ctx = _get_ctx(ctx)
+    a = _py2expr(a)
+    b = _py2expr(b)
+    return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX,a.ast,b.ast),ctx)
+
+def SuffixOf(a,b,ctx=None):
+    """check if a is a suffix of b
+    >>> s1 = SuffixOf("ab","abc")
+    >>> simplify(s1)
+    False
+    >>> s2 = SuffixOf("bc","abc")
+    >>> simplify(s2)
+    True
+    """
+    ctx = _get_ctx(ctx)
+    a = _py2expr(a)
+    b = _py2expr(b)
+    return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX,a.ast,b.ast),ctx)
+
+def IndexOf(s,substr,offset=None):
+    """retrieves the index of substr in s starting at offset, if offset is missing retrieves the first occurence
+    >>> simplify(IndexOf("abcabc", "bc", 0))
+    1
+    >>> simplify(IndexOf("abcabc", "bc", 2))
+    4
+    """
+    if offset is None:
+        offset = IntVal(0)
+    s = _py2expr(s)
+    substr = _py2expr(substr)
+    ctx = _get_ctx(None)
+    if _is_int(offset):
+        offset = IntVal(offset, ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.STRING_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
+
+def Replace(s,src,dst):
+    """Replace the first occurence of src with dst in s
+    """
+    s = _py2expr(s)
+    src = _py2expr(src)
+    dst = _py2expr(dst)
+    ctx = _get_ctx(None)
+    return StringRef(ctx.solver.mkTerm(Kind.STRING_REPLACE,s.ast,src.ast,dst.ast),ctx)
 
 #########################################
 #
@@ -2660,6 +2764,8 @@ def _py2expr(a, ctx=None):
         return IntVal(a, ctx)
     if isinstance(a, float):
         return RealVal(a, ctx)
+    if isinstance(a, str):
+        return StringVal(a, ctx)
     if is_expr(a):
         return a
     if debugging():
@@ -3981,17 +4087,19 @@ def Concat(*args):
     sz = len(args)
     if debugging():
         _assert(sz >= 2, "At least two arguments expected.")
-
-    ctx = None
+    args = [ _py2expr(s) for s in args]
+    ctx = _get_ctx(None)
     for a in args:
         if is_expr(a):
             ctx = a.ctx
             break
     if debugging():
         _assert(
-            all([is_bv(a) for a in args]),
+            all([is_bv(a) or is_string(a) for a in args]),
             "All arguments must be SMT bit-vector expressions.",
         )
+    if is_string(args[0]):
+        return StringRef(ctx.solver.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
     return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
 
 
