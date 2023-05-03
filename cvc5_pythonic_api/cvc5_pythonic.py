@@ -1766,6 +1766,18 @@ class StringRef(ExprRef):
         if isinstance(i,int):
             i = IntVal(i,self.ctx)
         return 
+    
+    def __le__(self,other):
+        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LEQ ,self.ast,other.ast),self.ctx)
+    
+    def __lt__(self,other):
+        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LT ,self.ast,other.ast),self.ctx)
+    
+    def __ge__(self,other):
+        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LEQ,other.ast,self.ast),self.ctx)
+    
+    def __gt__(self,other):
+        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LT ,other.ast,self.ast),self.ctx)
 
 def StringSort(ctx=None):
     """Return the string sort in the given context. If `ctx=None`, then the global context is used.
