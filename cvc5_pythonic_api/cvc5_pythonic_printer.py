@@ -140,6 +140,7 @@ _cvc5_kinds_to_str = {
     Kind.ARCCOTANGENT: "Arccotangent",
     Kind.PI: "Pi",
     Kind.EXPONENTIAL: "Exponential",
+    Kind.STRING_SUBSTR: "SubString"
 }
 
 # List of infix operators
@@ -382,7 +383,7 @@ def _op_name(a):
     k = a.kind()
     n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER, Kind.CONST_STRING]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
