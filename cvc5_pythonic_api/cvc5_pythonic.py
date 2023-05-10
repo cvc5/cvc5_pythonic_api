@@ -1747,26 +1747,25 @@ class StringRef(ExprRef):
         >>> x = String('x')
         >>> y = String('y')
         >>> x + y
-        x + y
+        +(x, y)
         >>> (x + y).sort()
         String
         """
         return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, self.ast,other.ast), self.ctx)
 
     def __radd__(self, other):
-        """Create the SMT expression `other + self`.
-
-        >>> x = String('x')
-        >>> 10 + x
-        10 + x
+        """Create the SMT expression `other + self`
         """
         return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, other.ast,self.ast), self.ctx)
     
     def __getitem__(self,i):
         if isinstance(i,int):
             i = IntVal(i,self.ctx)
-        return 
+        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CHARAT,self.ast,i.ast),self.ctx)
     
+    def at(self,i):
+        return self.__getitem__(i)
+
     def __le__(self,other):
         return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LEQ ,self.ast,other.ast),self.ctx)
     
@@ -1801,11 +1800,11 @@ def String(name,ctx=None):
 def Strings(names,ctx = None):
     """Return a tuple of strings constants.
 
-    >>> x, y, z = Reals('x y z')
-    >>> Sum(x, y, z)
-    x + y + z
-    >>> Sum(x, y, z).sort()
-    Real
+    >>> x, y, z = Strings('x y z')
+    >>> Concat(x,y,z)
+    +(x, y, z)
+    >>> Concat(x,y,z).sort()
+    String
     """
     ctx = _get_ctx(ctx)
     if isinstance(names, str):
@@ -1827,17 +1826,13 @@ def is_string(a):
 def StringVal(val, ctx=None):
     """Return an SMT String value.
 
-    `val` may be a Python int, long, float or string representing a number in decimal or rational notation.
-    If `ctx=None`, then the global context is used.
+    `val`is a string value
+     If `ctx=None`, then the global context is used.
 
-    >>> RealVal(1)
-    1
-    >>> RealVal(1).sort()
-    Real
-    >>> RealVal("3/5")
-    3/5
-    >>> RealVal("1.5")
-    3/2
+    >>> StringVal('hello')
+    "hello"()
+    >>> StringVal('hello').sort()
+    String
     """
     ctx = _get_ctx(ctx)
     return StringRef(ctx.solver.mkString(str(val)), ctx)
@@ -1928,6 +1923,21 @@ def Replace(s,src,dst):
     ctx = _get_ctx(None)
     return StringRef(ctx.solver.mkTerm(Kind.STRING_REPLACE,s.ast,src.ast,dst.ast),ctx)
 
+def StrToInt(s):
+    """Convert string expression to int
+    >>> a = StrToInt('1')
+    >>> simplify(a==1)
+    True
+    """
+    s = _py2expr(s)
+    ctx = _get_ctx(s.ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.STRING_TO_INT, s.ast),ctx)
+
+def IntToStr(s):
+    """Convert integer expression to string"""
+    s = _py2expr(s)
+    ctx = _get_ctx(s.ctx)
+    return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast ),ctx)
 #########################################
 #
 # Arithmetic
@@ -4085,7 +4095,7 @@ def BitVecs(names, bv, ctx=None):
 
 
 def Concat(*args):
-    """Create an SMT bit-vector concatenation expression.
+    """Create an SMT bit-vector or string concatenation expression.
 
     >>> v = BitVecVal(1, 4)
     >>> Concat(v, v+1, v)

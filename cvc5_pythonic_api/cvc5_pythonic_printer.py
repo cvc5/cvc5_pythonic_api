@@ -140,7 +140,13 @@ _cvc5_kinds_to_str = {
     Kind.ARCCOTANGENT: "Arccotangent",
     Kind.PI: "Pi",
     Kind.EXPONENTIAL: "Exponential",
-    Kind.STRING_SUBSTR: "SubString"
+    # Strings
+    Kind.STRING_SUBSTR: "SubString",
+    Kind.STRING_CHARAT: "At",
+    Kind.STRING_CONCAT: "+",
+    Kind.STRING_LENGTH: "Length",
+    Kind.STRING_REPLACE: "Replace"
+
 }
 
 # List of infix operators
