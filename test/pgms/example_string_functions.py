@@ -1,4 +1,5 @@
 from cvc5_pythonic_api import *
+#from z3 import *
 a = StringVal('hello world')
 b = String('b')
 solve(Contains(b,a))
