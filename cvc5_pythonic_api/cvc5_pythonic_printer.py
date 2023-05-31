@@ -112,6 +112,8 @@ _cvc5_kinds_to_str = {
     Kind.STRING_FROM_INT: "IntToStr",
     # Kind.Seq_in_re: "InRe",
     # Kind.Seq_to_re: "Re",
+    Kind.STRING_TO_REGEXP: "StringToRegexp",
+    Kind.STRING_IN_REGEXP: "StringInRegexp",
     Kind.REGEXP_PLUS: "Plus",
     Kind.REGEXP_STAR: "Star",
     Kind.REGEXP_UNION: "Union",
@@ -146,6 +148,7 @@ _cvc5_kinds_to_str = {
     Kind.STRING_CONCAT: "+",
     Kind.STRING_LENGTH: "Length",
     Kind.STRING_REPLACE: "Replace"
+    
 
 }
 

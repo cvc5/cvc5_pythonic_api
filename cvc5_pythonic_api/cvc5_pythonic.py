@@ -766,6 +766,8 @@ def _to_sort_ref(s, ctx):
     """
     if debugging():
         instance_check(s, pc.Sort)
+    if s.isString():
+        return StringSortRef(s,ctx)
     if s.isBoolean():
         return BoolSortRef(s, ctx)
     elif s.isInteger() or s.isReal():
@@ -1734,12 +1736,36 @@ def Or(*args):
 #########################################
 class StringSortRef(SortRef):
     """String sort."""
+    def cast(self, val):
+        """Try to cast `val` as a String.
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            val_s = val.sort()
+            if self.eq(val_s):
+                return val
+            if val_s.is_bool() and self.is_int():
+                return If(val, 1, 0)
+            if val_s.is_bool() and self.is_real():
+                return ToReal(If(val, 1, 0))
+            if val_s.is_int() and self.is_real():
+                return ToReal(val)
+            if debugging():
+                _assert(False, "SMT Integer/Real expression expected")
+        else:
+            return StringVal(str(val))
+
 
 
 
 class StringRef(ExprRef):
     """String expressions"""
+    def sort(self):
+        return _sort(self.ctx, self.ast)
     
+    def isString(self):
+        return True
 
     def __add__(self, other):
         """Create the SMT expression `self + other`.
@@ -1751,12 +1777,12 @@ class StringRef(ExprRef):
         >>> (x + y).sort()
         String
         """
-        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, self.ast,other.ast), self.ctx)
+        return Concat(self,other)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`
         """
-        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CONCAT, other.ast,self.ast), self.ctx)
+        return Concat(other,self)
     
     def __getitem__(self,i):
         if isinstance(i,int):
@@ -1938,6 +1964,149 @@ def IntToStr(s):
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
     return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast ),ctx)
+
+
+#########################################
+#
+# Regular Expressions
+#
+#########################################
+
+
+class ReSortRef(SortRef):
+    """Regular expression sort."""
+
+class ReRef(ExprRef):
+    def __add__(self,other):
+        pass
+
+
+def ReSort(s=None):
+    # if is_ast(s):
+    #     return ReSortRef(s.ctx.ref(),s.ctx)
+    if s is None or isinstance(s,Context):
+        ctx = _get_ctx(s)
+        return ReSortRef(ctx.solver.getRegExpSort(), ctx) 
+    
+def Re(s,ctx=None):
+    s = _py2expr(s)
+    return ReRef(s.ctx.solver.mkTerm(Kind.STRING_TO_REGEXP,s.ast),s.ctx)
+
+def is_re(s):
+    return isinstance(s, ReRef)
+
+def InRe(s,re):
+    """Create regular expression membership test
+    >>> re = Union(Re("a"),Re("b"))
+    >>> print (simplify(InRe("a", re)))
+    True
+    >>> print (simplify(InRe("b", re)))
+    True
+    >>> print (simplify(InRe("c", re)))
+    False
+    """
+    s = _py2expr(s)
+    return BoolRef(s.ctx.solver.mkTerm(Kind.STRING_IN_REGEXP,s.ast,re.ast),s.ctx)
+
+def Union(*args):
+    """create union of regular expressions
+    >>> re = Union(Re("a"), Re("b"), Re("c"))
+    >>> print (simplify(InRe("d", re)))
+    False
+    """
+    args = _get_args(args)
+    sz = len(args)
+    if debugging():
+        _assert(sz >= 1, "At least one argument expected.")
+    if sz == 1:
+        return args[0]
+    ctx = args[0].ctx
+    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION,args[0].ast,args[1].ast),ctx)
+    for i in range(2,sz):
+        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION,v.ast,args[i].ast),ctx)
+    return v
+
+def Intersect(*args):
+    """Create intersection of regular expressions.
+    >>> re = Intersect(Re("a"), Re("b"), Re("c"))
+    """
+    args = _get_args(args)
+    sz = len(args)
+    if debugging():
+        _assert(sz >= 1, "At least one argument expected.")
+    if sz == 1:
+        return args[0]
+    ctx = args[0].ctx
+    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER ,args[0].ast,args[1].ast),ctx)
+    for i in range(2,sz):
+        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER ,v.ast,args[i].ast),ctx)
+    return v
+
+def Plus(re):
+    """Create the regular expression accepting one or more repetitions of argument.
+    >>> re = Plus(Re("a"))
+    >>> print(simplify(InRe("aa", re)))
+    True
+    >>> print(simplify(InRe("ab", re)))
+    False
+    >>> print(simplify(InRe("", re)))
+    False
+    """
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_PLUS,re.ast),re.ctx)
+
+def Option(re):
+    pass
+
+def Complement(re):
+    """Create the complement regular expression."""
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT,re.ast),re.ctx)
+
+def Star(re):
+    """Create the regular expression accepting zero or more repetitions of argument.
+    >>> re = Star(Re("a"))
+    >>> print(simplify(InRe("aa", re)))
+    True
+    >>> print(simplify(InRe("ab", re)))
+    False
+    >>> print(simplify(InRe("", re)))
+    True
+    """
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_STAR,re.ast),re.ctx)
+
+def Loop(re, lo, hi=0):
+    """Create the regular expression accepting between a lower and upper bound repetitions
+    >>> re = Loop(Re("a"), 1, 3)
+    >>> print(simplify(InRe("aa", re)))
+    True
+    >>> print(simplify(InRe("aaaa", re)))
+    False
+    >>> print(simplify(InRe("", re)))
+    False
+    """
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_LOOP, re.ast, lo, hi),re.ctx)
+
+def Range(lo, hi, ctx=None):
+    """Create the range regular expression over two sequences of length 1
+    >>> range = Range("a","z")
+    >>> print(simplify(InRe("b", range)))
+    True
+    >>> print(simplify(InRe("bb", range)))
+    False
+    """
+    lo = _py2expr(lo,ctx)
+    hi = _py2expr(hi,ctx)
+    return ReRef(lo.ctx.solver.mkTerm(Kind.REGEXP_RANGE,lo.ast,hi.ast),lo.ctx)
+
+def Diff(a, b, ctx=None):
+    """Create the difference regular expression
+    """
+    return ReRef(a.ctx.solver.mkTerm(Kind.REGEXP_DIFF ,a.ast,b.ast),a.ctx)
+
+
+def AllChar(regex_sort, ctx=None):
+    """Create a regular expression that accepts all single character strings
+    """
+    return ReRef(regex_sort.ctx.solver.mkTerm(Kind.REGEXP_ALLCHAR),regex_sort.ctx)
 #########################################
 #
 # Arithmetic
@@ -2780,6 +2949,7 @@ class RatNumRef(ArithRef):
 
 
 def _py2expr(a, ctx=None):
+    
     if isinstance(a, bool):
         return BoolVal(a, ctx)
     if _is_int(a):
