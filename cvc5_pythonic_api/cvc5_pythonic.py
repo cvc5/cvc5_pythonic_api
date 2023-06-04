@@ -1731,7 +1731,7 @@ def Or(*args):
 
 #########################################
 #
-# String
+# Strings and Sequences
 #
 #########################################
 class StringSortRef(SortRef):
@@ -1836,6 +1836,33 @@ def Strings(names,ctx = None):
     if isinstance(names, str):
         names = names.split(" ")
     return [String(name, ctx) for name in names]
+
+
+class SeqSortRef(SortRef):
+    def cast(self,val):
+        """Try to cast `val` as a String.
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            val_s = val.sort()
+            if self.eq(val_s):
+                return val
+            if val_s.is_bool() and self.is_int():
+                return If(val, 1, 0)
+            if val_s.is_bool() and self.is_real():
+                return ToReal(If(val, 1, 0))
+            if val_s.is_int() and self.is_real():
+                return ToReal(val)
+            if debugging():
+                _assert(False, "SMT Integer/Real expression expected")
+        elif type(val) == str:
+            return StringVal(str(val))
+        else:
+            return None
+
+
+
 
 def is_string(a):
     """Return `True` if `a` is a string expression.
@@ -2041,6 +2068,23 @@ def Intersect(*args):
     for i in range(2,sz):
         v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER ,v.ast,args[i].ast),ctx)
     return v
+    
+
+def Option(re):
+    """Create the regular expression that optionally accepts the argument.
+    >>> re = Option(Re("a"))
+    >>> print(simplify(InRe("a", re)))
+    True
+    >>> print(simplify(InRe("", re)))
+    True
+    >>> print(simplify(InRe("aa", re)))
+    False
+    """
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_OPT, re.ast),re.ctx)
+
+def Complement(re):
+    """Create the complement regular expression."""
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT,re.ast),re.ctx)
 
 def Plus(re):
     """Create the regular expression accepting one or more repetitions of argument.
@@ -2053,13 +2097,7 @@ def Plus(re):
     False
     """
     return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_PLUS,re.ast),re.ctx)
-
-def Option(re):
-    pass
-
-def Complement(re):
-    """Create the complement regular expression."""
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT,re.ast),re.ctx)
+    
 
 def Star(re):
     """Create the regular expression accepting zero or more repetitions of argument.
@@ -2083,7 +2121,7 @@ def Loop(re, lo, hi=0):
     >>> print(simplify(InRe("", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_LOOP, re.ast, lo, hi),re.ctx)
+    return ReRef(re.ctx.solver.mkTerm(re.ctx.solver.mkOp(Kind.REGEXP_LOOP, lo, hi),re.ast),re.ctx)
 
 def Range(lo, hi, ctx=None):
     """Create the range regular expression over two sequences of length 1
@@ -3285,21 +3323,6 @@ def Cbrt(a, ctx=None):
         a = RealVal(a, ctx)
     return a ** "1/3"
 
-
-def Plus(*args):
-    """ Create an SMT addition.
-
-    Deprecated. Kept for compatiblity with Z3. See "Add".
-
-    See also the __add__ overload (+ operator) for arithmetic SMT expressions.
-
-    >>> x, y = Ints('x y')
-    >>> Plus(x, x, y)
-    x + x + y
-    >>> Plus(x, x, y, main_ctx())
-    x + x + y
-    """
-    return Add(*args)
 
 
 def Add(*args):
