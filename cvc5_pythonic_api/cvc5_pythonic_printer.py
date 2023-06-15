@@ -84,9 +84,9 @@ _cvc5_kinds_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
-    #Kind.FINITE_FIELD_ADD: "+",
-    #Kind.FINITE_FIELD_MULT: "*",
-    #Kind.FINITE_FIELD_NEG: "-",
+    Kind.FINITE_FIELD_ADD: "+",
+    Kind.FINITE_FIELD_MULT: "*",
+    Kind.FINITE_FIELD_NEG: "-",
     Kind.SELECT: "Select",
     Kind.STORE: "Store",
     Kind.CONST_ARRAY: "ConstArray",
@@ -123,6 +123,7 @@ _cvc5_kinds_to_str = {
     Kind.REGEXP_INTER: "Intersect",
     Kind.REGEXP_COMPLEMENT: "Complement",
     Kind.REGEXP_ALL: "Full",
+    Kind.REGEXP_NONE: "RegexpNone",
     Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
     Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
     Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
@@ -184,12 +185,12 @@ _cvc5_infix = [
     Kind.BITVECTOR_SGT,
     Kind.BITVECTOR_ASHR,
     Kind.BITVECTOR_SHL,
-    #Kind.FINITE_FIELD_ADD,
-    #Kind.FINITE_FIELD_MULT,
+    Kind.FINITE_FIELD_ADD,
+    Kind.FINITE_FIELD_MULT,
 ]
 
 _cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
-               Kind.BITVECTOR_NOT ]#, Kind.FINITE_FIELD_NEG]
+               Kind.BITVECTOR_NOT , Kind.FINITE_FIELD_NEG]
 
 # Precedence
 _cvc5_precedence = {
@@ -197,7 +198,7 @@ _cvc5_precedence = {
     Kind.NEG: 1,
     Kind.BITVECTOR_NEG: 1,
     Kind.BITVECTOR_NOT: 1,
-    #Kind.FINITE_FIELD_NEG: 1,
+    Kind.FINITE_FIELD_NEG: 1,
     Kind.MULT: 2,
     Kind.DIVISION: 2,
     Kind.INTS_DIVISION: 2,

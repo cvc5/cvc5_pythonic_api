@@ -1922,20 +1922,16 @@ def SeqSort(s):
 
 
 
-# def Empty(s):
-#     """Create the empty sequence of the given sort
-#     >>> e4 = Empty(ReSort(SeqSort(IntSort())))
-#     >>> print(e4)
-#     Empty(ReSort(Seq(Int)))
-#     """
-#     # if isinstance(s, SeqSortRef):
-#     #     return SeqRef(s.ast, s.ctx)
-#     if isinstance(s, ReSortRef):
-#         return ReRef(s.ast, s.ctx)
-#     #raise Z3Exception("Non-sequence, non-regular expression sort passed to Empty")
+def Empty(s):
+    """Create the empty sequence of the given sort
+    """
+    if isinstance(s, ReSortRef):
+        return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
+    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.ast), s.ctx)
+    
 
 def is_seq(a):
-    """Return `True` if `a` is a Z3 sequence expression.
+    """Return `True` if `a` is a sequence expression.
     >>> print (is_seq(Unit(IntVal(0))))
     True
     >>> print (is_seq(StringVal("abc")))
@@ -2002,17 +1998,14 @@ def SubSeq(s, offset, length):
     return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
 
 
-def Full():
+def Full(ctx=None):
     """Create the regular expression that accepts the universal language
-    >>> e = Full(ReSort(SeqSort(IntSort())))
+    >>> e = Full()
     >>> print(e)
-    Full(ReSort(Seq(Int)))
-    >>> e1 = Full(ReSort(StringSort()))
-    >>> print(e1)
-    Full(ReSort(String))
+    Full()
     """
-    #if isinstance(s, ReSortRef):
-    return ReRef(s.ctx.solver.mkRegexpAll(), s.ctx)
+    ctx = _get_ctx(ctx)
+    return ReRef(ctx.solver.mkRegexpAll(), ctx)
 
 def Contains(a,b,ctx=None):
     """check if a contains b
@@ -2107,6 +2100,19 @@ def IntToStr(s):
     ctx = _get_ctx(s.ctx)
     return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast ),ctx)
 
+def StrToCode(s):
+    """Convert a unit length string to integer code"""
+    if not is_expr(s):
+        s = _py2expr(s)
+    return ArithRef(s.ctx.solver.mkTerm(Kind.STRING_TO_CODE,s.ast ), s.ctx)
+
+def StrFromCode(c):
+    """Convert code to a string"""
+    if not is_expr(c):
+        c = _py2expr(c)
+    return SeqRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
+
+
 
 #########################################
 #
@@ -2119,8 +2125,7 @@ class ReSortRef(SortRef):
     """Regular expression sort."""
 
 class ReRef(ExprRef):
-    def __add__(self,other):
-        pass
+    """Regular expressions"""
 
 
 def ReSort(s=None):
@@ -4403,7 +4408,7 @@ def BitVecs(names, bv, ctx=None):
 
 
 def Concat(*args):
-    """Create an SMT bit-vector or string concatenation expression.
+    """Create an SMT bit-vector, string or sequence concatenation expression.
 
     >>> v = BitVecVal(1, 4)
     >>> Concat(v, v+1, v)
