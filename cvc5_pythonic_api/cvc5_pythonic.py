@@ -768,6 +768,8 @@ def _to_sort_ref(s, ctx):
         instance_check(s, pc.Sort)
     if s.isString():
         return StringSortRef(s,ctx)
+    if s.isSequence():
+        return SeqSortRef(s,ctx)
     if s.isBoolean():
         return BoolSortRef(s, ctx)
     elif s.isInteger() or s.isReal():
@@ -1000,6 +1002,10 @@ def _to_expr_ref(a, ctx, r=None):
         return ArrayRef(ast, ctx, r)
     if sort.isSet():
         return SetRef(ast, ctx, r)
+    if sort.isString():
+        return StringRef(ast,ctx,r)
+    if sort.isSequence():
+        return SeqRef(ast,ctx,r)
     return ExprRef(ast, ctx, r)
 
 
@@ -1734,7 +1740,72 @@ def Or(*args):
 # Strings and Sequences
 #
 #########################################
-class StringSortRef(SortRef):
+
+class SeqSortRef(SortRef):
+    def cast(self,val):
+        """Try to cast `val` as a String.
+        """
+        if is_expr(val):
+            if debugging():
+                _assert(self.ctx == val.ctx, "Context mismatch")
+            val_s = val.sort()
+            if self.eq(val_s):
+                return val
+            if val_s.is_bool() and self.is_int():
+                return If(val, 1, 0)
+            if val_s.is_bool() and self.is_real():
+                return ToReal(If(val, 1, 0))
+            if val_s.is_int() and self.is_real():
+                return ToReal(val)
+            if debugging():
+                _assert(False, "SMT Integer/Real expression expected")
+        elif type(val) == str:
+            return StringVal(str(val))
+        else:
+            return None
+    
+    def is_string(self):
+        """Determine if sort is a string
+        >>> s = StringSort()
+        >>> s.is_string()
+        True
+        >>> s = SeqSort(IntSort())
+        >>> s.is_string()
+        False
+        """
+        return isinstance(self,StringSortRef)
+    
+class SeqRef(ExprRef):
+    """Sequence Expressions"""
+    def sort(self):
+        return _sort(self.ctx, self.ast)
+    
+    def isSequence(self):
+        return True
+    
+    def __add__(self, other):
+        return Concat(self, other)
+    
+    def __radd__(self, other):
+        return Concat(other, self)
+    
+    def __getitem__(self, i):
+        if _is_int(i):
+            i = IntVal(i, self.ctx)
+        return _to_expr_ref(self.ctx.solver.mkTerm(Kind.SEQ_NTH,self.ast,i.ast),self.ctx)
+
+    def at(self, i):
+        if _is_int(i):
+            i = IntVal(i, self.ctx)
+        return  SeqRef(self.ctx.solver.mkTerm(Kind.SEQ_AT, self.ast,i.ast),self.ctx)
+
+    def is_string(self):
+        return isinstance(self,StringRef)
+    
+
+
+
+class StringSortRef(SeqSortRef):
     """String sort."""
     def cast(self, val):
         """Try to cast `val` as a String.
@@ -1759,7 +1830,7 @@ class StringSortRef(SortRef):
 
 
 
-class StringRef(ExprRef):
+class StringRef(SeqRef):
     """String expressions"""
     def sort(self):
         return _sort(self.ctx, self.ast)
@@ -1767,22 +1838,22 @@ class StringRef(ExprRef):
     def isString(self):
         return True
 
-    def __add__(self, other):
-        """Create the SMT expression `self + other`.
+    # def __add__(self, other):
+    #     """Create the SMT expression `self + other`.
 
-        >>> x = String('x')
-        >>> y = String('y')
-        >>> x + y
-        +(x, y)
-        >>> (x + y).sort()
-        String
-        """
-        return Concat(self,other)
+    #     >>> x = String('x')
+    #     >>> y = String('y')
+    #     >>> x + y
+    #     +(x, y)
+    #     >>> (x + y).sort()
+    #     String
+    #     """
+    #     return Concat(self,other)
 
-    def __radd__(self, other):
-        """Create the SMT expression `other + self`
-        """
-        return Concat(other,self)
+    # def __radd__(self, other):
+    #     """Create the SMT expression `other + self`
+    #     """
+    #     return Concat(other,self)
     
     def __getitem__(self,i):
         if isinstance(i,int):
@@ -1838,31 +1909,39 @@ def Strings(names,ctx = None):
     return [String(name, ctx) for name in names]
 
 
-class SeqSortRef(SortRef):
-    def cast(self,val):
-        """Try to cast `val` as a String.
-        """
-        if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
-            val_s = val.sort()
-            if self.eq(val_s):
-                return val
-            if val_s.is_bool() and self.is_int():
-                return If(val, 1, 0)
-            if val_s.is_bool() and self.is_real():
-                return ToReal(If(val, 1, 0))
-            if val_s.is_int() and self.is_real():
-                return ToReal(val)
-            if debugging():
-                _assert(False, "SMT Integer/Real expression expected")
-        elif type(val) == str:
-            return StringVal(str(val))
-        else:
-            return None
 
 
 
+def SeqSort(s):
+    """Create a sequence sort over elements provided in the argument
+    >>> s = SeqSort(IntSort())
+    >>> s == Unit(IntVal(1)).sort()
+    True
+    """
+    return SeqSortRef(s.ctx.solver.mkSequenceSort(s.ast),s.ctx)
+
+
+
+# def Empty(s):
+#     """Create the empty sequence of the given sort
+#     >>> e4 = Empty(ReSort(SeqSort(IntSort())))
+#     >>> print(e4)
+#     Empty(ReSort(Seq(Int)))
+#     """
+#     # if isinstance(s, SeqSortRef):
+#     #     return SeqRef(s.ast, s.ctx)
+#     if isinstance(s, ReSortRef):
+#         return ReRef(s.ast, s.ctx)
+#     #raise Z3Exception("Non-sequence, non-regular expression sort passed to Empty")
+
+def is_seq(a):
+    """Return `True` if `a` is a Z3 sequence expression.
+    >>> print (is_seq(Unit(IntVal(0))))
+    True
+    >>> print (is_seq(StringVal("abc")))
+    True
+    """
+    return isinstance(a, SeqRef)
 
 def is_string(a):
     """Return `True` if `a` is a string expression.
@@ -1875,6 +1954,12 @@ def is_string(a):
     True
     """
     return isinstance(a, StringRef)
+
+def Unit(a):
+    """Create a singleton sequence"""
+    return SeqRef(a.ctx.solver.mkTerm(Kind.SEQ_UNIT,a.ast),a.ctx)
+
+
 
 def StringVal(val, ctx=None):
     """Return an SMT String value.
@@ -1890,8 +1975,9 @@ def StringVal(val, ctx=None):
     ctx = _get_ctx(ctx)
     return StringRef(ctx.solver.mkString(str(val)), ctx)
 
+
 def Length(s,ctx=None):
-    """obtain the length of a string s 
+    """obtain the length of a string or sequence s 
     >>> s = StringVal('s')
     >>> l = Length(s)
     >>> simplify(l)
@@ -1899,7 +1985,7 @@ def Length(s,ctx=None):
     """
     s = _py2expr(s)
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.STRING_LENGTH,s.ast),ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH,s.ast),ctx)
 
 def SubString(s,offset,length,ctx=None):
     """Extract substring or subsequence starting at offset"""
@@ -1908,6 +1994,25 @@ def SubString(s,offset,length,ctx=None):
     offset = _py2expr(offset)
     length = _py2expr(length)
     return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
+
+def SubSeq(s, offset, length):
+    s = _py2expr(s)
+    offset = _py2expr(offset)
+    length = _py2expr(length)
+    return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
+
+
+def Full():
+    """Create the regular expression that accepts the universal language
+    >>> e = Full(ReSort(SeqSort(IntSort())))
+    >>> print(e)
+    Full(ReSort(Seq(Int)))
+    >>> e1 = Full(ReSort(StringSort()))
+    >>> print(e1)
+    Full(ReSort(String))
+    """
+    #if isinstance(s, ReSortRef):
+    return ReRef(s.ctx.solver.mkRegexpAll(), s.ctx)
 
 def Contains(a,b,ctx=None):
     """check if a contains b
@@ -1921,7 +2026,9 @@ def Contains(a,b,ctx=None):
     ctx = _get_ctx(ctx)
     a = _py2expr(a)
     b = _py2expr(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS,a.ast,b.ast),ctx)
+    if is_string(a) and is_string(b):
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS,a.ast,b.ast),ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_CONTAINS,a.ast,b.ast),ctx)
 
 def PrefixOf(a,b,ctx=None):
     """check if a is a prefix of b
@@ -1935,7 +2042,9 @@ def PrefixOf(a,b,ctx=None):
     ctx = _get_ctx(ctx)
     a = _py2expr(a)
     b = _py2expr(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX,a.ast,b.ast),ctx)
+    if is_string(a) and is_string(b):
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX,a.ast,b.ast),ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_PREFIX,a.ast,b.ast),ctx)
 
 def SuffixOf(a,b,ctx=None):
     """check if a is a suffix of b
@@ -1949,7 +2058,9 @@ def SuffixOf(a,b,ctx=None):
     ctx = _get_ctx(ctx)
     a = _py2expr(a)
     b = _py2expr(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX,a.ast,b.ast),ctx)
+    if is_string(a) and is_string(b):
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX,a.ast,b.ast),ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_SUFFIX ,a.ast,b.ast),ctx)
 
 def IndexOf(s,substr,offset=None):
     """retrieves the index of substr in s starting at offset, if offset is missing retrieves the first occurence
@@ -1965,7 +2076,9 @@ def IndexOf(s,substr,offset=None):
     ctx = _get_ctx(None)
     if _is_int(offset):
         offset = IntVal(offset, ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.STRING_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
+    if is_string(s) and is_string(substr):
+        return ArithRef(ctx.solver.mkTerm(Kind.STRING_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
 
 def Replace(s,src,dst):
     """Replace the first occurence of src with dst in s
@@ -1974,7 +2087,9 @@ def Replace(s,src,dst):
     src = _py2expr(src)
     dst = _py2expr(dst)
     ctx = _get_ctx(None)
-    return StringRef(ctx.solver.mkTerm(Kind.STRING_REPLACE,s.ast,src.ast,dst.ast),ctx)
+    if is_string(s) and is_string(src) and is_string(dst):
+        return StringRef(ctx.solver.mkTerm(Kind.STRING_REPLACE,s.ast,src.ast,dst.ast),ctx)
+    return SeqRef(ctx.solver.mkTerm(Kind.SEQ_REPLACE,s.ast,src.ast,dst.ast),ctx)
 
 def StrToInt(s):
     """Convert string expression to int
@@ -2009,8 +2124,8 @@ class ReRef(ExprRef):
 
 
 def ReSort(s=None):
-    # if is_ast(s):
-    #     return ReSortRef(s.ctx.ref(),s.ctx)
+    if is_ast(s):
+        return ReSortRef(s ,s.ctx)
     if s is None or isinstance(s,Context):
         ctx = _get_ctx(s)
         return ReSortRef(ctx.solver.getRegExpSort(), ctx) 
@@ -4310,11 +4425,13 @@ def Concat(*args):
             break
     if debugging():
         _assert(
-            all([is_bv(a) or is_string(a) for a in args]),
-            "All arguments must be SMT bit-vector expressions.",
+            all([is_bv(a) or is_string(a) or is_seq(a) for a in args]),
+            "All arguments must be SMT bit-vector, string or sequence expressions.",
         )
     if is_string(args[0]):
         return StringRef(ctx.solver.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
+    if is_seq(args[0]):
+        return SeqRef(ctx.solver.mkTerm(Kind.SEQ_CONCAT,*[a.ast for a in args]))
     return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
 
 

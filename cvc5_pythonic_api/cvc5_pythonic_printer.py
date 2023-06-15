@@ -122,6 +122,7 @@ _cvc5_kinds_to_str = {
     Kind.REGEXP_RANGE: "Range",
     Kind.REGEXP_INTER: "Intersect",
     Kind.REGEXP_COMPLEMENT: "Complement",
+    Kind.REGEXP_ALL: "Full",
     Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
     Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
     Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
@@ -394,7 +395,7 @@ def _op_name(a):
     k = a.kind()
     n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER, Kind.CONST_STRING]:
+        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER, Kind.CONST_STRING, Kind.CONST_SEQUENCE]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
