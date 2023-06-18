@@ -1924,9 +1924,18 @@ def SeqSort(s):
 
 def Empty(s):
     """Create the empty sequence of the given sort
+    >>> e = Empty(StringSort())
+    >>> e2 = StringVal("")
+    >>> print(e.eq(e2))
+    True
+    >>> e3 = Empty(SeqSort(IntSort()))
+    >>> print(e3)
+    (as seq.empty (Seq (Seq Int)))()
     """
     if isinstance(s, ReSortRef):
         return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
+    if isinstance(s, StringSortRef):
+        return StringRef(s.ctx.solver.mkString(""),s.ctx)
     return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.ast), s.ctx)
     
 
