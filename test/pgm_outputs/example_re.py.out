@@ -8,3 +8,5 @@ no solution
 [a = "A"()]
 [a = "a"()]
 [a = ""()]
+no solution
+[a = ""()]

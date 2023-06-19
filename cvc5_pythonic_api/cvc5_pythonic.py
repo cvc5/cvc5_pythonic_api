@@ -2119,7 +2119,7 @@ def StrFromCode(c):
     """Convert code to a string"""
     if not is_expr(c):
         c = _py2expr(c)
-    return SeqRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
+    return StringRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
 
 
 
