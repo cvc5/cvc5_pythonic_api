@@ -110,8 +110,6 @@ _cvc5_kinds_to_str = {
     Kind.SET_MEMBER: "IsMember",
     Kind.STRING_TO_INT: "StrToInt",
     Kind.STRING_FROM_INT: "IntToStr",
-    # Kind.Seq_in_re: "InRe",
-    # Kind.Seq_to_re: "Re",
     Kind.STRING_TO_REGEXP: "StringToRegexp",
     Kind.STRING_IN_REGEXP: "StringInRegexp",
     Kind.REGEXP_LOOP: "RegexpLoop",
