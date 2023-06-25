@@ -188,7 +188,7 @@ _cvc5_infix = [
 ]
 
 _cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
-               Kind.BITVECTOR_NOT , Kind.FINITE_FIELD_NEG]
+               Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
 
 # Precedence
 _cvc5_precedence = {
