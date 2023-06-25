@@ -99,6 +99,7 @@ _cvc5_kinds_to_str = {
     Kind.SEQ_AT: "At",
     Kind.SEQ_NTH: "Nth",
     Kind.SEQ_INDEXOF: "IndexOf",
+    Kind.SEQ_UPDATE: "Update",
     Kind.SEQ_LENGTH: "Length",
     Kind.SET_SUBSET: "IsSubset",
     Kind.SET_MINUS: "SetDifference",
@@ -149,7 +150,8 @@ _cvc5_kinds_to_str = {
     Kind.STRING_CHARAT: "At",
     Kind.STRING_CONCAT: "+",
     Kind.STRING_LENGTH: "Length",
-    Kind.STRING_REPLACE: "Replace"
+    Kind.STRING_REPLACE: "Replace",
+    Kind.STRING_UPDATE: "StringUpdate"
     
 
 }
@@ -301,15 +303,6 @@ def _is_assoc(k):
             Kind.FINITE_FIELD_ADD,
             Kind.FINITE_FIELD_MULT,
             Kind.BITVECTOR_MULT}
-    # return (
-    #     k == Kind.BITVECTOR_OR
-    #     or k == Kind.BITVECTOR_XOR
-    #     or k == Kind.BITVECTOR_AND
-    #     or k == Kind.ADD
-    #     or k == Kind.BITVECTOR_ADD
-    #     or k == Kind.MULT
-    #     or k == Kind.BITVECTOR_MULT
-    # )
 
 
 def _is_left_assoc(k):

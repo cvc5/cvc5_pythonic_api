@@ -1837,23 +1837,6 @@ class StringRef(SeqRef):
     
     def isString(self):
         return True
-
-    # def __add__(self, other):
-    #     """Create the SMT expression `self + other`.
-
-    #     >>> x = String('x')
-    #     >>> y = String('y')
-    #     >>> x + y
-    #     +(x, y)
-    #     >>> (x + y).sort()
-    #     String
-    #     """
-    #     return Concat(self,other)
-
-    # def __radd__(self, other):
-    #     """Create the SMT expression `other + self`
-    #     """
-    #     return Concat(other,self)
     
     def __getitem__(self,i):
         if isinstance(i,int):
@@ -1889,7 +1872,9 @@ def StringSort(ctx=None):
 
 
 def String(name,ctx=None):
-
+    """Return a string constant named `name`. If `ctx=None`, then the global context is used.
+    >>> x = String('x')
+    """
     ctx = _get_ctx(ctx)
     e = ctx.get_var(name, StringSort(ctx))
     return StringRef(e, ctx)
@@ -2006,6 +1991,19 @@ def SubSeq(s, offset, length):
     length = _py2expr(length)
     return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
 
+def SeqUpdate(s,t,i):
+    """Update a sequence s by replacing its content starting at index i with sequence t. 
+    If the start index is negative or greater than the sequence size the result is s. 
+    >>> lst = Concat(Concat(Unit(IntVal(3)),Unit(IntVal(2))),Unit(IntVal(1)))
+    >>> simplify(lst)
+    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
+    >>> simplify(SeqUpdate(lst,Unit(IntVal(4)),2))
+    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 4))()
+    >>> simplify(SeqUpdate(lst,Unit(IntVal(1)),4))
+    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
+    """
+    i = _py2expr(i)
+    return SeqRef(t.ctx.solver.mkTerm(Kind.SEQ_UPDATE, s.ast, i.ast, t.ast ),t.ctx)
 
 def Full(ctx=None):
     """Create the regular expression that accepts the universal language
