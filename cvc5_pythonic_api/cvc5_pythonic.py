@@ -1986,7 +1986,7 @@ def SubString(s,offset,length,ctx=None):
     return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
 
 def SubSeq(s, offset, length):
-    """Extract substring or subsequence starting at offset"""
+    """Extract subsequence starting at offset"""
     s = _py2expr(s)
     offset = _py2expr(offset)
     length = _py2expr(length)
