@@ -1,5 +1,6 @@
 from cvc5_pythonic_api import *
 s, t, u = Consts('s t u', SeqSort(IntSort()))
+print(s.is_string())
 solve(Concat(s, Unit(IntVal(2))) == Concat(Unit(IntVal(1)), t))
 solve(PrefixOf(s.at(0),t),Length(s)>0)
 solve(s[0]> 5)

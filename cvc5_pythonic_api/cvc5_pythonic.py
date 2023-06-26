@@ -1954,7 +1954,7 @@ def Unit(a):
 def StringVal(val, ctx=None):
     """Return an SMT String value.
 
-    `val`is a string value
+    `val` is a string value
      If `ctx=None`, then the global context is used.
 
     >>> StringVal('hello')
@@ -1978,7 +1978,7 @@ def Length(s,ctx=None):
     return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH,s.ast),ctx)
 
 def SubString(s,offset,length,ctx=None):
-    """Extract substring or subsequence starting at offset"""
+    """Extract substring starting at offset"""
     ctx = _get_ctx(ctx)
     s = _py2expr(s)
     offset = _py2expr(offset)
@@ -1986,14 +1986,14 @@ def SubString(s,offset,length,ctx=None):
     return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
 
 def SubSeq(s, offset, length):
+    """Extract substring or subsequence starting at offset"""
     s = _py2expr(s)
     offset = _py2expr(offset)
     length = _py2expr(length)
     return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
 
 def SeqUpdate(s,t,i):
-    """Update a sequence s by replacing its content starting at index i with sequence t. 
-    If the start index is negative or greater than the sequence size the result is s. 
+    """Update a sequence s by replacing its content starting at index i with sequence t.  
     >>> lst = Concat(Concat(Unit(IntVal(3)),Unit(IntVal(2))),Unit(IntVal(1)))
     >>> simplify(lst)
     (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
@@ -2272,6 +2272,7 @@ def AllChar(regex_sort, ctx=None):
     """Create a regular expression that accepts all single character strings
     """
     return ReRef(regex_sort.ctx.solver.mkTerm(Kind.REGEXP_ALLCHAR),regex_sort.ctx)
+
 #########################################
 #
 # Arithmetic
