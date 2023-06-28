@@ -4416,7 +4416,7 @@ def BitVecs(names, bv, ctx=None):
 
 
 def Concat(*args):
-    """Create an SMT bit-vector, string or sequence concatenation expression.
+    """Create an SMT bit-vector, string, sequence or regular expression concatenation expression.
 
     >>> v = BitVecVal(1, 4)
     >>> Concat(v, v+1, v)
@@ -4438,13 +4438,15 @@ def Concat(*args):
             break
     if debugging():
         _assert(
-            all([is_bv(a) or is_string(a) or is_seq(a) for a in args]),
+            all([is_bv(a) or is_string(a) or is_seq(a) or is_re(a) for a in args]),
             "All arguments must be SMT bit-vector, string or sequence expressions.",
         )
     if is_string(args[0]):
         return StringRef(ctx.solver.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
     if is_seq(args[0]):
         return SeqRef(ctx.solver.mkTerm(Kind.SEQ_CONCAT,*[a.ast for a in args]))
+    if is_re(args[0]):
+        return ReRef(ctx.solver.mkTerm(Kind.REGEXP_CONCAT, *[a.ast for a in args]))
     return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
 
 
