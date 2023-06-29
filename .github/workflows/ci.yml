@@ -12,7 +12,16 @@ jobs:
 
     steps:
 
+    - name: Install system deps
+      shell: bash
+      run: |
+        sudo apt install black # python formatter
+
     - uses: actions/checkout@v2
+
+    - name: Check formatting
+      run: |
+        make check-fmt
 
     - uses: actions/checkout@v2
       with:
