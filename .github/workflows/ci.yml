@@ -20,11 +20,6 @@ jobs:
         src: "cvc5_pythonic_api"
         version: "23.3.0"
 
-    - name: Check formatting
-      run: |
-        black --version
-        make check-fmt
-
     - uses: actions/checkout@v2
       with:
         repository: cvc5/cvc5
