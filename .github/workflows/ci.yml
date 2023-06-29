@@ -12,12 +12,13 @@ jobs:
 
     steps:
 
-    - name: Install system deps
-      shell: bash
-      run: |
-        sudo apt install black # python formatter
-
     - uses: actions/checkout@v2
+
+    - uses: psf/black@stable
+      with:
+        options: "--check --verbose"
+        src: "cvc5_pythonic_api"
+        version: "23.3.0"
 
     - name: Check formatting
       run: |
