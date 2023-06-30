@@ -63,6 +63,7 @@ Differences with Z3py:
   * FiniteDomainSort
   * Fixedpoint API
   * SMT2 file support
+  * recursive functions
 * Not missing, but different
   * Options
     * as expected
