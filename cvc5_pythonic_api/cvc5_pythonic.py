@@ -55,7 +55,6 @@ Differences with Z3py:
   * Pseudo-boolean counting constraints
     * AtMost, AtLeast, PbLe, PbGe, PbEq
   * HTML integration
-  * String, Sequences, Regexes
   * User propagation hooks
   * Special relations:
     * PartialOrder, LinearOrder, TreeOrder, PiecewiseLinearOrder, TransitiveClosure
@@ -1742,28 +1741,6 @@ def Or(*args):
 #########################################
 
 class SeqSortRef(SortRef):
-    def cast(self,val):
-        """Try to cast `val` as a String.
-        """
-        if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
-            val_s = val.sort()
-            if self.eq(val_s):
-                return val
-            if val_s.is_bool() and self.is_int():
-                return If(val, 1, 0)
-            if val_s.is_bool() and self.is_real():
-                return ToReal(If(val, 1, 0))
-            if val_s.is_int() and self.is_real():
-                return ToReal(val)
-            if debugging():
-                _assert(False, "SMT Integer/Real expression expected")
-        elif type(val) == str:
-            return StringVal(str(val))
-        else:
-            return None
-    
     def is_string(self):
         """Determine if sort is a string
         >>> s = StringSort()
@@ -1801,6 +1778,17 @@ class SeqRef(ExprRef):
 
     def is_string(self):
         return isinstance(self,StringRef)
+    
+    def as_string(self):
+        """Return a string representation of sequence expression."""
+        return str(self.ast)
+    
+    def is_string_value(self):
+
+        return self.is_string() and self.ast.getKind() == Kind.CONST_STRING
+
+
+
     
 
 
@@ -1873,7 +1861,9 @@ def StringSort(ctx=None):
 
 def String(name,ctx=None):
     """Return a string constant named `name`. If `ctx=None`, then the global context is used.
-    >>> x = String('x')
+    >>> s = String('s')
+    >>> s.sort()
+    String
     """
     ctx = _get_ctx(ctx)
     e = ctx.get_var(name, StringSort(ctx))
@@ -1946,7 +1936,11 @@ def is_string(a):
     return isinstance(a, StringRef)
 
 def Unit(a):
-    """Create a singleton sequence"""
+    """Create a singleton sequence
+    >>> i = Unit(IntVal(1))
+    >>> i.sort()
+    (Seq Int)
+    """
     return SeqRef(a.ctx.solver.mkTerm(Kind.SEQ_UNIT,a.ast),a.ctx)
 
 
@@ -1968,6 +1962,7 @@ def StringVal(val, ctx=None):
 
 def Length(s,ctx=None):
     """obtain the length of a string or sequence s 
+
     >>> s = StringVal('s')
     >>> l = Length(s)
     >>> simplify(l)
@@ -1978,7 +1973,13 @@ def Length(s,ctx=None):
     return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH,s.ast),ctx)
 
 def SubString(s,offset,length,ctx=None):
-    """Extract substring starting at offset"""
+    """Extract substring starting at offset of size length
+
+    >>> simplify(SubString('hello',3,2))
+    "lo"()
+    >>> simplify(SubString(StringVal('hello'),3,2))
+    "lo"()
+    """
     ctx = _get_ctx(ctx)
     s = _py2expr(s)
     offset = _py2expr(offset)
@@ -1986,14 +1987,22 @@ def SubString(s,offset,length,ctx=None):
     return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
 
 def SubSeq(s, offset, length):
-    """Extract subsequence starting at offset"""
+    """Extract subsequence starting at offset
+    
+    >>> seq = Concat(Unit(IntVal(1)),Unit(IntVal(2)))
+    >>> simplify(SubSeq(seq,1,1))
+    (seq.unit 2)()
+    >>> simplify(SubSeq(seq,1,0))
+    (as seq.empty (Seq Int))()
+    """
     s = _py2expr(s)
     offset = _py2expr(offset)
     length = _py2expr(length)
     return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
 
 def SeqUpdate(s,t,i):
-    """Update a sequence s by replacing its content starting at index i with sequence t.  
+    """Update a sequence s by replacing its content starting at index i with sequence t.
+
     >>> lst = Concat(Concat(Unit(IntVal(3)),Unit(IntVal(2))),Unit(IntVal(1)))
     >>> simplify(lst)
     (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
@@ -2007,15 +2016,20 @@ def SeqUpdate(s,t,i):
 
 def Full(ctx=None):
     """Create the regular expression that accepts the universal language
+
     >>> e = Full()
     >>> print(e)
     Full()
+    >>> s = String('s')
+    >>> simplify(InRe(s,e))
+    True
     """
     ctx = _get_ctx(ctx)
     return ReRef(ctx.solver.mkRegexpAll(), ctx)
 
 def Contains(a,b,ctx=None):
     """check if a contains b
+
     >>> simplify(Contains('ab','a'))
     True
     >>> a,b,c = Strings("a b c")
@@ -2032,6 +2046,7 @@ def Contains(a,b,ctx=None):
 
 def PrefixOf(a,b,ctx=None):
     """check if a is a prefix of b
+
     >>> s1 = PrefixOf("ab","abc")
     >>> simplify(s1)
     True
@@ -2048,6 +2063,7 @@ def PrefixOf(a,b,ctx=None):
 
 def SuffixOf(a,b,ctx=None):
     """check if a is a suffix of b
+
     >>> s1 = SuffixOf("ab","abc")
     >>> simplify(s1)
     False
@@ -2064,6 +2080,9 @@ def SuffixOf(a,b,ctx=None):
 
 def IndexOf(s,substr,offset=None):
     """retrieves the index of substr in s starting at offset, if offset is missing retrieves the first occurence
+
+    >>> simplify(IndexOf("abcabc", "bc"))
+    1
     >>> simplify(IndexOf("abcabc", "bc", 0))
     1
     >>> simplify(IndexOf("abcabc", "bc", 2))
@@ -2082,6 +2101,14 @@ def IndexOf(s,substr,offset=None):
 
 def Replace(s,src,dst):
     """Replace the first occurence of src with dst in s
+
+    >>> simplify(Replace('hello','l','?'))
+    "he?lo"()
+    >>> seq = Concat(Unit(IntVal(1)),Unit(IntVal(2)))
+    >>> seq
+    Concat(Unit(1), Unit(2))
+    >>> simplify(Replace(seq,Unit(IntVal(1)),Unit(IntVal(5))))
+    (seq.++ (seq.unit 5) (seq.unit 2))()
     """
     s = _py2expr(s)
     src = _py2expr(src)
@@ -2096,25 +2123,47 @@ def StrToInt(s):
     >>> a = StrToInt('1')
     >>> simplify(a==1)
     True
+    >>> b = StrToInt('123')
+    >>> simplify(b)
+    123
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
     return ArithRef(ctx.solver.mkTerm(Kind.STRING_TO_INT, s.ast),ctx)
 
 def IntToStr(s):
-    """Convert integer expression to string"""
+    """Convert integer expression to string
+    
+    >>> b = IntToStr(55)
+    >>> simplify(b)
+    "55"()
+    >>> b = IntToStr(-5)
+    >>> simplify(b)
+    ""()
+    """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
     return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast ),ctx)
 
 def StrToCode(s):
-    """Convert a unit length string to integer code"""
+    """Convert a unit length string to integer code
+    
+    >>> simplify(StrToCode('a'))
+    97
+    >>> simplify(StrToCode('*'))
+    42
+    """
     if not is_expr(s):
         s = _py2expr(s)
     return ArithRef(s.ctx.solver.mkTerm(Kind.STRING_TO_CODE,s.ast ), s.ctx)
 
 def StrFromCode(c):
-    """Convert code to a string"""
+    """Convert code to a string
+    
+    >>> a = StrFromCode(97)
+    >>> simplify(a == 'a')
+    True
+    """
     if not is_expr(c):
         c = _py2expr(c)
     return StringRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
