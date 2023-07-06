@@ -98,7 +98,7 @@ _cvc5_kinds_to_str = {
     Kind.SEQ_REPLACE: "Replace",
     Kind.SEQ_EXTRACT: "Extract",
     Kind.SEQ_AT: "At",
-    Kind.SEQ_NTH: "Nth",
+    Kind.SEQ_NTH: "[]",
     Kind.SEQ_INDEXOF: "IndexOf",
     Kind.SEQ_UPDATE: "Update",
     Kind.SEQ_LENGTH: "Length",
@@ -155,7 +155,9 @@ _cvc5_kinds_to_str = {
     Kind.STRING_CONCAT: "+",
     Kind.STRING_LENGTH: "Length",
     Kind.STRING_REPLACE: "Replace",
-    Kind.STRING_UPDATE: "StringUpdate"
+    Kind.STRING_UPDATE: "StringUpdate",
+    Kind.STRING_LEQ: "<=",
+    Kind.STRING_LT: "<"
     
 
 }
@@ -191,6 +193,9 @@ _cvc5_infix = [
     Kind.BITVECTOR_SHL,
     Kind.FINITE_FIELD_ADD,
     Kind.FINITE_FIELD_MULT,
+    Kind.STRING_LT,
+    Kind.STRING_LEQ,
+    Kind.SEQ_NTH
 ]
 
 _cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
