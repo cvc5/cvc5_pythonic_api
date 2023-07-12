@@ -3707,7 +3707,6 @@ def Cbrt(a, ctx=None):
     return a ** "1/3"
 
 
-
 def Add(*args):
     """Create an SMT addition.
 

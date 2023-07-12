@@ -418,7 +418,6 @@ def _op_name(a):
             Kind.CONST_INTEGER,
             Kind.CONST_STRING,
             Kind.CONST_SEQUENCE,
-
         ]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
