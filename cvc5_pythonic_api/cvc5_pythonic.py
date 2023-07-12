@@ -189,15 +189,15 @@ def main_ctx():
     >>> x.ctx == main_ctx()
     True
     """
-# Pending multiple solvers
-#    >>> c = Context()
-#    >>> c == main_ctx()
-#    False
-#    >>> x2 = Real('x', c)
-#    >>> x2.ctx == c
-#    True
-#    >>> eq(x, x2)
-#    False
+    # Pending multiple solvers
+    #    >>> c = Context()
+    #    >>> c == main_ctx()
+    #    False
+    #    >>> x2 = Real('x', c)
+    #    >>> x2.ctx == c
+    #    True
+    #    >>> eq(x, x2)
+    #    False
     global _main_ctx
     if _main_ctx is None:
         _main_ctx = Context()
@@ -252,7 +252,7 @@ class ExprRef(object):
         return obj_to_string(self)
 
     def __nonzero__(self):
-        """ Convert this expression to a python boolean. See __bool__.
+        """Convert this expression to a python boolean. See __bool__.
 
         >>> (BoolVal(False) == BoolVal(False)).__nonzero__()
         True
@@ -260,7 +260,7 @@ class ExprRef(object):
         return self.__bool__()
 
     def __bool__(self):
-        """ Convert this expression to a python boolean.
+        """Convert this expression to a python boolean.
 
         Produces
         * the appropriate value for a BoolVal.
@@ -766,9 +766,9 @@ def _to_sort_ref(s, ctx):
     if debugging():
         instance_check(s, pc.Sort)
     if s.isString():
-        return StringSortRef(s,ctx)
+        return StringSortRef(s, ctx)
     if s.isSequence():
-        return SeqSortRef(s,ctx)
+        return SeqSortRef(s, ctx)
     if s.isBoolean():
         return BoolSortRef(s, ctx)
     elif s.isInteger() or s.isReal():
@@ -882,9 +882,7 @@ def _higherorder_apply(func, args, kind):
     for i in range(num):
         tmp = func.domain(i).cast(args[i])
         _args.append(tmp.as_ast())
-    return _to_expr_ref(
-        func.ctx.solver.mkTerm(kind, func.ast, *_args), func.ctx
-    )
+    return _to_expr_ref(func.ctx.solver.mkTerm(kind, func.ast, *_args), func.ctx)
 
 
 def is_func_decl(a):
@@ -898,6 +896,7 @@ def is_func_decl(a):
     False
     """
     return isinstance(a, FuncDeclRef)
+
 
 def Function(name, *sig):
     """Create a new SMT uninterpreted function with the given sorts.
@@ -1002,14 +1001,14 @@ def _to_expr_ref(a, ctx, r=None):
     if sort.isSet():
         return SetRef(ast, ctx, r)
     if sort.isString():
-        return StringRef(ast,ctx,r)
+        return StringRef(ast, ctx, r)
     if sort.isSequence():
-        return SeqRef(ast,ctx,r)
+        return SeqRef(ast, ctx, r)
     return ExprRef(ast, ctx, r)
 
 
 def _coerce_expr_merge(s, a):
-    """ Return a sort common to the sort `s` and the term `a`'s sort
+    """Return a sort common to the sort `s` and the term `a`'s sort
 
     >>> a = Int('a')
     >>> b = Real('b')
@@ -1039,7 +1038,7 @@ def _coerce_expr_merge(s, a):
 
 
 def _coerce_exprs(a, b, ctx=None):
-    """ Return a sort common to that of `a` and `b`.
+    """Return a sort common to that of `a` and `b`.
 
     Used in binary term-maker functions.
 
@@ -1069,7 +1068,7 @@ def _coerce_exprs(a, b, ctx=None):
 
 
 def _coerce_expr_list(alist, ctx=None):
-    """ Return a sort common to all items in the list.
+    """Return a sort common to all items in the list.
 
     Used in n-ary term-maker functions.
 
@@ -1094,7 +1093,7 @@ def _coerce_expr_list(alist, ctx=None):
 
 
 def _nary_kind_builder(kind, *args):
-    """ Helper for defining n-ary builders where args can represent a list of
+    """Helper for defining n-ary builders where args can represent a list of
     expressions, either as a python list or tuple, or as a var-arg sequence of
     expressions.
 
@@ -1689,7 +1688,7 @@ def Not(a, ctx=None):
 
 
 def mk_not(a):
-    """ Negate a boolean expression.
+    """Negate a boolean expression.
     Strips a negation if one is already present
 
     >>> x = Bool('x')
@@ -1740,6 +1739,7 @@ def Or(*args):
 #
 #########################################
 
+
 class SeqSortRef(SortRef):
     def is_string(self):
         """Determine if sort is a string
@@ -1751,16 +1751,18 @@ class SeqSortRef(SortRef):
         >>> s.is_string()
         False
         """
-        return isinstance(self,StringSortRef)
-    
+        return isinstance(self, StringSortRef)
+
+
 class SeqRef(ExprRef):
     """Sequence Expressions"""
+
     def sort(self):
         return _sort(self.ctx, self.ast)
-    
+
     def isSequence(self):
         return True
-    
+
     def __add__(self, other):
         """Concatenation of two sequences.
 
@@ -1771,38 +1773,50 @@ class SeqRef(ExprRef):
         (Seq Real)
         """
         return Concat(self, other)
-    
+
     def __radd__(self, other):
         return Concat(other, self)
-    
+
     def __getitem__(self, i):
         """Return the SMT expression `self[arg]`
-        
+
         >>> seq = Const('seq',SeqSort(IntSort()))
         >>> seq[0]
         seq [] 0
+        >>> seq[0].sort()
+        Int
         """
         if _is_int(i):
             i = IntVal(i, self.ctx)
-        return _to_expr_ref(self.ctx.solver.mkTerm(Kind.SEQ_NTH,self.ast,i.ast),self.ctx)
+        return _to_expr_ref(
+            self.ctx.solver.mkTerm(Kind.SEQ_NTH, self.ast, i.ast), self.ctx
+        )
 
     def at(self, i):
+        """Return the sequence at index i
+
+        >>> seq = Const('seq',SeqSort(IntSort()))
+        >>> seq.at(0)
+        At(seq, 0)
+        >>> seq.at(0).sort()
+        (Seq Int)
+        """
         if _is_int(i):
             i = IntVal(i, self.ctx)
-        return  SeqRef(self.ctx.solver.mkTerm(Kind.SEQ_AT, self.ast,i.ast),self.ctx)
+        return SeqRef(self.ctx.solver.mkTerm(Kind.SEQ_AT, self.ast, i.ast), self.ctx)
 
     def is_string(self):
-        return isinstance(self,StringRef)
-    
+        return isinstance(self, StringRef)
+
     def as_string(self):
         """Return a string representation of sequence expression.
-        
+
         >>> s = Unit(IntVal(1)) + Unit(IntVal(2))
         >>> s.as_string()
         '(str.++ (seq.unit 1) (seq.unit 2))'
         """
         return str(self.ast)
-    
+
     def is_string_value(self):
         """Return True if self is a string value
 
@@ -1816,13 +1830,9 @@ class SeqRef(ExprRef):
         return self.is_string() and self.ast.getKind() == Kind.CONST_STRING
 
 
-
-    
-
-
-
 class StringSortRef(SeqSortRef):
     """String sort."""
+
     def cast(self, val):
         """Try to cast `val` as a String.
 
@@ -1852,18 +1862,16 @@ class StringSortRef(SeqSortRef):
             return StringVal(str(val))
 
 
-
-
 class StringRef(SeqRef):
     """String expressions"""
 
     def sort(self):
         return _sort(self.ctx, self.ast)
-    
+
     def isString(self):
         return True
-    
-    def __getitem__(self,i):
+
+    def __getitem__(self, i):
         """Return string character at i
 
         >>> StringVal("hello")[0]
@@ -1871,48 +1879,59 @@ class StringRef(SeqRef):
         >>> simplify(StringVal("hello")[0])
         "h"()
         """
-        if isinstance(i,int):
-            i = IntVal(i,self.ctx)
-        return StringRef(self.ctx.solver.mkTerm(Kind.STRING_CHARAT,self.ast,i.ast),self.ctx)
-    
-    def at(self,i):
+        if isinstance(i, int):
+            i = IntVal(i, self.ctx)
+        return StringRef(
+            self.ctx.solver.mkTerm(Kind.STRING_CHARAT, self.ast, i.ast), self.ctx
+        )
+
+    def at(self, i):
         return self.__getitem__(i)
 
-    def __le__(self,other):
+    def __le__(self, other):
         """Create the SMT expression `self <= other` based on a lexiographic ordering.
 
         >>> s,t = Strings('s t')
         >>> s <= t
         s <= t
         """
-        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LEQ ,self.ast,other.ast),self.ctx)
-    
-    def __lt__(self,other):
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.STRING_LEQ, self.ast, other.ast), self.ctx
+        )
+
+    def __lt__(self, other):
         """Create the SMT expression `self < other` based on a lexiographic ordering.
-        
+
         >>> s,t = Strings('s t')
         >>> s < t
         s < t
         """
-        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LT ,self.ast,other.ast),self.ctx)
-    
-    def __ge__(self,other):
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.STRING_LT, self.ast, other.ast), self.ctx
+        )
+
+    def __ge__(self, other):
         """Create the SMT expression `other <= self` based on a lexiographic ordering.
-        
+
         >>> s,t = Strings('s t')
         >>> s >= t
         t <= s
         """
-        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LEQ,other.ast,self.ast),self.ctx)
-    
-    def __gt__(self,other):
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.STRING_LEQ, other.ast, self.ast), self.ctx
+        )
+
+    def __gt__(self, other):
         """Create the SMT expression `other < self` based on a lexiographic ordering.
-        
+
         >>> s,t = Strings('s t')
         >>> s > t
         t < s
         """
-        return BoolRef(self.ctx.solver.mkTerm(Kind.STRING_LT ,other.ast,self.ast),self.ctx)
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.STRING_LT, other.ast, self.ast), self.ctx
+        )
+
 
 def StringSort(ctx=None):
     """Return the string sort in the given context. If `ctx=None`, then the global context is used.
@@ -1927,7 +1946,7 @@ def StringSort(ctx=None):
     return StringSortRef(ctx.solver.getStringSort(), ctx)
 
 
-def String(name,ctx=None):
+def String(name, ctx=None):
     """Return a string constant named `name`. If `ctx=None`, then the global context is used.
 
     >>> s = String('s')
@@ -1938,7 +1957,8 @@ def String(name,ctx=None):
     e = ctx.get_var(name, StringSort(ctx))
     return StringRef(e, ctx)
 
-def Strings(names,ctx = None):
+
+def Strings(names, ctx=None):
     """Return a tuple of string constants.
 
     >>> x, y, z = Strings('x y z')
@@ -1953,17 +1973,13 @@ def Strings(names,ctx = None):
     return [String(name, ctx) for name in names]
 
 
-
-
-
 def SeqSort(s):
     """Create a sequence sort over elements provided in the argument
     >>> s = SeqSort(IntSort())
     >>> s == Unit(IntVal(1)).sort()
     True
     """
-    return SeqSortRef(s.ctx.solver.mkSequenceSort(s.ast),s.ctx)
-
+    return SeqSortRef(s.ctx.solver.mkSequenceSort(s.ast), s.ctx)
 
 
 def Empty(s):
@@ -1980,9 +1996,9 @@ def Empty(s):
     if isinstance(s, ReSortRef):
         return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
     if isinstance(s, StringSortRef):
-        return StringRef(s.ctx.solver.mkString(""),s.ctx)
+        return StringRef(s.ctx.solver.mkString(""), s.ctx)
     return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.ast), s.ctx)
-    
+
 
 def is_seq(a):
     """Return `True` if `a` is a sequence expression.
@@ -1993,6 +2009,7 @@ def is_seq(a):
     True
     """
     return isinstance(a, SeqRef)
+
 
 def is_string(a):
     """Return `True` if `a` is a string expression.
@@ -2006,6 +2023,7 @@ def is_string(a):
     """
     return isinstance(a, StringRef)
 
+
 def Unit(a):
     """Create a singleton sequence
 
@@ -2013,8 +2031,7 @@ def Unit(a):
     >>> i.sort()
     (Seq Int)
     """
-    return SeqRef(a.ctx.solver.mkTerm(Kind.SEQ_UNIT,a.ast),a.ctx)
-
+    return SeqRef(a.ctx.solver.mkTerm(Kind.SEQ_UNIT, a.ast), a.ctx)
 
 
 def StringVal(val, ctx=None):
@@ -2032,8 +2049,8 @@ def StringVal(val, ctx=None):
     return StringRef(ctx.solver.mkString(str(val)), ctx)
 
 
-def Length(s,ctx=None):
-    """obtain the length of a string or sequence s 
+def Length(s, ctx=None):
+    """obtain the length of a string or sequence s
 
     >>> s = StringVal('s')
     >>> l = Length(s)
@@ -2042,9 +2059,10 @@ def Length(s,ctx=None):
     """
     s = _py2expr(s)
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH,s.ast),ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH, s.ast), ctx)
 
-def SubString(s,offset,length,ctx=None):
+
+def SubString(s, offset, length, ctx=None):
     """Extract substring starting at offset of size length
 
     >>> simplify(SubString('hello',3,2))
@@ -2056,11 +2074,14 @@ def SubString(s,offset,length,ctx=None):
     s = _py2expr(s)
     offset = _py2expr(offset)
     length = _py2expr(length)
-    return StringRef(ctx.solver.mkTerm(Kind.STRING_SUBSTR,s.ast,offset.ast,length.ast),ctx)
+    return StringRef(
+        ctx.solver.mkTerm(Kind.STRING_SUBSTR, s.ast, offset.ast, length.ast), ctx
+    )
+
 
 def SubSeq(s, offset, length):
     """Extract subsequence starting at offset
-    
+
     >>> seq = Concat(Unit(IntVal(1)),Unit(IntVal(2)))
     >>> simplify(SubSeq(seq,1,1))
     (seq.unit 2)()
@@ -2070,21 +2091,25 @@ def SubSeq(s, offset, length):
     s = _py2expr(s)
     offset = _py2expr(offset)
     length = _py2expr(length)
-    return SeqRef(s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT,s.ast,offset.ast,length.ast),s.ctx)
+    return SeqRef(
+        s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT, s.ast, offset.ast, length.ast), s.ctx
+    )
 
-def SeqUpdate(s,t,i):
+
+def SeqUpdate(s, t, i):
     """Update a sequence s by replacing its content starting at index i with sequence t.
 
-    >>> lst = Concat(Concat(Unit(IntVal(3)),Unit(IntVal(2))),Unit(IntVal(1)))
+    >>> lst = Unit(IntVal(1)) + Unit(IntVal(2)) + Unit(IntVal(3))
     >>> simplify(lst)
-    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
+    (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))()
     >>> simplify(SeqUpdate(lst,Unit(IntVal(4)),2))
-    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 4))()
+    (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 4))()
     >>> simplify(SeqUpdate(lst,Unit(IntVal(1)),4))
-    (seq.++ (seq.unit 3) (seq.unit 2) (seq.unit 1))()
+    (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))()
     """
     i = _py2expr(i)
-    return SeqRef(t.ctx.solver.mkTerm(Kind.SEQ_UPDATE, s.ast, i.ast, t.ast ),t.ctx)
+    return SeqRef(t.ctx.solver.mkTerm(Kind.SEQ_UPDATE, s.ast, i.ast, t.ast), t.ctx)
+
 
 def Full(ctx=None):
     """Create the regular expression that accepts the universal language
@@ -2099,7 +2124,8 @@ def Full(ctx=None):
     ctx = _get_ctx(ctx)
     return ReRef(ctx.solver.mkRegexpAll(), ctx)
 
-def Contains(a,b,ctx=None):
+
+def Contains(a, b, ctx=None):
     """check if a contains b
 
     >>> simplify(Contains('ab','a'))
@@ -2113,10 +2139,11 @@ def Contains(a,b,ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS,a.ast,b.ast),ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_CONTAINS,a.ast,b.ast),ctx)
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS, a.ast, b.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_CONTAINS, a.ast, b.ast), ctx)
 
-def PrefixOf(a,b,ctx=None):
+
+def PrefixOf(a, b, ctx=None):
     """check if a is a prefix of b
 
     >>> s1 = PrefixOf("ab","abc")
@@ -2130,10 +2157,11 @@ def PrefixOf(a,b,ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX,a.ast,b.ast),ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_PREFIX,a.ast,b.ast),ctx)
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX, a.ast, b.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_PREFIX, a.ast, b.ast), ctx)
 
-def SuffixOf(a,b,ctx=None):
+
+def SuffixOf(a, b, ctx=None):
     """check if a is a suffix of b
 
     >>> s1 = SuffixOf("ab","abc")
@@ -2147,10 +2175,11 @@ def SuffixOf(a,b,ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX,a.ast,b.ast),ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_SUFFIX ,a.ast,b.ast),ctx)
+        return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX, a.ast, b.ast), ctx)
+    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_SUFFIX, a.ast, b.ast), ctx)
 
-def IndexOf(s,substr,offset=None):
+
+def IndexOf(s, substr, offset=None):
     """retrieves the index of substr in s starting at offset, if offset is missing retrieves the first occurence
 
     >>> simplify(IndexOf("abcabc", "bc"))
@@ -2168,10 +2197,15 @@ def IndexOf(s,substr,offset=None):
     if _is_int(offset):
         offset = IntVal(offset, ctx)
     if is_string(s) and is_string(substr):
-        return ArithRef(ctx.solver.mkTerm(Kind.STRING_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_INDEXOF,s.ast,substr.ast,offset.ast),ctx)
+        return ArithRef(
+            ctx.solver.mkTerm(Kind.STRING_INDEXOF, s.ast, substr.ast, offset.ast), ctx
+        )
+    return ArithRef(
+        ctx.solver.mkTerm(Kind.SEQ_INDEXOF, s.ast, substr.ast, offset.ast), ctx
+    )
 
-def Replace(s,src,dst):
+
+def Replace(s, src, dst):
     """Replace the first occurence of src with dst in s
 
     >>> simplify(Replace('hello','l','?'))
@@ -2187,8 +2221,11 @@ def Replace(s,src,dst):
     dst = _py2expr(dst)
     ctx = _get_ctx(None)
     if is_string(s) and is_string(src) and is_string(dst):
-        return StringRef(ctx.solver.mkTerm(Kind.STRING_REPLACE,s.ast,src.ast,dst.ast),ctx)
-    return SeqRef(ctx.solver.mkTerm(Kind.SEQ_REPLACE,s.ast,src.ast,dst.ast),ctx)
+        return StringRef(
+            ctx.solver.mkTerm(Kind.STRING_REPLACE, s.ast, src.ast, dst.ast), ctx
+        )
+    return SeqRef(ctx.solver.mkTerm(Kind.SEQ_REPLACE, s.ast, src.ast, dst.ast), ctx)
+
 
 def StrToInt(s):
     """Convert string expression to int
@@ -2202,11 +2239,12 @@ def StrToInt(s):
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.STRING_TO_INT, s.ast),ctx)
+    return ArithRef(ctx.solver.mkTerm(Kind.STRING_TO_INT, s.ast), ctx)
+
 
 def IntToStr(s):
     """Convert integer expression to string
-    
+
     >>> b = IntToStr(55)
     >>> simplify(b)
     "55"()
@@ -2216,11 +2254,12 @@ def IntToStr(s):
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
-    return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast ),ctx)
+    return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast), ctx)
+
 
 def StrToCode(s):
     """Convert a unit length string to integer code
-    
+
     >>> simplify(StrToCode('a'))
     97
     >>> simplify(StrToCode('*'))
@@ -2228,11 +2267,12 @@ def StrToCode(s):
     """
     if not is_expr(s):
         s = _py2expr(s)
-    return ArithRef(s.ctx.solver.mkTerm(Kind.STRING_TO_CODE,s.ast ), s.ctx)
+    return ArithRef(s.ctx.solver.mkTerm(Kind.STRING_TO_CODE, s.ast), s.ctx)
+
 
 def StrFromCode(c):
     """Convert code to a string
-    
+
     >>> a = StrFromCode(97)
     >>> simplify(a == 'a')
     True
@@ -2240,7 +2280,6 @@ def StrFromCode(c):
     if not is_expr(c):
         c = _py2expr(c)
     return StringRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
-
 
 
 #########################################
@@ -2253,10 +2292,11 @@ def StrFromCode(c):
 class ReSortRef(SortRef):
     """Regular expression sort."""
 
+
 class ReRef(ExprRef):
     """Regular expressions"""
 
-    def __add__(self,other):
+    def __add__(self, other):
         """Create the SMT expression `self + other`
 
         >>> r1 = Re('a')
@@ -2266,8 +2306,7 @@ class ReRef(ExprRef):
         >>> is_re(r1+r2)
         True
         """
-        return Union(self,other)
-
+        return Union(self, other)
 
 
 def ReSort(ctx=None):
@@ -2277,13 +2316,14 @@ def ReSort(ctx=None):
     RegLan
     """
 
-    if ctx is None or isinstance(ctx,Context):
+    if ctx is None or isinstance(ctx, Context):
         ctx = _get_ctx(ctx)
-        return ReSortRef(ctx.solver.getRegExpSort(), ctx) 
-    
-def Re(s,ctx=None):
+        return ReSortRef(ctx.solver.getRegExpSort(), ctx)
+
+
+def Re(s, ctx=None):
     """The regular expression that accepts the string s
-    
+
     >>> re = Re('a')
     >>> simplify(InRe('a',re))
     True
@@ -2291,7 +2331,8 @@ def Re(s,ctx=None):
     False
     """
     s = _py2expr(s)
-    return ReRef(s.ctx.solver.mkTerm(Kind.STRING_TO_REGEXP,s.ast),s.ctx)
+    return ReRef(s.ctx.solver.mkTerm(Kind.STRING_TO_REGEXP, s.ast), s.ctx)
+
 
 def is_re(s):
     """Retrun `True` if `s` is a re expression
@@ -2304,7 +2345,8 @@ def is_re(s):
     """
     return isinstance(s, ReRef)
 
-def InRe(s,re):
+
+def InRe(s, re):
     """Create regular expression membership test
 
     >>> re = Union(Re("a"),Re("b"))
@@ -2316,7 +2358,8 @@ def InRe(s,re):
     False
     """
     s = _py2expr(s)
-    return BoolRef(s.ctx.solver.mkTerm(Kind.STRING_IN_REGEXP,s.ast,re.ast),s.ctx)
+    return BoolRef(s.ctx.solver.mkTerm(Kind.STRING_IN_REGEXP, s.ast, re.ast), s.ctx)
+
 
 def Union(*args):
     """create union of regular expressions
@@ -2334,10 +2377,11 @@ def Union(*args):
     if sz == 1:
         return args[0]
     ctx = args[0].ctx
-    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION,args[0].ast,args[1].ast),ctx)
-    for i in range(2,sz):
-        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION,v.ast,args[i].ast),ctx)
+    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION, args[0].ast, args[1].ast), ctx)
+    for i in range(2, sz):
+        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION, v.ast, args[i].ast), ctx)
     return v
+
 
 def Intersect(*args):
     """Create intersection of regular expressions.
@@ -2356,11 +2400,11 @@ def Intersect(*args):
     if sz == 1:
         return args[0]
     ctx = args[0].ctx
-    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER ,args[0].ast,args[1].ast),ctx)
-    for i in range(2,sz):
-        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER ,v.ast,args[i].ast),ctx)
+    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER, args[0].ast, args[1].ast), ctx)
+    for i in range(2, sz):
+        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER, v.ast, args[i].ast), ctx)
     return v
-    
+
 
 def Option(re):
     """Create the regular expression that optionally accepts the argument.
@@ -2373,11 +2417,12 @@ def Option(re):
     >>> print(simplify(InRe("aa", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_OPT, re.ast),re.ctx)
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_OPT, re.ast), re.ctx)
+
 
 def Complement(re):
     """Create the complement regular expression.
-    
+
     >>> re = Re('a')
     >>> comp_re = Complement(re)
     >>> simplify(InRe('a',comp_re))
@@ -2385,7 +2430,8 @@ def Complement(re):
     >>> simplify(InRe('aa',comp_re))
     True
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT,re.ast),re.ctx)
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT, re.ast), re.ctx)
+
 
 def Plus(re):
     """Create the regular expression accepting one or more repetitions of argument.
@@ -2398,8 +2444,8 @@ def Plus(re):
     >>> print(simplify(InRe("", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_PLUS,re.ast),re.ctx)
-    
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_PLUS, re.ast), re.ctx)
+
 
 def Star(re):
     """Create the regular expression accepting zero or more repetitions of argument.
@@ -2412,7 +2458,8 @@ def Star(re):
     >>> print(simplify(InRe("", re)))
     True
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_STAR,re.ast),re.ctx)
+    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_STAR, re.ast), re.ctx)
+
 
 def Loop(re, lo, hi=0):
     """Create the regular expression accepting between a lower and upper bound repetitions
@@ -2425,7 +2472,11 @@ def Loop(re, lo, hi=0):
     >>> print(simplify(InRe("", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(re.ctx.solver.mkOp(Kind.REGEXP_LOOP, lo, hi),re.ast),re.ctx)
+    return ReRef(
+        re.ctx.solver.mkTerm(re.ctx.solver.mkOp(Kind.REGEXP_LOOP, lo, hi), re.ast),
+        re.ctx,
+    )
+
 
 def Range(lo, hi, ctx=None):
     """Create the range regular expression over two sequences of length 1
@@ -2436,9 +2487,10 @@ def Range(lo, hi, ctx=None):
     >>> print(simplify(InRe("bb", range)))
     False
     """
-    lo = _py2expr(lo,ctx)
-    hi = _py2expr(hi,ctx)
-    return ReRef(lo.ctx.solver.mkTerm(Kind.REGEXP_RANGE,lo.ast,hi.ast),lo.ctx)
+    lo = _py2expr(lo, ctx)
+    hi = _py2expr(hi, ctx)
+    return ReRef(lo.ctx.solver.mkTerm(Kind.REGEXP_RANGE, lo.ast, hi.ast), lo.ctx)
+
 
 def Diff(a, b, ctx=None):
     """Create the difference regular expression
@@ -2450,7 +2502,7 @@ def Diff(a, b, ctx=None):
     >>> simplify(InRe('b',Diff(r2,r1)))
     True
     """
-    return ReRef(a.ctx.solver.mkTerm(Kind.REGEXP_DIFF ,a.ast,b.ast),a.ctx)
+    return ReRef(a.ctx.solver.mkTerm(Kind.REGEXP_DIFF, a.ast, b.ast), a.ctx)
 
 
 def AllChar(ctx=None):
@@ -2465,7 +2517,8 @@ def AllChar(ctx=None):
     False
     """
     ctx = _get_ctx(ctx)
-    return ReRef(ctx.solver.mkTerm(Kind.REGEXP_ALLCHAR),ctx)
+    return ReRef(ctx.solver.mkTerm(Kind.REGEXP_ALLCHAR), ctx)
+
 
 #########################################
 #
@@ -2926,7 +2979,15 @@ def is_real(a):
 
 
 def _is_numeral(ctx, term):
-    return term.getKind() in [Kind.CONST_RATIONAL, Kind.CONST_BITVECTOR, Kind.CONST_BOOLEAN, Kind.CONST_ROUNDINGMODE, Kind.CONST_FLOATINGPOINT, Kind.CONST_FINITE_FIELD, Kind.CONST_INTEGER]
+    return term.getKind() in [
+        Kind.CONST_RATIONAL,
+        Kind.CONST_BITVECTOR,
+        Kind.CONST_BOOLEAN,
+        Kind.CONST_ROUNDINGMODE,
+        Kind.CONST_FLOATINGPOINT,
+        Kind.CONST_FINITE_FIELD,
+        Kind.CONST_INTEGER,
+    ]
 
 
 def is_int_value(a):
@@ -3250,7 +3311,7 @@ class RatNumRef(ArithRef):
         return True
 
     def is_int_value(self):
-        """ Is this arithmetic value an integer?
+        """Is this arithmetic value an integer?
         >>> RealVal("2/1").is_int_value()
         True
         >>> RealVal("2/3").is_int_value()
@@ -3259,7 +3320,7 @@ class RatNumRef(ArithRef):
         return self.denominator_as_long() == 1
 
     def as_long(self):
-        """ Is this arithmetic value an integer?
+        """Is this arithmetic value an integer?
         >>> RealVal("2/1").as_long()
         2
         >>> try:
@@ -3309,7 +3370,6 @@ class RatNumRef(ArithRef):
 
 
 def _py2expr(a, ctx=None):
-    
     if isinstance(a, bool):
         return BoolVal(a, ctx)
     if _is_int(a):
@@ -3646,9 +3706,8 @@ def Cbrt(a, ctx=None):
     return a ** "1/3"
 
 
-
 def Add(*args):
-    """ Create an SMT addition.
+    """Create an SMT addition.
 
     See also the __add__ overload (+ operator) for arithmetic SMT expressions.
 
@@ -3662,7 +3721,7 @@ def Add(*args):
 
 
 def Mult(*args):
-    """ Create an SMT multiplication.
+    """Create an SMT multiplication.
 
     See also the __mul__ overload (* operator) for arithmetic SMT expressions.
 
@@ -3676,7 +3735,7 @@ def Mult(*args):
 
 
 def Sub(a, b):
-    """ Create an SMT subtraction.
+    """Create an SMT subtraction.
 
     See also the __sub__ overload (- operator) for arithmetic SMT expressions.
 
@@ -3688,7 +3747,7 @@ def Sub(a, b):
 
 
 def Neg(a):
-    """ Create an SMT unary negation.
+    """Create an SMT unary negation.
 
     See also the __neg__ overload (unary - operator) for arithmetic SMT expressions.
 
@@ -3700,7 +3759,7 @@ def Neg(a):
 
 
 def UMinus(a):
-    """ Create an SMT unary negation.
+    """Create an SMT unary negation.
 
     Deprecated. Kept for compatiblity with Z3. See "Neg".
 
@@ -3714,7 +3773,7 @@ def UMinus(a):
 
 
 def Div(a, b):
-    """ Create an SMT division.
+    """Create an SMT division.
 
     See also the __div__ overload (/ operator) for arithmetic SMT expressions.
 
@@ -3731,7 +3790,7 @@ def Div(a, b):
 
 
 def Pow(a, b):
-    """ Create an SMT power.
+    """Create an SMT power.
 
     See also the __pow__ overload for arithmetic SMT expressions.
 
@@ -3739,11 +3798,11 @@ def Pow(a, b):
     >>> Pow(x, 3)
     x**3
     """
-    return a ** b
+    return a**b
 
 
 def IntsModulus(a, b):
-    """ Create an SMT integer modulus.
+    """Create an SMT integer modulus.
 
     See also the __mod__ overload (% operator) for arithmetic SMT expressions.
 
@@ -3755,7 +3814,7 @@ def IntsModulus(a, b):
 
 
 def Leq(a, b):
-    """ Create an SMT less-than-or-equal-to.
+    """Create an SMT less-than-or-equal-to.
 
     See also the __le__ overload (<= operator) for arithmetic SMT expressions.
 
@@ -3767,7 +3826,7 @@ def Leq(a, b):
 
 
 def Geq(a, b):
-    """ Create an SMT greater-than-or-equal-to.
+    """Create an SMT greater-than-or-equal-to.
 
     See also the __ge__ overload (>= operator) for arithmetic SMT expressions.
 
@@ -3779,7 +3838,7 @@ def Geq(a, b):
 
 
 def Lt(a, b):
-    """ Create an SMT less-than.
+    """Create an SMT less-than.
 
     See also the __lt__ overload (< operator) for arithmetic SMT expressions.
 
@@ -3791,7 +3850,7 @@ def Lt(a, b):
 
 
 def Gt(a, b):
-    """ Create an SMT greater-than.
+    """Create an SMT greater-than.
 
     See also the __gt__ overload (> operator) for arithmetic SMT expressions.
 
@@ -3810,7 +3869,7 @@ def Gt(a, b):
 
 
 def Pi(ctx=None):
-    """ Create the constant pi
+    """Create the constant pi
 
     >>> Pi()
     Pi
@@ -3820,7 +3879,7 @@ def Pi(ctx=None):
 
 
 def Exponential(x):
-    """ Create an exponential function
+    """Create an exponential function
 
     >>> x = Real('x')
     >>> solve(Exponential(x) == 1)
@@ -3830,7 +3889,7 @@ def Exponential(x):
 
 
 def Sine(x):
-    """ Create a sine function
+    """Create a sine function
 
     >>> x = Real('x')
     >>> i = Int('i')
@@ -3843,7 +3902,7 @@ def Sine(x):
 
 
 def Cosine(x):
-    """ Create a cosine function
+    """Create a cosine function
 
     >>> x = Real('x')
     >>> i = Int('i')
@@ -3856,7 +3915,7 @@ def Cosine(x):
 
 
 def Tangent(x):
-    """ Create a tangent function
+    """Create a tangent function
 
     >>> Tangent(Real('x'))
     Tangent(x)
@@ -3865,7 +3924,7 @@ def Tangent(x):
 
 
 def Arcsine(x):
-    """ Create an arcsine function
+    """Create an arcsine function
 
     >>> Arcsine(Real('x'))
     Arcsine(x)
@@ -3874,7 +3933,7 @@ def Arcsine(x):
 
 
 def Arccosine(x):
-    """ Create an arccosine function
+    """Create an arccosine function
 
     >>> Arccosine(Real('x'))
     Arccosine(x)
@@ -3883,7 +3942,7 @@ def Arccosine(x):
 
 
 def Arctangent(x):
-    """ Create an arctangent function
+    """Create an arctangent function
 
     >>> Arctangent(Real('x'))
     Arctangent(x)
@@ -3892,7 +3951,7 @@ def Arctangent(x):
 
 
 def Secant(x):
-    """ Create a secant function
+    """Create a secant function
 
     >>> Secant(Real('x'))
     Secant(x)
@@ -3901,7 +3960,7 @@ def Secant(x):
 
 
 def Cosecant(x):
-    """ Create a cosecant function
+    """Create a cosecant function
 
     >>> Cosecant(Real('x'))
     Cosecant(x)
@@ -3910,7 +3969,7 @@ def Cosecant(x):
 
 
 def Cotangent(x):
-    """ Create a cotangent function
+    """Create a cotangent function
 
     >>> Cotangent(Real('x'))
     Cotangent(x)
@@ -3919,7 +3978,7 @@ def Cotangent(x):
 
 
 def Arcsecant(x):
-    """ Create an arcsecant function
+    """Create an arcsecant function
 
     >>> Arcsecant(Real('x'))
     Arcsecant(x)
@@ -3928,7 +3987,7 @@ def Arcsecant(x):
 
 
 def Arccosecant(x):
-    """ Create an arccosecant function
+    """Create an arccosecant function
 
     >>> Arccosecant(Real('x'))
     Arccosecant(x)
@@ -3937,7 +3996,7 @@ def Arccosecant(x):
 
 
 def Arccotangent(x):
-    """ Create an arccotangent function
+    """Create an arccotangent function
 
     >>> Arccotangent(Real('x'))
     Arccotangent(x)
@@ -4033,7 +4092,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx
+        )
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -4043,7 +4104,9 @@ class BitVecRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx
+        )
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -4056,7 +4119,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, a.ast, b.ast), self.ctx
+        )
 
     def __rmul__(self, other):
         """Create the SMT expression `other * self`.
@@ -4066,7 +4131,9 @@ class BitVecRef(ExprRef):
         10*x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, b.ast, a.ast), self.ctx
+        )
 
     def __sub__(self, other):
         """Create the SMT expression `self - other`.
@@ -4079,7 +4146,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx
+        )
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -4089,7 +4158,9 @@ class BitVecRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx
+        )
 
     def __or__(self, other):
         """Create the SMT expression bitwise-or `self | other`.
@@ -4102,7 +4173,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx
+        )
 
     def __ror__(self, other):
         """Create the SMT expression bitwise-or `other | self`.
@@ -4112,7 +4185,9 @@ class BitVecRef(ExprRef):
         10 | x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx
+        )
 
     def __and__(self, other):
         """Create the SMT expression bitwise-and `self & other`.
@@ -4125,7 +4200,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx
+        )
 
     def __rand__(self, other):
         """Create the SMT expression bitwise-or `other & self`.
@@ -4135,7 +4212,9 @@ class BitVecRef(ExprRef):
         10 & x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx
+        )
 
     def __xor__(self, other):
         """Create the SMT expression bitwise-xor `self ^ other`.
@@ -4148,7 +4227,9 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx
+        )
 
     def __rxor__(self, other):
         """Create the SMT expression bitwise-xor `other ^ self`.
@@ -4158,7 +4239,9 @@ class BitVecRef(ExprRef):
         10 ^ x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx
+        )
 
     def __pos__(self):
         """Return `self`.
@@ -4208,7 +4291,9 @@ class BitVecRef(ExprRef):
         '(bvudiv x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, a.ast, b.ast), self.ctx
+        )
 
     def __truediv__(self, other):
         """Create the SMT expression (signed) division `self / other`."""
@@ -4228,7 +4313,9 @@ class BitVecRef(ExprRef):
         '(bvudiv #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, b.ast, a.ast), self.ctx
+        )
 
     def __rtruediv__(self, other):
         """Create the SMT expression (signed) division `other / self`."""
@@ -4253,7 +4340,9 @@ class BitVecRef(ExprRef):
         '(bvsrem x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, a.ast, b.ast), self.ctx
+        )
 
     def __rmod__(self, other):
         """Create the SMT expression (signed) mod `other % self`.
@@ -4271,7 +4360,9 @@ class BitVecRef(ExprRef):
         '(bvsrem #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, b.ast, a.ast), self.ctx
+        )
 
     def __le__(self, other):
         """Create the SMT expression (signed) `other <= self`.
@@ -4287,7 +4378,9 @@ class BitVecRef(ExprRef):
         '(bvule x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx)
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx
+        )
 
     def __lt__(self, other):
         """Create the SMT expression (signed) `other < self`.
@@ -4303,7 +4396,9 @@ class BitVecRef(ExprRef):
         '(bvult x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx)
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx
+        )
 
     def __gt__(self, other):
         """Create the SMT expression (signed) `other > self`.
@@ -4319,7 +4414,9 @@ class BitVecRef(ExprRef):
         '(bvugt x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx)
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx
+        )
 
     def __ge__(self, other):
         """Create the SMT expression (signed) `other >= self`.
@@ -4335,7 +4432,9 @@ class BitVecRef(ExprRef):
         '(bvuge x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx)
+        return BoolRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx
+        )
 
     def __rshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `self >> other`
@@ -4365,7 +4464,9 @@ class BitVecRef(ExprRef):
         1
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, a.ast, b.ast), self.ctx
+        )
 
     def __lshift__(self, other):
         """Create the SMT expression left shift `self << other`
@@ -4379,7 +4480,9 @@ class BitVecRef(ExprRef):
         4
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx
+        )
 
     def __rrshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `other` >> `self`.
@@ -4393,7 +4496,9 @@ class BitVecRef(ExprRef):
         '(bvashr #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, b.ast, a.ast), self.ctx
+        )
 
     def __rlshift__(self, other):
         """Create the SMT expression left shift `other << self`.
@@ -4407,7 +4512,9 @@ class BitVecRef(ExprRef):
         '(bvshl #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx)
+        return BitVecRef(
+            self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx
+        )
 
 
 class BitVecNumRef(BitVecRef):
@@ -4442,9 +4549,9 @@ class BitVecNumRef(BitVecRef):
         sz = self.size()
         val = self.as_long()
         if val >= 2 ** (sz - 1):
-            val = val - 2 ** sz
+            val = val - 2**sz
         if val < -(2 ** (sz - 1)):
-            val = val + 2 ** sz
+            val = val + 2**sz
         return int(val)
 
     def as_string(self):
@@ -4505,7 +4612,7 @@ def BV2Int(a, is_signed=False):
     if is_signed:
         w = a.sort().size()
         nat = BV2Int(a)
-        return If(a < 0, nat - (2 ** w), nat)
+        return If(a < 0, nat - (2**w), nat)
     else:
         return ArithRef(ctx.solver.mkTerm(Kind.BITVECTOR_TO_NAT, a.ast), ctx)
 
@@ -4522,7 +4629,9 @@ def Int2BV(a, num_bits):
     no solution
     """
     ctx = a.ctx
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BITVECTOR, num_bits), a.ast), ctx)
+    return BitVecRef(
+        ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BITVECTOR, num_bits), a.ast), ctx
+    )
 
 
 def BitVecSort(sz, ctx=None):
@@ -4560,7 +4669,7 @@ def BitVecVal(val, bv, ctx=None):
     else:
         size = bv
         ctx = _get_ctx(ctx)
-    modulus = 2 ** size
+    modulus = 2**size
     val = (val + modulus) % modulus
     return BitVecNumRef(ctx.solver.mkBitVector(size, str(val), 10), ctx)
 
@@ -4624,7 +4733,7 @@ def Concat(*args):
     sz = len(args)
     if debugging():
         _assert(sz >= 2, "At least two arguments expected.")
-    args = [ _py2expr(s) for s in args]
+    args = [_py2expr(s) for s in args]
     ctx = _get_ctx(None)
     for a in args:
         if is_expr(a):
@@ -4638,7 +4747,7 @@ def Concat(*args):
     if is_string(args[0]):
         return StringRef(ctx.solver.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
     if is_seq(args[0]):
-        return SeqRef(ctx.solver.mkTerm(Kind.SEQ_CONCAT,*[a.ast for a in args]),ctx)
+        return SeqRef(ctx.solver.mkTerm(Kind.SEQ_CONCAT, *[a.ast for a in args]), ctx)
     if is_re(args[0]):
         return ReRef(ctx.solver.mkTerm(Kind.REGEXP_CONCAT, *[a.ast for a in args]))
     return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
@@ -4664,7 +4773,10 @@ def Extract(high, low, a):
         )
         _assert(is_bv(a), "Third argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast), a.ctx
+        a.ctx.solver.mkTerm(
+            a.ctx.solver.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast
+        ),
+        a.ctx,
     )
 
 
@@ -5075,7 +5187,7 @@ def BVRedOr(a):
 
 
 def BVAdd(*args):
-    """ Create a sum of bit-vectors.
+    """Create a sum of bit-vectors.
 
     See also the __add__ overload (+ operator) for BitVecRef.
 
@@ -5087,7 +5199,7 @@ def BVAdd(*args):
 
 
 def BVMult(*args):
-    """ Create a product of bit-vectors.
+    """Create a product of bit-vectors.
 
     See also the __mul__ overload (* operator) for BitVecRef.
 
@@ -5099,7 +5211,7 @@ def BVMult(*args):
 
 
 def BVSub(a, b):
-    """ Create a difference of bit-vectors.
+    """Create a difference of bit-vectors.
 
     See also the __sub__ overload (- operator) for BitVecRef.
 
@@ -5111,7 +5223,7 @@ def BVSub(a, b):
 
 
 def BVOr(*args):
-    """ Create a bit-wise disjunction of bit-vectors.
+    """Create a bit-wise disjunction of bit-vectors.
 
     See also the __or__ overload (| operator) for BitVecRef.
 
@@ -5123,7 +5235,7 @@ def BVOr(*args):
 
 
 def BVAnd(*args):
-    """ Create a bit-wise conjunction of bit-vectors.
+    """Create a bit-wise conjunction of bit-vectors.
 
     See also the __and__ overload (& operator) for BitVecRef.
 
@@ -5135,7 +5247,7 @@ def BVAnd(*args):
 
 
 def BVXor(*args):
-    """ Create a bit-wise exclusive disjunction of bit-vectors.
+    """Create a bit-wise exclusive disjunction of bit-vectors.
 
     See also the __xor__ overload (^ operator) for BitVecRef.
 
@@ -5147,7 +5259,7 @@ def BVXor(*args):
 
 
 def BVNeg(a):
-    """ Create a negation (two's complement) of a bit-vector
+    """Create a negation (two's complement) of a bit-vector
 
     See also the __neg__ overload (unary - operator) for BitVecRef.
 
@@ -5159,7 +5271,7 @@ def BVNeg(a):
 
 
 def BVNot(a):
-    """ Create a bitwise not of a bit-vector
+    """Create a bitwise not of a bit-vector
 
     See also the __invert__ overload (unary ~ operator) for BitVecRef.
 
@@ -5271,7 +5383,7 @@ class ArrayRef(ExprRef):
 
 
 def is_array_sort(a):
-    """ Is this an array sort?
+    """Is this an array sort?
 
     >>> is_array_sort(ArraySort(BoolSort(), BoolSort()))
     True
@@ -5597,7 +5709,7 @@ class SetRef(ExprRef):
         return BoolRef(self.ctx.solver.mkFalse(), self.ctx)
 
     def __and__(self, other):
-        """ Intersection
+        """Intersection
 
         >>> a = Const('a', SetSort(IntSort()))
         >>> b = Const('b', SetSort(IntSort()))
@@ -5608,7 +5720,7 @@ class SetRef(ExprRef):
         return SetIntersect(a, b)
 
     def __or__(self, other):
-        """ Union
+        """Union
 
         >>> a = Const('a', SetSort(IntSort()))
         >>> b = Const('b', SetSort(IntSort()))
@@ -5950,7 +6062,7 @@ class Solver(object):
         """Fully reset the solver. This actually destroys the solver object in
         the context and recreates this. **This invalidates all objects created
         within this context and using them will most likely crash.**
-        
+
         >>> s = Solver()
         >>> x = Int('x')
         >>> s.add(x > 0)
@@ -6148,7 +6260,7 @@ class Solver(object):
         'true'
         """
         return self.solver.getOption(name)
-    
+
     def getOptionNames(self):
         """Get all option names that can be used with ``getOption()``,
         ``setOption()`` and ``getOptionInfo()``.
@@ -6200,16 +6312,16 @@ def SolverFor(logic, ctx=None, logFile=None):
     See https://smtlib.cs.uiowa.edu/ for the name of all available logics.
     """
 
-# Pending multiple solvers
-# >>> s = SolverFor("QF_LIA")
-# >>> x = Int('x')
-# >>> s.add(x > 0)
-# >>> s.add(x < 2)
-# >>> s.check()
-# sat
-# >>> s.model()
-# [x = 1]
-# """
+    # Pending multiple solvers
+    # >>> s = SolverFor("QF_LIA")
+    # >>> x = Int('x')
+    # >>> s.add(x > 0)
+    # >>> s.add(x < 2)
+    # >>> s.check()
+    # sat
+    # >>> s.model()
+    # [x = 1]
+    # """
     solver = pc.Solver()
     solver.setLogic(logic)
     ctx = _get_ctx(ctx)
@@ -6649,6 +6761,7 @@ def _coerce_fp_expr_list(alist, ctx):
 
 # FP Sorts
 
+
 class FPSortRef(SortRef):
     """Floating-point sort."""
 
@@ -6729,7 +6842,7 @@ def FloatQuadruple(ctx=None):
 
 
 class FPRMSortRef(SortRef):
-    """"Floating-point rounding mode sort."""
+    """ "Floating-point rounding mode sort."""
 
 
 def is_fp_sort(s):
@@ -6752,6 +6865,7 @@ def is_fprm_sort(s):
     True
     """
     return isinstance(s, FPRMSortRef)
+
 
 # FP Expressions
 
@@ -6946,7 +7060,9 @@ def RoundNearestTiesToEven(ctx=None):
     fpMul(RNE(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_EVEN), ctx)
+    return FPRMRef(
+        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_EVEN), ctx
+    )
 
 
 def RNE(ctx=None):
@@ -6975,7 +7091,9 @@ def RoundNearestTiesToAway(ctx=None):
     fpMul(RNA(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_AWAY), ctx)
+    return FPRMRef(
+        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_AWAY), ctx
+    )
 
 
 def RNA(ctx=None):
@@ -7004,7 +7122,9 @@ def RoundTowardPositive(ctx=None):
     fpMul(RTP(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx)
+    return FPRMRef(
+        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx
+    )
 
 
 def RTP(ctx=None):
@@ -7033,7 +7153,9 @@ def RoundTowardNegative(ctx=None):
     fpMul(RTN(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx)
+    return FPRMRef(
+        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx
+    )
 
 
 def RTN(ctx=None):
@@ -7106,7 +7228,9 @@ _dflt_fpsort_sbits = 53
 def get_default_rounding_mode(ctx=None):
     """Retrieves the global default rounding mode."""
     if debugging():
-        _assert(isinstance(_dflt_rounding_mode, pc.RoundingMode), "illegal rounding mode")
+        _assert(
+            isinstance(_dflt_rounding_mode, pc.RoundingMode), "illegal rounding mode"
+        )
     ctx = _get_ctx(ctx)
     return FPRMRef(ctx.solver.mkRoundingMode(_dflt_rounding_mode), ctx)
 
@@ -7153,27 +7277,28 @@ def _dflt_rm(ctx=None):
 def _dflt_fps(ctx=None):
     return get_default_fp_sort(ctx)
 
+
 # FP Numerals
 
 
 def _fp_ieee_val_sign_py_bool(term):
     sbits, ebits, bv = term.getFloatingPointValue()
     bit = bv.getBitVectorValue()[0]
-    if bit == '0':
+    if bit == "0":
         return False
-    if bit == '1':
+    if bit == "1":
         return True
     _assert(False, "Bad sign bit: " + str(bit))
 
 
 def _fp_ieee_val_significand_bv_py_str(term):
     ebits, sbits, bv = term.getFloatingPointValue()
-    return '1.' + bv.getBitVectorValue()[1+ebits:]
+    return "1." + bv.getBitVectorValue()[1 + ebits :]
 
 
 def _fp_ieee_val_exponent_bv_py_str(term):
     ebits, sbits, bv = term.getFloatingPointValue()
-    return bv.getBitVectorValue()[1:1+ebits]
+    return bv.getBitVectorValue()[1 : 1 + ebits]
 
 
 def _fp_ieee_val_significand_py_uint(term):
@@ -7280,7 +7405,7 @@ class FPNumRef(FPRef):
         1.25*(2**4)
         """
         return str(self)
-        #return ("FPVal(%s, %s)" % (s, self.sort()))
+        # return ("FPVal(%s, %s)" % (s, self.sort()))
 
 
 def is_fp(a):
@@ -7360,7 +7485,7 @@ def _to_float_str(val, exp=0):
             res = val
         elif val[-1] == ")":
             res = val[0:inx]
-            exp = str(int(val[inx + 5:-1]) + int(exp))
+            exp = str(int(val[inx + 5 : -1]) + int(exp))
         else:
             _assert(False, "String does not have floating-point numeral form.")
     elif debugging():
@@ -7485,7 +7610,9 @@ def FPVal(val, exp=None, fps=None, ctx=None):
         dub = Float64(ctx)
         bv = ctx.solver.mkBitVector(len(bv_str), bv_str, 2)
         fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
-        fp_to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, fps.ebits(), fps.sbits())
+        fp_to_fp_op = ctx.solver.mkOp(
+            Kind.FLOATINGPOINT_TO_FP_FROM_FP, fps.ebits(), fps.sbits()
+        )
         fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
         presimp = FPNumRef(fp, ctx)
         post = simplify(presimp)
@@ -7582,7 +7709,10 @@ def _mk_fp_unary(kind, rm, a, ctx):
     ctx = _get_ctx(ctx)
     [a] = _coerce_fp_expr_list([a], ctx)
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
         _assert(is_fp(a), "Second argument must be a SMT floating-point expression")
     return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast()), ctx)
 
@@ -7592,15 +7722,21 @@ def _mk_fp_unary_pred(kind, a, ctx):
     [a] = _coerce_fp_expr_list([a], ctx)
     if debugging():
         _assert(is_fp(a), "First argument must be a SMT floating-point expression")
-    return BoolRef(ctx.solver.mkTerm(kind,  a.as_ast()), ctx)
+    return BoolRef(ctx.solver.mkTerm(kind, a.as_ast()), ctx)
 
 
 def _mk_fp_bin(kind, rm, a, b, ctx):
     ctx = _get_ctx(ctx)
     [a, b] = _coerce_fp_expr_list([a, b], ctx)
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
-        _assert(is_fp(a) or is_fp(b), "Second or third argument must be a SMT floating-point expression")
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
+        _assert(
+            is_fp(a) or is_fp(b),
+            "Second or third argument must be a SMT floating-point expression",
+        )
     return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast()), ctx)
 
 
@@ -7608,7 +7744,10 @@ def _mk_fp_bin_norm(kind, a, b, ctx):
     ctx = _get_ctx(ctx)
     [a, b] = _coerce_fp_expr_list([a, b], ctx)
     if debugging():
-        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+        _assert(
+            is_fp(a) or is_fp(b),
+            "First or second argument must be a SMT floating-point expression",
+        )
     return FPRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
 
 
@@ -7616,7 +7755,10 @@ def _mk_fp_bin_pred(kind, a, b, ctx):
     ctx = _get_ctx(ctx)
     [a, b] = _coerce_fp_expr_list([a, b], ctx)
     if debugging():
-        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+        _assert(
+            is_fp(a) or is_fp(b),
+            "First or second argument must be a SMT floating-point expression",
+        )
     return BoolRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
 
 
@@ -7624,10 +7766,17 @@ def _mk_fp_tern(kind, rm, a, b, c, ctx):
     ctx = _get_ctx(ctx)
     [a, b, c] = _coerce_fp_expr_list([a, b, c], ctx)
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
-        _assert(is_fp(a) or is_fp(b) or is_fp(
-            c), "Second, third or fourth argument must be a SMT floating-point expression")
-    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast(), c.as_ast()), ctx)
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
+        _assert(
+            is_fp(a) or is_fp(b) or is_fp(c),
+            "Second, third or fourth argument must be a SMT floating-point expression",
+        )
+    return FPRef(
+        ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast(), c.as_ast()), ctx
+    )
 
 
 def fpAdd(rm, a, b, ctx=None):
@@ -7737,20 +7886,17 @@ def fpMax(a, b, ctx=None):
 
 
 def fpFMA(rm, a, b, c, ctx=None):
-    """Create a SMT floating-point fused multiply-add expression.
-    """
+    """Create a SMT floating-point fused multiply-add expression."""
     return _mk_fp_tern(Kind.FLOATINGPOINT_FMA, rm, a, b, c, ctx)
 
 
 def fpSqrt(rm, a, ctx=None):
-    """Create a SMT floating-point square root expression.
-    """
+    """Create a SMT floating-point square root expression."""
     return _mk_fp_unary(Kind.FLOATINGPOINT_SQRT, rm, a, ctx)
 
 
 def fpRoundToIntegral(rm, a, ctx=None):
-    """Create a SMT floating-point roundToIntegral expression.
-    """
+    """Create a SMT floating-point roundToIntegral expression."""
     return _mk_fp_unary(Kind.FLOATINGPOINT_RTI, rm, a, ctx)
 
 
@@ -7778,38 +7924,36 @@ def fpIsInf(a, ctx=None):
 
 
 def fpIsZero(a, ctx=None):
-    """Create a SMT floating-point isZero expression.
-    """
+    """Create a SMT floating-point isZero expression."""
     return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_ZERO, a, ctx)
 
 
 def fpIsNormal(a, ctx=None):
-    """Create a SMT floating-point isNormal expression.
-    """
+    """Create a SMT floating-point isNormal expression."""
     return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_NORMAL, a, ctx)
 
 
 def fpIsSubnormal(a, ctx=None):
-    """Create a SMT floating-point isSubnormal expression.
-    """
+    """Create a SMT floating-point isSubnormal expression."""
     return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_SUBNORMAL, a, ctx)
 
 
 def fpIsNegative(a, ctx=None):
-    """Create a SMT floating-point isNegative expression.
-    """
+    """Create a SMT floating-point isNegative expression."""
     return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_NEG, a, ctx)
 
 
 def fpIsPositive(a, ctx=None):
-    """Create a SMT floating-point isPositive expression.
-    """
+    """Create a SMT floating-point isPositive expression."""
     return _mk_fp_unary_pred(Kind.FLOATINGPOINT_IS_POS, a, ctx)
 
 
 def _check_fp_args(a, b):
     if debugging():
-        _assert(is_fp(a) or is_fp(b), "First or second argument must be a SMT floating-point expression")
+        _assert(
+            is_fp(a) or is_fp(b),
+            "First or second argument must be a SMT floating-point expression",
+        )
 
 
 def fpLT(a, b, ctx=None):
@@ -7910,8 +8054,10 @@ def fpFP(sgn, exp, sig, ctx=None):
     _assert(sgn.sort().size() == 1, "sort mismatch")
     ctx = _get_ctx(ctx)
     _assert(ctx == sgn.ctx == exp.ctx == sig.ctx, "context mismatch")
-    bv = BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx)
-    sort = FPSort(exp.size(), sig.size()+1)
+    bv = BitVecRef(
+        ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx
+    )
+    sort = FPSort(exp.size(), sig.size() + 1)
     return fpBVToFP(bv, sort)
 
 
@@ -7948,7 +8094,9 @@ def fpToFP(a1, a2=None, a3=None, ctx=None):
     elif is_fprm(a1) and is_bv(a2) and is_fp_sort(a3):
         return fpSignedToFP(a1, a2, a3, ctx)
     else:
-        raise SMTException("Unsupported combination of arguments for conversion to floating-point term.")
+        raise SMTException(
+            "Unsupported combination of arguments for conversion to floating-point term."
+        )
 
 
 def fpBVToFP(v, sort, ctx=None):
@@ -7965,7 +8113,9 @@ def fpBVToFP(v, sort, ctx=None):
     _assert(is_bv(v), "First argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Second argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(
+        Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV, sort.ebits(), sort.sbits()
+    )
     return FPRef(ctx.solver.mkTerm(to_fp_op, v.ast), ctx)
 
 
@@ -7982,11 +8132,16 @@ def fpFPToFP(rm, v, sort, ctx=None):
     >>> x_dbl.sort()
     FPSort(11, 53)
     """
-    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(
+        is_fprm(rm),
+        "First argument must be a SMT floating-point rounding mode expression.",
+    )
     _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(
+        Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits()
+    )
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -8001,11 +8156,16 @@ def fpRealToFP(rm, v, sort, ctx=None):
     >>> simplify(x_fp)
     1.5
     """
-    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(
+        is_fprm(rm),
+        "First argument must be a SMT floating-point rounding mode expression.",
+    )
     _assert(is_real(v), "Second argument must be a SMT expression or real sort.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_REAL, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(
+        Kind.FLOATINGPOINT_TO_FP_FROM_REAL, sort.ebits(), sort.sbits()
+    )
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -8020,11 +8180,16 @@ def fpSignedToFP(rm, v, sort, ctx=None):
     >>> simplify(x_fp)
     -1.25*(2**2)
     """
-    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(
+        is_fprm(rm),
+        "First argument must be a SMT floating-point rounding mode expression.",
+    )
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_SBV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(
+        Kind.FLOATINGPOINT_TO_FP_FROM_SBV, sort.ebits(), sort.sbits()
+    )
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -8039,18 +8204,26 @@ def fpUnsignedToFP(rm, v, sort, ctx=None):
     >>> simplify(x_fp)
     1*(2**32)
     """
-    _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression.")
+    _assert(
+        is_fprm(rm),
+        "First argument must be a SMT floating-point rounding mode expression.",
+    )
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_UBV, sort.ebits(), sort.sbits())
+    to_fp_op = ctx.solver.mkOp(
+        Kind.FLOATINGPOINT_TO_FP_FROM_UBV, sort.ebits(), sort.sbits()
+    )
     return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
 def fpToFPUnsigned(rm, x, s, ctx=None):
     """Create a SMT floating-point conversion expression, from unsigned bit-vector to floating-point expression."""
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
         _assert(is_bv(x), "Second argument must be a SMT bit-vector expression")
         _assert(is_fp_sort(s), "Third argument must be SMT floating-point sort")
     ctx = _get_ctx(ctx)
@@ -8073,11 +8246,19 @@ def fpToSBV(rm, x, s, ctx=None):
     False
     """
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
         _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast), ctx)
+    return BitVecRef(
+        ctx.solver.mkTerm(
+            ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast
+        ),
+        ctx,
+    )
 
 
 def fpToUBV(rm, x, s, ctx=None):
@@ -8095,11 +8276,19 @@ def fpToUBV(rm, x, s, ctx=None):
     False
     """
     if debugging():
-        _assert(is_fprm(rm), "First argument must be a SMT floating-point rounding mode expression")
+        _assert(
+            is_fprm(rm),
+            "First argument must be a SMT floating-point rounding mode expression",
+        )
         _assert(is_fp(x), "Second argument must be a SMT floating-point expression")
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
-    return BitVecRef(ctx.solver.mkTerm(ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast), ctx)
+    return BitVecRef(
+        ctx.solver.mkTerm(
+            ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast
+        ),
+        ctx,
+    )
 
 
 def fpToReal(x, ctx=None):
@@ -8128,8 +8317,9 @@ def fpToReal(x, ctx=None):
 #
 #########################################
 
+
 def _valid_accessor(acc):
-    """Return `True` if acc is pair of the form (String, Datatype or Sort). """
+    """Return `True` if acc is pair of the form (String, Datatype or Sort)."""
     if not isinstance(acc, tuple):
         return False
     if len(acc) != 2:
@@ -8265,7 +8455,9 @@ def CreateDatatypes(*ds):
     ds = _get_args(ds)
     if debugging():
         _assert(len(ds) > 0, "At least one Datatype must be specified")
-        _assert(all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes")
+        _assert(
+            all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes"
+        )
         _assert(all([d.ctx == ds[0].ctx for d in ds]), "Context mismatch")
         _assert(all([d.constructors != [] for d in ds]), "Non-empty Datatypes expected")
     ctx = ds[0].ctx
@@ -8458,7 +8650,9 @@ class DatatypeConstructorRef(FuncDeclRef):
         >>> List.constructor(0).domain(0)
         Int
         """
-        return _to_sort_ref(self.ast.getSort().getDatatypeConstructorDomainSorts()[i], self.ctx)
+        return _to_sort_ref(
+            self.ast.getSort().getDatatypeConstructorDomainSorts()[i], self.ctx
+        )
 
     def range(self):
         """Return the sort of the range of a function declaration.
@@ -8473,7 +8667,9 @@ class DatatypeConstructorRef(FuncDeclRef):
         >>> List.constructor(0).range()
         List
         """
-        return _to_sort_ref(self.ast.getSort().getDatatypeConstructorCodomainSort(), self.ctx)
+        return _to_sort_ref(
+            self.ast.getSort().getDatatypeConstructorCodomainSort(), self.ctx
+        )
 
     def __call__(self, *args):
         """Apply this constructor.
@@ -8503,8 +8699,7 @@ class DatatypeSelectorRef(FuncDeclRef):
         self.dt = datatype
 
     def arity(self):
-        """Return the number of arguments of a selector (always 1).
-        """
+        """Return the number of arguments of a selector (always 1)."""
         return 1
 
     def domain(self, i):
@@ -8512,13 +8707,17 @@ class DatatypeSelectorRef(FuncDeclRef):
         This method assumes that `0 <= i < self.arity()`.
         """
         _assert(i == 0, "Selectors take 1 argument")
-        return _to_sort_ref(self.ast.getSort().getDatatypeSelectorDomainSort(), self.ctx)
+        return _to_sort_ref(
+            self.ast.getSort().getDatatypeSelectorDomainSort(), self.ctx
+        )
 
     def range(self):
         """Return the sort of the range of a function declaration.
         For constants, this is the sort of the constant.
         """
-        return _to_sort_ref(self.ast.getSort().getDatatypeSelectorCodomainSort(), self.ctx)
+        return _to_sort_ref(
+            self.ast.getSort().getDatatypeSelectorCodomainSort(), self.ctx
+        )
 
     def __call__(self, *args):
         """Apply this selector.
@@ -8547,8 +8746,7 @@ class DatatypeRecognizerRef(FuncDeclRef):
         self.constructor = constructor
 
     def arity(self):
-        """Return the number of arguments of a selector (always 1).
-        """
+        """Return the number of arguments of a selector (always 1)."""
         return 1
 
     def domain(self, i):
@@ -8585,7 +8783,6 @@ class DatatypeRecognizerRef(FuncDeclRef):
         return _higherorder_apply(self, args, Kind.APPLY_TESTER)
 
 
-
 class DatatypeRef(ExprRef):
     """Datatype expressions."""
 
@@ -8612,7 +8809,11 @@ def TupleSort(name, sorts, ctx=None):
     projects = [("project%d" % i, sorts[i]) for i in range(len(sorts))]
     tuple.declare(name, *projects)
     tuple = tuple.create()
-    return tuple, tuple.constructor(0), [tuple.accessor(0, i) for i in range(len(sorts))]
+    return (
+        tuple,
+        tuple.constructor(0),
+        [tuple.accessor(0, i) for i in range(len(sorts))],
+    )
 
 
 def DisjointSum(name, sorts, ctx=None):
@@ -8990,7 +9191,9 @@ class FiniteFieldRef(ExprRef):
         >>> solve([-(-x) != x])
         no solution
         """
-        return FiniteFieldRef(self.ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, self.ast), self.ctx)
+        return FiniteFieldRef(
+            self.ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, self.ast), self.ctx
+        )
 
 
 class FiniteFieldNumRef(FiniteFieldRef):
@@ -9140,7 +9343,7 @@ def FiniteFieldElems(names, ff, ctx=None):
 
 
 def FFAdd(*args):
-    """ Create a sum of finite fields.
+    """Create a sum of finite fields.
 
     See also the __add__ overload (+ operator) for FiniteFieldRef.
 
@@ -9152,7 +9355,7 @@ def FFAdd(*args):
 
 
 def FFMult(*args):
-    """ Create a product of finite fields.
+    """Create a product of finite fields.
 
     See also the __mul__ overload (* operator) for FiniteFieldRef.
 
@@ -9164,7 +9367,7 @@ def FFMult(*args):
 
 
 def FFSub(a, b):
-    """ Create a difference of finite fields.
+    """Create a difference of finite fields.
 
     See also the __sub__ overload (- operator) for FiniteFieldRef.
 
@@ -9179,7 +9382,7 @@ def FFSub(a, b):
 
 
 def FFNeg(a):
-    """ Create a negation of a finite field elemetn
+    """Create a negation of a finite field elemetn
 
     See also the __neg__ overload (unary - operator) for FiniteFieldRef.
 

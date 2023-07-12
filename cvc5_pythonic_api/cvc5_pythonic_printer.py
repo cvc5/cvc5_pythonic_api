@@ -157,9 +157,7 @@ _cvc5_kinds_to_str = {
     Kind.STRING_REPLACE: "Replace",
     Kind.STRING_UPDATE: "StringUpdate",
     Kind.STRING_LEQ: "<=",
-    Kind.STRING_LT: "<"
-    
-
+    Kind.STRING_LT: "<",
 }
 
 # List of infix operators
@@ -195,11 +193,10 @@ _cvc5_infix = [
     Kind.FINITE_FIELD_MULT,
     Kind.STRING_LT,
     Kind.STRING_LEQ,
-    Kind.SEQ_NTH
+    Kind.SEQ_NTH,
 ]
 
-_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG,
-               Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
+_cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
 
 # Precedence
 _cvc5_precedence = {
@@ -270,13 +267,11 @@ _cvc5_kind_to_fp_normal_str = {
     Kind.FLOATINGPOINT_FMA: "fpFMA",
     Kind.FLOATINGPOINT_SQRT: "fpSqrt",
     Kind.FLOATINGPOINT_RTI: "fpRoundToIntegral",
-
     Kind.FLOATINGPOINT_EQ: "fpEQ",
     Kind.FLOATINGPOINT_LT: "fpLT",
     Kind.FLOATINGPOINT_GT: "fpGT",
     Kind.FLOATINGPOINT_LEQ: "fpLEQ",
     Kind.FLOATINGPOINT_GEQ: "fpGEQ",
-
     Kind.FLOATINGPOINT_TO_FP_FROM_FP: "fpToFP",
     Kind.FLOATINGPOINT_TO_FP_FROM_UBV: "fpToFP",
     Kind.FLOATINGPOINT_TO_FP_FROM_SBV: "fpToFP",
@@ -288,30 +283,44 @@ _cvc5_kind_to_fp_normal_str = {
 }
 
 _cvc5_kind_to_fp_pretty_str = {
-    Kind.FLOATINGPOINT_ADD: "+", Kind.FLOATINGPOINT_SUB: "-", Kind.FLOATINGPOINT_MULT: "*", Kind.FLOATINGPOINT_DIV: "/",
-    Kind.FLOATINGPOINT_REM: "%", Kind.FLOATINGPOINT_NEG: "-",
-
-    Kind.FLOATINGPOINT_EQ: "fpEQ", Kind.FLOATINGPOINT_LT: "<", Kind.FLOATINGPOINT_GT: ">", Kind.FLOATINGPOINT_LEQ: "<=",
-    Kind.FLOATINGPOINT_GEQ: ">="
+    Kind.FLOATINGPOINT_ADD: "+",
+    Kind.FLOATINGPOINT_SUB: "-",
+    Kind.FLOATINGPOINT_MULT: "*",
+    Kind.FLOATINGPOINT_DIV: "/",
+    Kind.FLOATINGPOINT_REM: "%",
+    Kind.FLOATINGPOINT_NEG: "-",
+    Kind.FLOATINGPOINT_EQ: "fpEQ",
+    Kind.FLOATINGPOINT_LT: "<",
+    Kind.FLOATINGPOINT_GT: ">",
+    Kind.FLOATINGPOINT_LEQ: "<=",
+    Kind.FLOATINGPOINT_GEQ: ">=",
 }
 
 _cvc5_fp_infix = [
-    Kind.FLOATINGPOINT_ADD, Kind.FLOATINGPOINT_SUB, Kind.FLOATINGPOINT_MULT, Kind.FLOATINGPOINT_DIV, Kind.FLOATINGPOINT_REM,
-    Kind.FLOATINGPOINT_LT, Kind.FLOATINGPOINT_GT, Kind.FLOATINGPOINT_LEQ, Kind.FLOATINGPOINT_GEQ
+    Kind.FLOATINGPOINT_ADD,
+    Kind.FLOATINGPOINT_SUB,
+    Kind.FLOATINGPOINT_MULT,
+    Kind.FLOATINGPOINT_DIV,
+    Kind.FLOATINGPOINT_REM,
+    Kind.FLOATINGPOINT_LT,
+    Kind.FLOATINGPOINT_GT,
+    Kind.FLOATINGPOINT_LEQ,
+    Kind.FLOATINGPOINT_GEQ,
 ]
 
 
 def _is_assoc(k):
     return k in {
-            Kind.BITVECTOR_OR,
-            Kind.BITVECTOR_XOR,
-            Kind.BITVECTOR_AND,
-            Kind.ADD,
-            Kind.BITVECTOR_ADD,
-            Kind.MULT,
-            Kind.FINITE_FIELD_ADD,
-            Kind.FINITE_FIELD_MULT,
-            Kind.BITVECTOR_MULT}
+        Kind.BITVECTOR_OR,
+        Kind.BITVECTOR_XOR,
+        Kind.BITVECTOR_AND,
+        Kind.ADD,
+        Kind.BITVECTOR_ADD,
+        Kind.MULT,
+        Kind.FINITE_FIELD_ADD,
+        Kind.FINITE_FIELD_MULT,
+        Kind.BITVECTOR_MULT,
+    }
 
 
 def _is_left_assoc(k):
@@ -331,7 +340,6 @@ if sys.version < "3":
 
     def u(x):
         return codecs.unicode_escape_decode(x)[0]
-
 
 else:
 
@@ -361,7 +369,11 @@ _ellipses = "..."
 
 
 def _support_pp(a):
-    return isinstance(a, (cvc.ExprRef, cvc.SortRef)) or isinstance(a, list) or isinstance(a, tuple)
+    return (
+        isinstance(a, (cvc.ExprRef, cvc.SortRef))
+        or isinstance(a, list)
+        or isinstance(a, tuple)
+    )
 
 
 _infix_map = {}
@@ -396,7 +408,17 @@ def _op_name(a):
     k = a.kind()
     n = _cvc5_kinds_to_str.get(k, None)
     if n is None:
-        if k in [Kind.CONSTANT, Kind.CONST_FLOATINGPOINT, Kind.CONST_ROUNDINGMODE, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER, Kind.CONST_STRING, Kind.CONST_SEQUENCE]:
+        if k in [
+            Kind.CONSTANT,
+            Kind.CONST_FLOATINGPOINT,
+            Kind.CONST_ROUNDINGMODE,
+            Kind.VARIABLE,
+            Kind.UNINTERPRETED_SORT_VALUE,
+            Kind.PI,
+            Kind.CONST_INTEGER,
+            Kind.CONST_STRING,
+            Kind.CONST_SEQUENCE,
+        ]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
             # Hack to handle DT selectors and constructors
@@ -750,7 +772,7 @@ class Formatter:
         elif isinstance(s, cvc.FiniteFieldSortRef):
             return seq1("FiniteField", (to_format(s.size()),))
         elif isinstance(s, cvc.SetSortRef):
-            return seq1("Set", (self.pp_sort(s.domain()), ))
+            return seq1("Set", (self.pp_sort(s.domain()),))
         elif isinstance(s, cvc.FPSortRef):
             return seq1("FPSort", (to_format(s.ebits()), to_format(s.sbits())))
         # elif isinstance(s, cvc.ReSortRef):
@@ -810,14 +832,14 @@ class Formatter:
         _assert(isinstance(a, cvc.FPNumRef), "type mismatch")
         if not self.fpa_pretty:
             r = []
-            if (a.isNaN()):
+            if a.isNaN():
                 r.append(to_format("fpNaN"))
                 r.append(to_format("("))
                 r.append(to_format(a.sort()))
                 r.append(to_format(")"))
                 return compose(r)
-            elif (a.isInf()):
-                if (a.isNegative()):
+            elif a.isInf():
+                if a.isNegative():
                     r.append(to_format("fpMinusInfinity"))
                 else:
                     r.append(to_format("fpPlusInfinity"))
@@ -826,8 +848,8 @@ class Formatter:
                 r.append(to_format(")"))
                 return compose(r)
 
-            elif (a.isZero()):
-                if (a.isNegative()):
+            elif a.isZero():
+                if a.isNegative():
                     return to_format("-zero")
                 else:
                     return to_format("+zero")
@@ -850,15 +872,15 @@ class Formatter:
                 r.append(to_format("))"))
                 return compose(r)
         else:
-            if (a.isNaN()):
+            if a.isNaN():
                 return to_format("NaN")
-            elif (a.isInf()):
-                if (a.isNegative()):
+            elif a.isInf():
+                if a.isNegative():
                     return to_format("-oo")
                 else:
                     return to_format("+oo")
-            elif (a.isZero()):
-                if (a.isNegative()):
+            elif a.isZero():
+                if a.isNegative():
                     return to_format("-0.0")
                 else:
                     return to_format("+0.0")
@@ -873,7 +895,7 @@ class Formatter:
                 if sgnb:
                     r.append(to_format("-"))
                 r.append(to_format(sig))
-                if (str(exp) != "0"):
+                if str(exp) != "0":
                     r.append(to_format("*(2**"))
                     r.append(to_format(exp))
                     r.append(to_format(")"))
@@ -883,7 +905,7 @@ class Formatter:
         _assert(isinstance(a, cvc.FPRef), "type mismatch")
         k = a.kind()
         op = "?"
-        if (self.fpa_pretty and k in _cvc5_kind_to_fp_pretty_str):
+        if self.fpa_pretty and k in _cvc5_kind_to_fp_pretty_str:
             op = _cvc5_kind_to_fp_pretty_str[k]
         elif k in _cvc5_kind_to_fp_normal_str:
             op = _cvc5_kind_to_fp_normal_str[k]
@@ -895,7 +917,9 @@ class Formatter:
         if self.fpa_pretty:
             if self.is_infix(k) and n >= 3:
                 rm = a.arg(0)
-                if cvc.is_fprm_value(rm) and cvc.get_default_rounding_mode(a.ctx).eq(rm):
+                if cvc.is_fprm_value(rm) and cvc.get_default_rounding_mode(a.ctx).eq(
+                    rm
+                ):
                     arg1 = to_format(self.pp_expr(a.arg(1), d + 1, xs))
                     arg2 = to_format(self.pp_expr(a.arg(2), d + 1, xs))
                     r = []
@@ -906,7 +930,9 @@ class Formatter:
                     r.append(arg2)
                     return compose(r)
             elif k == Kind.FLOATINGPOINT_NEG:
-                return compose([to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))])
+                return compose(
+                    [to_format("-"), to_format(self.pp_expr(a.arg(0), d + 1, xs))]
+                )
 
         if k in _cvc5_kind_to_fp_normal_str:
             op = _cvc5_kind_to_fp_normal_str[k]
@@ -1051,8 +1077,7 @@ class Formatter:
             arg1_pp = self.pp_expr(a.arg(0), d + 1, xs)
             arg2_pp = self.pp_expr(a.arg(1), d + 1, xs)
             return compose(
-                arg1_pp, indent(2, compose(
-                    to_format("["), arg2_pp, to_format("]")))
+                arg1_pp, indent(2, compose(to_format("["), arg2_pp, to_format("]")))
             )
 
     def pp_unary_param(self, a, d, xs, param_on_right):
@@ -1077,8 +1102,7 @@ class Formatter:
             return self.pp_expr(a.arg(0), d, xs)
         else:
             return seq1(
-                "MultiPattern", [self.pp_expr(arg, d + 1, xs)
-                                 for arg in a.children()]
+                "MultiPattern", [self.pp_expr(arg, d + 1, xs) for arg in a.children()]
             )
 
     def pp_is(self, a, d, xs):
@@ -1138,7 +1162,11 @@ class Formatter:
                 return self.pp_distinct(a, d, xs)
             elif k == Kind.SELECT:
                 return self.pp_select(a, d, xs)
-            elif k in [Kind.BITVECTOR_SIGN_EXTEND, Kind.BITVECTOR_ZERO_EXTEND, Kind.BITVECTOR_REPEAT]:
+            elif k in [
+                Kind.BITVECTOR_SIGN_EXTEND,
+                Kind.BITVECTOR_ZERO_EXTEND,
+                Kind.BITVECTOR_REPEAT,
+            ]:
                 return self.pp_unary_param(a, d, xs, False)
             elif k in [Kind.BITVECTOR_ROTATE_LEFT, Kind.BITVECTOR_ROTATE_RIGHT]:
                 return self.pp_unary_param(a, d, xs, True)
@@ -1147,7 +1175,14 @@ class Formatter:
             elif k == Kind.CONST_ARRAY:
                 return self.pp_K(a, d, xs)
             # Slight hack to handle DT fns here (InternalKind case).
-            elif k in [Kind.CONSTANT, Kind.INTERNAL_KIND, Kind.VARIABLE, Kind.UNINTERPRETED_SORT_VALUE, Kind.PI, Kind.CONST_INTEGER]:
+            elif k in [
+                Kind.CONSTANT,
+                Kind.INTERNAL_KIND,
+                Kind.VARIABLE,
+                Kind.UNINTERPRETED_SORT_VALUE,
+                Kind.PI,
+                Kind.CONST_INTEGER,
+            ]:
                 return self.pp_name(a)
             # elif cvc.is_pattern(a):
             #     return self.pp_pattern(a, d, xs)
@@ -1259,8 +1294,7 @@ class Formatter:
             else:
                 i_pp = self.pp_expr(i, 0, [])
             name = self.pp_name(d)
-            r.append(compose(name, to_format(" = "),
-                     indent(_len(name) + 3, i_pp)))
+            r.append(compose(name, to_format(" = "), indent(_len(name) + 3, i_pp)))
             sz = sz + 1
             if sz > self.max_args:
                 r.append(self.pp_ellipses())
@@ -1371,12 +1405,12 @@ def set_fpa_pretty(flag=True):
     global _cvc5_kinds_to_str
     _Formatter.fpa_pretty = flag
     if flag:
-        for (_k, _v) in _cvc5_kind_to_fp_pretty_str.items():
+        for _k, _v in _cvc5_kind_to_fp_pretty_str.items():
             _cvc5_kinds_to_str[_k] = _v
         for _k in _cvc5_fp_infix:
             _infix_map[_k] = True
     else:
-        for (_k, _v) in _cvc5_kind_to_fp_normal_str.items():
+        for _k, _v in _cvc5_kind_to_fp_normal_str.items():
             _cvc5_kinds_to_str[_k] = _v
         for _k in _cvc5_fp_infix:
             _infix_map[_k] = False
