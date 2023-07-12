@@ -62,6 +62,7 @@ Differences with Z3py:
   * FiniteDomainSort
   * Fixedpoint API
   * SMT2 file support
+  * recursive functions
 * Not missing, but different
   * Options
     * as expected
@@ -3704,6 +3705,7 @@ def Cbrt(a, ctx=None):
         ctx = _get_ctx(ctx)
         a = RealVal(a, ctx)
     return a ** "1/3"
+
 
 
 def Add(*args):
