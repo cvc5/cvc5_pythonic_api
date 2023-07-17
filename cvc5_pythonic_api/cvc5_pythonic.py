@@ -1758,12 +1758,6 @@ class SeqSortRef(SortRef):
 class SeqRef(ExprRef):
     """Sequence Expressions"""
 
-    def sort(self):
-        return _sort(self.ctx, self.ast)
-
-    def isSequence(self):
-        return True
-
     def __add__(self, other):
         """Concatenation of two sequences.
 
@@ -1815,6 +1809,9 @@ class SeqRef(ExprRef):
         >>> s = Unit(IntVal(1)) + Unit(IntVal(2))
         >>> s.as_string()
         '(str.++ (seq.unit 1) (seq.unit 2))'
+        >>> x = Unit(RealVal(1.5))
+        >>> print(x.as_string())
+        (seq.unit (/ 3 2))
         """
         return str(self.ast)
 
@@ -1831,6 +1828,11 @@ class SeqRef(ExprRef):
         return self.is_string() and self.ast.getKind() == Kind.CONST_STRING
 
 
+# Here strings are implemented as a subclass of sequences, while in z3 a string is a sequence of characters.
+# In SMTLIB (and cvc5) there is no sort for characters, and strings and sequences are implemented separately.
+# However, there are certain similarities which are implemented using inheritance.
+
+
 class StringSortRef(SeqSortRef):
     """String sort."""
 
@@ -1839,11 +1841,15 @@ class StringSortRef(SeqSortRef):
 
         >>> string_sort = StringSort()
         >>> string_sort.cast(10)
-        "10"()
+        "10"
         >>> string_sort.cast('hello')
-        "hello"()
+        "hello"
         >>> string_sort.cast(10.5)
-        "10.5"()
+        "10.5"
+        >>> string_sort.cast(RealVal(1.5))
+        "3/2"
+        >>> string_sort.cast(RealVal(1.5)).sort()
+        String
         """
         if is_expr(val):
             if debugging():
@@ -1851,14 +1857,10 @@ class StringSortRef(SeqSortRef):
             val_s = val.sort()
             if self.eq(val_s):
                 return val
-            if val_s.is_bool() and self.is_int():
-                return If(val, 1, 0)
-            if val_s.is_bool() and self.is_real():
-                return ToReal(If(val, 1, 0))
-            if val_s.is_int() and self.is_real():
-                return ToReal(val)
+            if is_arith_sort(val_s) and _is_numeral(val.ctx, val.ast):
+                return StringVal(val.as_string())
             if debugging():
-                _assert(False, "SMT Integer/Real expression expected")
+                _assert(False, "SMT String/Integer/Real expression expected")
         else:
             return StringVal(str(val))
 
@@ -1866,19 +1868,13 @@ class StringSortRef(SeqSortRef):
 class StringRef(SeqRef):
     """String expressions"""
 
-    def sort(self):
-        return _sort(self.ctx, self.ast)
-
-    def isString(self):
-        return True
-
     def __getitem__(self, i):
         """Return string character at i
 
         >>> StringVal("hello")[0]
-        At("hello"(), 0)
+        At("hello", 0)
         >>> simplify(StringVal("hello")[0])
-        "h"()
+        "h"
         """
         if isinstance(i, int):
             i = IntVal(i, self.ctx)
@@ -2025,6 +2021,17 @@ def is_string(a):
     return isinstance(a, StringRef)
 
 
+def is_string_value(a):
+    """Return True if a is a string constant expression
+
+    >>> print (is_string_value(StringVal("a")))
+    True
+    >>> print (is_string_value(StringVal("a") + StringVal("b")))
+    False
+    """
+    return is_string(a) and a.is_string_value()
+
+
 def Unit(a):
     """Create a singleton sequence
 
@@ -2042,7 +2049,7 @@ def StringVal(val, ctx=None):
      If `ctx=None`, then the global context is used.
 
     >>> StringVal('hello')
-    "hello"()
+    "hello"
     >>> StringVal('hello').sort()
     String
     """
@@ -2067,9 +2074,9 @@ def SubString(s, offset, length, ctx=None):
     """Extract substring starting at offset of size length
 
     >>> simplify(SubString('hello',3,2))
-    "lo"()
+    "lo"
     >>> simplify(SubString(StringVal('hello'),3,2))
-    "lo"()
+    "lo"
     """
     ctx = _get_ctx(ctx)
     s = _py2expr(s)
@@ -2210,7 +2217,7 @@ def Replace(s, src, dst):
     """Replace the first occurence of src with dst in s
 
     >>> simplify(Replace('hello','l','?'))
-    "he?lo"()
+    "he?lo"
     >>> seq = Concat(Unit(IntVal(1)),Unit(IntVal(2)))
     >>> seq
     Concat(Unit(1), Unit(2))
@@ -2248,10 +2255,10 @@ def IntToStr(s):
 
     >>> b = IntToStr(55)
     >>> simplify(b)
-    "55"()
+    "55"
     >>> b = IntToStr(-5)
     >>> simplify(b)
-    ""()
+    ""
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
@@ -2506,7 +2513,7 @@ def Diff(a, b, ctx=None):
     return ReRef(a.ctx.solver.mkTerm(Kind.REGEXP_DIFF, a.ast, b.ast), a.ctx)
 
 
-def AllChar(ctx=None):
+def AllChar():
     """Create a regular expression that accepts all single character strings
 
     >>> re = AllChar()
@@ -2517,8 +2524,8 @@ def AllChar(ctx=None):
     >>> simplify(InRe('ab',re))
     False
     """
-    ctx = _get_ctx(ctx)
-    return ReRef(ctx.solver.mkTerm(Kind.REGEXP_ALLCHAR), ctx)
+    ctx = _get_ctx(None)
+    return ReRef(ctx.solver.mkRegexpAllchar(), ctx)
 
 
 #########################################
