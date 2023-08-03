@@ -1755,6 +1755,7 @@ class SeqSortRef(SortRef):
         return isinstance(self, StringSortRef)
 
 
+
 class SeqRef(ExprRef):
     """Sequence Expressions"""
 
@@ -1813,6 +1814,8 @@ class SeqRef(ExprRef):
         >>> print(x.as_string())
         (seq.unit (/ 3 2))
         """
+        if self.is_string_value():
+            return self.ast.getStringValue()
         return str(self.ast)
 
     def is_string_value(self):
@@ -1863,6 +1866,7 @@ class StringSortRef(SeqSortRef):
                 _assert(False, "SMT String/Integer/Real expression expected")
         else:
             return StringVal(str(val))
+
 
 
 class StringRef(SeqRef):

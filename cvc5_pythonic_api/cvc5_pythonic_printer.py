@@ -809,7 +809,7 @@ class Formatter:
         return to_format(a.as_decimal(self.precision))
 
     def pp_string(self, a):
-        return to_format(a.as_string())
+        return to_format(str(a.ast))
 
     def pp_bv(self, a):
         return to_format(a.as_string())
