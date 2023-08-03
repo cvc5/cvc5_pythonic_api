@@ -96,9 +96,11 @@ _cvc5_kinds_to_str = {
     Kind.SEQ_UNIT: "Unit",
     Kind.SEQ_CONTAINS: "Contains",
     Kind.SEQ_REPLACE: "Replace",
+    Kind.SEQ_EXTRACT: "Extract",
     Kind.SEQ_AT: "At",
-    Kind.SEQ_NTH: "Nth",
+    Kind.SEQ_NTH: "[]",
     Kind.SEQ_INDEXOF: "IndexOf",
+    Kind.SEQ_UPDATE: "Update",
     Kind.SEQ_LENGTH: "Length",
     Kind.SET_SUBSET: "IsSubset",
     Kind.SET_MINUS: "SetDifference",
@@ -110,14 +112,21 @@ _cvc5_kinds_to_str = {
     Kind.SET_MEMBER: "IsMember",
     Kind.STRING_TO_INT: "StrToInt",
     Kind.STRING_FROM_INT: "IntToStr",
-    # Kind.Seq_in_re: "InRe",
-    # Kind.Seq_to_re: "Re",
+    Kind.STRING_FROM_CODE: "StringFromCode",
+    Kind.STRING_TO_REGEXP: "StringToRegexp",
+    Kind.STRING_IN_REGEXP: "StringInRegexp",
+    Kind.STRING_TO_CODE: "StringToCode",
+    Kind.REGEXP_LOOP: "RegexpLoop",
+    Kind.REGEXP_CONCAT: "RegexpConcat",
+    Kind.REGEXP_OPT: "RegexpOpt",
     Kind.REGEXP_PLUS: "Plus",
     Kind.REGEXP_STAR: "Star",
     Kind.REGEXP_UNION: "Union",
     Kind.REGEXP_RANGE: "Range",
     Kind.REGEXP_INTER: "Intersect",
     Kind.REGEXP_COMPLEMENT: "Complement",
+    Kind.REGEXP_ALL: "Full",
+    Kind.REGEXP_NONE: "RegexpNone",
     Kind.FLOATINGPOINT_IS_NAN: "fpIsNaN",
     Kind.FLOATINGPOINT_IS_INF: "fpIsInf",
     Kind.FLOATINGPOINT_IS_ZERO: "fpIsZero",
@@ -140,6 +149,15 @@ _cvc5_kinds_to_str = {
     Kind.ARCCOTANGENT: "Arccotangent",
     Kind.PI: "Pi",
     Kind.EXPONENTIAL: "Exponential",
+    # Strings
+    Kind.STRING_SUBSTR: "SubString",
+    Kind.STRING_CHARAT: "At",
+    Kind.STRING_CONCAT: "+",
+    Kind.STRING_LENGTH: "Length",
+    Kind.STRING_REPLACE: "Replace",
+    Kind.STRING_UPDATE: "StringUpdate",
+    Kind.STRING_LEQ: "<=",
+    Kind.STRING_LT: "<",
 }
 
 # List of infix operators
@@ -173,6 +191,9 @@ _cvc5_infix = [
     Kind.BITVECTOR_SHL,
     Kind.FINITE_FIELD_ADD,
     Kind.FINITE_FIELD_MULT,
+    Kind.STRING_LT,
+    Kind.STRING_LEQ,
+    Kind.SEQ_NTH,
 ]
 
 _cvc5_unary = [Kind.NEG, Kind.BITVECTOR_NEG, Kind.BITVECTOR_NOT, Kind.FINITE_FIELD_NEG]
@@ -395,6 +416,8 @@ def _op_name(a):
             Kind.UNINTERPRETED_SORT_VALUE,
             Kind.PI,
             Kind.CONST_INTEGER,
+            Kind.CONST_STRING,
+            Kind.CONST_SEQUENCE,
         ]:
             return str(a.ast)
         if k == Kind.INTERNAL_KIND:
@@ -786,7 +809,7 @@ class Formatter:
         return to_format(a.as_decimal(self.precision))
 
     def pp_string(self, a):
-        return to_format('"' + a.as_string() + '"')
+        return to_format(str(a.ast))
 
     def pp_bv(self, a):
         return to_format(a.as_string())
@@ -1127,8 +1150,8 @@ class Formatter:
             return self.pp_fp_value(a)
         elif cvc.is_fp(a):
             return self.pp_fp(a, d, xs)
-        # elif cvc.is_string_value(a):
-        #     return self.pp_string(a)
+        elif cvc.is_string_value(a):
+            return self.pp_string(a)
         elif cvc.is_const(a):
             return self.pp_const(a)
         else:
