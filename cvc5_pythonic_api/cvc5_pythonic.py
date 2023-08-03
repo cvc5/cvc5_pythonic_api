@@ -1755,7 +1755,6 @@ class SeqSortRef(SortRef):
         return isinstance(self, StringSortRef)
 
 
-
 class SeqRef(ExprRef):
     """Sequence Expressions"""
 
@@ -1866,7 +1865,6 @@ class StringSortRef(SeqSortRef):
                 _assert(False, "SMT String/Integer/Real expression expected")
         else:
             return StringVal(str(val))
-
 
 
 class StringRef(SeqRef):
