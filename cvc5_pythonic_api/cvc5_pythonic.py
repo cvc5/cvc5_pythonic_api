@@ -1750,6 +1750,16 @@ class SeqSortRef(SortRef):
         """
         return isinstance(self, StringSortRef)
 
+    def elem_sort(self):
+        """ Get the element sort for this sequence
+
+        >>> SeqSort(IntSort()).elem_sort()
+        Int
+        >>> SeqSort(SeqSort(IntSort())).elem_sort()
+        (Seq Int)
+        """
+        return _to_sort_ref(self.ast.getSequenceElementSort(), self.ctx)
+
 
 class SeqRef(ExprRef):
     """Sequence Expressions"""
@@ -1986,13 +1996,13 @@ def Empty(s):
     True
     >>> e3 = Empty(SeqSort(IntSort()))
     >>> print(e3)
-    (as seq.empty (Seq (Seq Int)))()
+    (as seq.empty (Seq Int))()
     """
     if isinstance(s, ReSortRef):
         return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
     if isinstance(s, StringSortRef):
         return StringRef(s.ctx.solver.mkString(""), s.ctx)
-    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.ast), s.ctx)
+    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.elem_sort().ast), s.ctx)
 
 
 def is_seq(a):
