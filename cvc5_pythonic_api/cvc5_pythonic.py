@@ -5170,8 +5170,9 @@ class Solver(object):
     * etc."""
 
     def __init__(self, logic=None, ctx=None, logFile=None):
+        # save logic so that we can re-build the solver if needed.
         self.logic = logic
-        # ignore ctx
+        # ignore ctx (the paramter is kept for z3 compatibility)
         self.solver = None
         self.initFromLogic()
         self.scopes = 0
@@ -5180,6 +5181,7 @@ class Solver(object):
         self.resetAssertions()
 
     def initFromLogic(self):
+        """Create the base-API solver from the logic"""
         self.solver = pc.Solver()
         if self.logic is not None:
             self.solver.setLogic(self.logic)
