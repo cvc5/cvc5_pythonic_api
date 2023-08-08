@@ -1,0 +1,13 @@
+False
+[s = (seq.unit 1)(), t = (seq.unit 2)()]
+[s = (seq.unit (- 1))(), t = (seq.unit (- 1))()]
+[s = (as seq.empty (Seq Int))()]
+[s = (as seq.empty (Seq Int))()]
+[s = (seq.++ (seq.unit 1) (seq.unit 2))()]
+[s = (as seq.empty (Seq Int))()]
+[s = (seq.++ (seq.unit 1) (seq.unit 2))()]
+[s = (seq.++ (seq.unit 1) (seq.unit 1))(), t = (seq.++ (seq.unit 1) (seq.unit 1))()]
+[s = (as seq.empty (Seq Int))(), t = (as seq.empty (Seq Int))(), u = (as seq.empty (Seq Int))()]
+[s = (seq.++ (seq.unit (- 2)) (seq.unit (- 1)))(), t = (seq.unit (- 1))()]
+[s = (seq.++ (seq.unit (- 3)) (seq.unit (- 2)) (seq.unit 4))(), t = (seq.unit 4)()]
+no solution
