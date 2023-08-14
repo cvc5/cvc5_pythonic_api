@@ -127,11 +127,14 @@ def _get_args(args):
 class Context(object):
     """A Context manages all terms, configurations, etc.
 
-    In z3's API, a context owns terms, sorts, and solvers. It is used to create them. Terms/sorts/solvers from one context cannot be implicitly used in another. Items *can* be explicitly transfered between contexts.
-    The result is that essentially all functions have a context threaded through them.
+    In z3's API, a context owns terms, sorts, and solvers. It is used to create
+    them. Terms/sorts/solvers from one context cannot be implicitly used in
+    another. Items *can* be explicitly transfered between contexts. The result
+    is that essentially all functions have a context threaded through them.
     There is a default "main" context.
 
-    In cvc5's API, terms and sorts are created using a solver, but stored globally and are freely transferable.
+    In cvc5's API, terms and sorts are created using a solver, but stored
+    globally and are freely transferable.
 
     Our compatibility solution is:
     * a context wraps a solver, so that a context can be used to create terms
