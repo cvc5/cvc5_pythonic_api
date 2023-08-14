@@ -1,0 +1,10 @@
+[x = 0, y = 0]
+sat
+0
+The logic was specified as QF_BV, which doesn't include THEORY_ARITH, but got a theory atom for that theory.
+The atom:
+(= x (* 2 y))
+Can't solve integer problems with QF_BV solver
+unsat
+unsat
+Can't eagerly BB with models and ALL
