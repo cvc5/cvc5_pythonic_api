@@ -1004,6 +1004,8 @@ def _to_expr_ref(a, ctx, r=None):
         return StringRef(ast, ctx, r)
     if sort.isSequence():
         return SeqRef(ast, ctx, r)
+    if sort.isFunction():
+        return FuncDeclRef(ast, ctx, r)
     return ExprRef(ast, ctx, r)
 
 
