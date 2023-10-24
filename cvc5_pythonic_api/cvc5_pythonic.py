@@ -127,31 +127,31 @@ def _get_args(args):
 class Context(object):
     """A Context manages all terms, configurations, etc.
 
-    In cvc5's API, these are managed by a solver, but we keep the Context class
-    (which just wraps a solver) for compatiblity.
+    In z3's API, a context owns terms, sorts, and solvers. It is used to create
+    them. Terms/sorts/solvers from one context cannot be implicitly used in
+    another. Items *can* be explicitly transfered between contexts. The result
+    is that essentially all functions have a context threaded through them.
+    There is a default "main" context.
 
-    It's only responsibilities are:
+    In cvc5's API, terms and sorts are created using a solver, but stored
+    globally and are freely transferable.
+
+    Our compatibility solution is:
+    * a context wraps a solver, so that a context can be used to create terms
+    * also, a context does these things:
         * making fresh identifiers for a given sort
         * looking up previously defined constants
     """
 
-    def __init__(self, *args, **kws):
-        self.reset()
-
-    def __del__(self):
-        self.solver = None
-
-    def reset(self):
-        """Fully reset the context. This actually destroys the solver object and
-        recreates it. **This invalidates all objects created within this context
-        and using them will most likely crash.**
-        """
-        self.solver = pc.Solver()
-        self.solver.setOption("produce-models", "true")
+    def __init__(self, solver=None):
+        self.solver = solver.solver if solver is not None else SimpleSolver().solver
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
         self.next_fresh_var = 0
+
+    def __del__(self):
+        self.solver = None
 
     def get_var(self, name, sort):
         """Get the variable identified by `name`.
@@ -633,7 +633,6 @@ class SortRef(object):
         True
         """
         instance_check(other, SortRef)
-        assert self.ctx == other.ctx
         return self.as_ast() == other.as_ast()
 
     def hash(self):
@@ -1005,6 +1004,10 @@ def _to_expr_ref(a, ctx, r=None):
         return StringRef(ast, ctx, r)
     if sort.isSequence():
         return SeqRef(ast, ctx, r)
+
+    if sort.isFunction():
+        return FuncDeclRef(ast, ctx, r)
+
     return ExprRef(ast, ctx, r)
 
 
@@ -1755,6 +1758,18 @@ class SeqSortRef(SortRef):
         return isinstance(self, StringSortRef)
 
 
+    def elem_sort(self):
+        """Get the element sort for this sequence
+
+        >>> SeqSort(IntSort()).elem_sort()
+        Int
+        >>> SeqSort(SeqSort(IntSort())).elem_sort()
+        (Seq Int)
+        """
+        return _to_sort_ref(self.ast.getSequenceElementSort(), self.ctx)
+
+
+
 class SeqRef(ExprRef):
     """Sequence Expressions"""
 
@@ -1990,13 +2005,16 @@ def Empty(s):
     True
     >>> e3 = Empty(SeqSort(IntSort()))
     >>> print(e3)
-    (as seq.empty (Seq (Seq Int)))()
+
+    (as seq.empty (Seq Int))()
     """
     if isinstance(s, ReSortRef):
         return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
     if isinstance(s, StringSortRef):
         return StringRef(s.ctx.solver.mkString(""), s.ctx)
-    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.ast), s.ctx)
+
+    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.elem_sort().ast), s.ctx)
+
 
 
 def is_seq(a):
@@ -5968,20 +5986,27 @@ class Solver(object):
     * get-model,
     * etc."""
 
-    def __init__(self, solver=None, ctx=None, logFile=None):
-        assert solver is None or ctx is not None
-        self.ctx = _get_ctx(ctx)
-        self.solver = self.ctx.solver
+    def __init__(self, logic=None, ctx=None, logFile=None):
+        # save logic so that we can re-build the solver if needed.
+        self.logic = logic
+        # ignore ctx (the paramter is kept for z3 compatibility)
+        self.solver = None
+        self.initFromLogic()
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
         self.resetAssertions()
 
+    def initFromLogic(self):
+        """Create the base-API solver from the logic"""
+        self.solver = pc.Solver()
+        if self.logic is not None:
+            self.solver.setLogic(self.logic)
+        self.solver.setOption("produce-models", "true")
+
     def __del__(self):
         if self.solver is not None:
             self.solver = None
-        if self.ctx is not None:
-            self.ctx = None
 
     def push(self):
         """Create a backtracking point.
@@ -6081,9 +6106,7 @@ class Solver(object):
         >>> s.reset()
         >>> s.setOption(incremental=True)
         """
-        self.ctx.reset()
-        self.solver = self.ctx.solver
-        self.resetAssertions()
+        self.initFromLogic()
 
     def assert_exprs(self, *args):
         """Assert constraints into the solver.
@@ -6095,7 +6118,7 @@ class Solver(object):
         [x > 0, x < 2]
         """
         args = _get_args(args)
-        s = BoolSort(self.ctx)
+        s = BoolSort()
         for arg in args:
             arg = s.cast(arg)
             self.assertions_[-1].append(arg)
@@ -6184,7 +6207,7 @@ class Solver(object):
         >>> s.model()
         [a = -2]
         """
-        return ModelRef(self, self.ctx)
+        return ModelRef(self)
 
     def assertions(self):
         """Return an AST vector containing all added constraints.
@@ -6229,7 +6252,6 @@ class Solver(object):
     def set(self, *args, **kwargs):
         """Set an option on the solver. Wraps ``setOption()``.
 
-        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.set(incremental=True)
         >>> s.set('incremental', 'true')
@@ -6244,7 +6266,6 @@ class Solver(object):
         properly converted manually, all other types are convertes using
         ``str()``.
 
-        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.setOption('incremental', True)
         >>> s.setOption(incremental='true')
@@ -6265,7 +6286,6 @@ class Solver(object):
         """Get the current value of an option from the solver. The value is
         returned as a string. For type-safe querying use ``getOptionInfo()``.
 
-        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.setOption(incremental=True)
         >>> s.getOption("incremental")
@@ -6287,12 +6307,10 @@ class Solver(object):
         """Get the current value of an option from the solver. The value is
         returned as a string. For type-safe querying use ``getOptionInfo()``.
 
-        >>> main_ctx().reset()
         >>> s = Solver()
         >>> s.setOption(incremental=False)
         >>> s.getOptionInfo("incremental")
         {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': True}
-        >>> main_ctx().reset()
         """
         return self.solver.getOptionInfo(name)
 
@@ -6307,7 +6325,7 @@ class Solver(object):
         sat
         >>> stats = s.statistics()
         >>> stats['cvc5::CONSTANT']
-        {'defaulted': False, 'internal': False, 'value': {'integer type': 1}}
+        {'defaulted': True, 'internal': False, 'value': {}}
         >>> len(stats.get()) < 10
         True
         >>> len(stats.get(True, True)) > 30
@@ -6341,11 +6359,7 @@ def SolverFor(logic, ctx=None, logFile=None):
     # sat
     # >>> s.model()
     # [x = 1]
-    # """
-    solver = pc.Solver()
-    solver.setLogic(logic)
-    ctx = _get_ctx(ctx)
-    return Solver(solver, ctx, logFile)
+    return Solver(logic=logic, ctx=ctx, logFile=logFile)
 
 
 def SimpleSolver(ctx=None, logFile=None):
@@ -6357,8 +6371,7 @@ def SimpleSolver(ctx=None, logFile=None):
     >>> s.check()
     sat
     """
-    ctx = _get_ctx(ctx)
-    return Solver(None, ctx, logFile)
+    return Solver(ctx=ctx, logFile=logFile)
 
 
 #########################################
@@ -6581,17 +6594,13 @@ def is_tautology(taut):
 class ModelRef:
     """Model/Solution of a satisfiability problem (aka system of constraints)."""
 
-    def __init__(self, solver, ctx):
+    def __init__(self, solver):
         assert solver is not None
-        assert ctx is not None
         self.solver = solver
-        self.ctx = ctx
 
     def __del__(self):
         if self.solver is not None:
             self.solver = None
-        if self.ctx is not None:
-            self.ctx = None
 
     def vars(self):
         """Returns the free constants in an assertion, as terms"""
@@ -6639,7 +6648,7 @@ class ModelRef:
         >>> m.eval(x == 1)
         True
         """
-        return _to_expr_ref(self.solver.solver.getValue(t.ast), self.solver.ctx)
+        return _to_expr_ref(self.solver.solver.getValue(t.ast), Context(self.solver))
 
     def evaluate(self, t, model_completion=False):
         """Alias for `eval`.

@@ -1,3 +1,3 @@
 True
-[s = (seq.++ (seq.unit 1) (seq.unit 2))(), t = (as seq.empty (Seq Int))()]
-[a = "heAAA"]
+sat
+sat
