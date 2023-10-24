@@ -6253,6 +6253,8 @@ class Solver(object):
             kwargs[name] = value
         for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
+            if k == 'unsat_core':
+                k = 'produce-unsat-cores'
             if isinstance(v, bool):
                 v = "true" if v else "false"
             elif not isinstance(v, str):
@@ -6312,6 +6314,14 @@ class Solver(object):
         True
         """
         return self.solver.getStatistics()
+    
+    def assert_and_track(self, a, p):
+        pass
+
+    def unsat_core(self):
+        core = self.solver.getUnsatAssumptions()
+        #core = self.solver.getUnsatCore()
+        return [ _to_expr_ref(c, self.ctx) for c in core] 
 
 
 def SolverFor(logic, ctx=None, logFile=None):
