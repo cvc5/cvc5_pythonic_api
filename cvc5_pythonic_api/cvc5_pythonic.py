@@ -2005,7 +2005,6 @@ def Empty(s):
     True
     >>> e3 = Empty(SeqSort(IntSort()))
     >>> print(e3)
-
     (as seq.empty (Seq Int))()
     """
     if isinstance(s, ReSortRef):
@@ -6332,14 +6331,32 @@ class Solver(object):
         True
         """
         return self.solver.getStatistics()
-    
-    def assert_and_track(self, a, p):
-        pass
 
     def unsat_core(self):
+        """Return a subset (as a list of Bool expressions) of the assumptions provided to the last check().
+
+        These are the unsat ("failed") assumptions.
+
+        To enable this, set the option "produce-unsat-assumptions" to true. 
+
+        >>> a,b,c = Bools('a b c')
+        >>> s = Solver()
+        >>> s.set('produce-unsat-assumptions','true')
+        >>> s.add(Or(a,b),Or(b,c),Not(c))
+        >>> s.check(a,b,c)
+        unsat
+        >>> core = s.unsat_core()
+        >>> a in core
+        False
+        >>> b in core
+        False
+        >>> c in core
+        True
+        >>> s.check(a,b)
+        sat
+        """
         core = self.solver.getUnsatAssumptions()
-        #core = self.solver.getUnsatCore()
-        return [ _to_expr_ref(c, self.ctx) for c in core] 
+        return [ BoolRef(c) for c in core] 
 
 
 def SolverFor(logic, ctx=None, logFile=None):

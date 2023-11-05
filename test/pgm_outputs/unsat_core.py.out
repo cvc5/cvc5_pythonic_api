@@ -1,17 +1,1 @@
-unsat
-[p1, p2, p3]
-p1 in core:  True
-p2 in core:  True
-p3 in core:  True
--------------------------
-Formula is unsatisfiable
-Unsatisfiable core: [a]
--------------------------
-Formula is unsatisfiable
-Unsatisfiable core: [c]
--------------------------
-Constraints are unsatisfiable.
-Unsatisfiable core: [x > 0]
--------------------------
-Constraints are unsatisfiable.
-Unsatisfiable core: [Length(s2) < 2]
+success
