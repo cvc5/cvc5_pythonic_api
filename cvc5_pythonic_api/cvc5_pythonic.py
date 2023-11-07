@@ -1755,7 +1755,6 @@ class SeqSortRef(SortRef):
         """
         return isinstance(self, StringSortRef)
 
-
     def elem_sort(self):
         """Get the element sort for this sequence
 
