@@ -2007,7 +2007,6 @@ def Empty(s):
         return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
     if isinstance(s, StringSortRef):
         return StringRef(s.ctx.solver.mkString(""), s.ctx)
-
     return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.elem_sort().ast), s.ctx)
 
 
