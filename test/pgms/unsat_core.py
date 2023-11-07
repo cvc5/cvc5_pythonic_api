@@ -39,7 +39,6 @@ if len(core) < len(assumptions):
 
 # example 2 - booleans
 
-
 reset_solver(s)
 
 a, b, c = Bools('a b c')
