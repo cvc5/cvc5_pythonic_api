@@ -1766,7 +1766,6 @@ class SeqSortRef(SortRef):
         return _to_sort_ref(self.ast.getSequenceElementSort(), self.ctx)
 
 
-
 class SeqRef(ExprRef):
     """Sequence Expressions"""
 
