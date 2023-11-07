@@ -2010,7 +2010,6 @@ def Empty(s):
     return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.elem_sort().ast), s.ctx)
 
 
-
 def is_seq(a):
     """Return `True` if `a` is a sequence expression.
 
