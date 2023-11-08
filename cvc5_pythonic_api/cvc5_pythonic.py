@@ -6267,8 +6267,6 @@ class Solver(object):
             kwargs[name] = value
         for k, v in kwargs.items():
             _assert(isinstance(k, str), "non-string key " + str(k))
-            if k == 'unsat_core':
-                k = 'produce-unsat-cores'
             if isinstance(v, bool):
                 v = "true" if v else "false"
             elif not isinstance(v, str):
@@ -6331,7 +6329,7 @@ class Solver(object):
 
         These are the unsat ("failed") assumptions.
 
-        To enable this, set the option "produce-unsat-assumptions" to true. 
+        To enable this, set the option "produce-unsat-assumptions" to true.
 
         >>> a,b,c = Bools('a b c')
         >>> s = Solver()
@@ -6350,7 +6348,7 @@ class Solver(object):
         sat
         """
         core = self.solver.getUnsatAssumptions()
-        return [ BoolRef(c) for c in core] 
+        return [BoolRef(c) for c in core]
 
 
 def SolverFor(logic, ctx=None, logFile=None):
