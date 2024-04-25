@@ -6620,6 +6620,8 @@ class ModelRef:
         automatically added for symbols that do not have an interpretation in
         the model `self`.
 
+        This method is similar to the SMT-LIB `get-value` command.
+
         >>> x = Int('x')
         >>> s = Solver()
         >>> s.add(x > 0, x < 2)
@@ -6672,6 +6674,8 @@ class ModelRef:
 
         The elements can be retrieved using position or the actual declaration.
 
+        This method is similar to the SMT-LIB `get-value` command.
+
         >>> f = Function('f', IntSort(), IntSort())
         >>> x = Int('x')
         >>> s = Solver()
@@ -6718,7 +6722,10 @@ class ModelRef:
 
 
 def evaluate(t):
-    """Evaluates the given term (assuming it is constant!)"""
+    """Evaluates the given term (assuming it is constant!)
+
+    This method is similar to the SMT-LIB `get-value` command.
+    """
     s = Solver()
     s.check()
     m = s.model()
