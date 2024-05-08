@@ -1819,7 +1819,7 @@ class SeqRef(ExprRef):
 
         >>> s = Unit(IntVal(1)) + Unit(IntVal(2))
         >>> s.as_string()
-        '(str.++ (seq.unit 1) (seq.unit 2))'
+        '(seq.++ (seq.unit 1) (seq.unit 2))'
         >>> x = Unit(RealVal(1.5))
         >>> print(x.as_string())
         (seq.unit (/ 3 2))
@@ -6316,13 +6316,39 @@ class Solver(object):
         sat
         >>> stats = s.statistics()
         >>> stats['cvc5::CONSTANT']
-        {'defaulted': True, 'internal': False, 'value': {}}
+        {'default': True, 'internal': False, 'value': {}}
         >>> len(stats.get()) < 10
         True
         >>> len(stats.get(True, True)) > 30
         True
         """
         return self.solver.getStatistics()
+
+    def unsat_core(self):
+        """Return a subset (as a list of Bool expressions) of the assumptions provided to the last check().
+
+        These are the unsat ("failed") assumptions.
+
+        To enable this, set the option "produce-unsat-assumptions" to true.
+
+        >>> a,b,c = Bools('a b c')
+        >>> s = Solver()
+        >>> s.set('produce-unsat-assumptions','true')
+        >>> s.add(Or(a,b),Or(b,c),Not(c))
+        >>> s.check(a,b,c)
+        unsat
+        >>> core = s.unsat_core()
+        >>> a in core
+        False
+        >>> b in core
+        False
+        >>> c in core
+        True
+        >>> s.check(a,b)
+        sat
+        """
+        core = self.solver.getUnsatAssumptions()
+        return [BoolRef(c) for c in core]
 
 
 def SolverFor(logic, ctx=None, logFile=None):
