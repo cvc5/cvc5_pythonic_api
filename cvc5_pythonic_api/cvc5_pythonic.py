@@ -1819,7 +1819,7 @@ class SeqRef(ExprRef):
 
         >>> s = Unit(IntVal(1)) + Unit(IntVal(2))
         >>> s.as_string()
-        '(str.++ (seq.unit 1) (seq.unit 2))'
+        '(seq.++ (seq.unit 1) (seq.unit 2))'
         >>> x = Unit(RealVal(1.5))
         >>> print(x.as_string())
         (seq.unit (/ 3 2))
@@ -6316,7 +6316,7 @@ class Solver(object):
         sat
         >>> stats = s.statistics()
         >>> stats['cvc5::CONSTANT']
-        {'defaulted': True, 'internal': False, 'value': {}}
+        {'default': True, 'internal': False, 'value': {}}
         >>> len(stats.get()) < 10
         True
         >>> len(stats.get(True, True)) > 30
