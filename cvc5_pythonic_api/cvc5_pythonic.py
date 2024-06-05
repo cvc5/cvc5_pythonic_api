@@ -5988,7 +5988,7 @@ class Solver(object):
         self.assertions_ = [[]]
         self.last_result = None
         self.resetAssertions()
-        assert(ctx == None)
+        assert ctx == None
 
     def initFromLogic(self):
         """Create the base-API solver from the logic"""
