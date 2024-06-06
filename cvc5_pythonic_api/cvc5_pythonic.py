@@ -1723,7 +1723,7 @@ def And(*args):
     """
     if len(args) == 0:
         return True
-    if len(args) == 1:
+    if len(args) == 1 and type(args[0]) is not list:
         return args[0]
     return _nary_kind_builder(Kind.AND, *args)
 
@@ -1746,7 +1746,7 @@ def Or(*args):
     """
     if len(args) == 0:
         return False
-    if len(args) == 1:
+    if len(args) == 1 and type(args[0]) is not list:
         return args[0]
     return _nary_kind_builder(Kind.OR, *args)
 
