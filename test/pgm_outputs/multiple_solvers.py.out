@@ -5,6 +5,7 @@ The logic was specified as QF_BV, which doesn't include THEORY_ARITH, but got a 
 The atom:
 (= x (* 2 y))
 Can't solve integer problems with QF_BV solver
+got an exception, which is good
 unsat
 unsat
 Can't eagerly BB with models and ALL

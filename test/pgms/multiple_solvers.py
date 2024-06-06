@@ -21,6 +21,12 @@ except Exception as e:
     print(e)
     print("Can't solve integer problems with QF_BV solver")
 
+# Can't specify logic unless using `SolverFor`
+try:
+    s = Solver("QF_BV")
+except Exception as e:
+    print("got an exception, which is good")
+
 
 # QF_NIA
 s = SolverFor("QF_BV")
