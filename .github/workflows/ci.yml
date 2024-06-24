@@ -24,9 +24,10 @@ jobs:
       with:
         repository: cvc5/cvc5
         path: cvc5
-      
+
     - name: Install dependencies
       uses: ./cvc5/.github/actions/install-dependencies
+      working-directory: ./cvc5
       with:
         with-documentation: false
         with-python-bindings: true
