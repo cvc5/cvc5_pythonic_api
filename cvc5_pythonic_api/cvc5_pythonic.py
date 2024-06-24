@@ -6325,15 +6325,14 @@ class Solver(object):
         return self.solver.getStatistics()
 
     def unsat_core(self):
-        """Return a subset (as a list of Bool expressions) of the assumptions provided to the last check().
+        """Return a subset (as a list of Bool expressions) of the
+        assertions and assumptions provided to the last check().
 
-        These are the unsat ("failed") assumptions.
-
-        To enable this, set the option "produce-unsat-assumptions" to true.
+        To enable this, set the option "produce-unsat-cores" to true.
 
         >>> a,b,c = Bools('a b c')
         >>> s = Solver()
-        >>> s.set('produce-unsat-assumptions','true')
+        >>> s.set('produce-unsat-cores','true')
         >>> s.add(Or(a,b),Or(b,c),Not(c))
         >>> s.check(a,b,c)
         unsat
@@ -6347,8 +6346,8 @@ class Solver(object):
         >>> s.check(a,b)
         sat
         """
-        core = self.solver.getUnsatAssumptions()
-        return [BoolRef(c) for c in core]
+        core = self.solver.getUnsatCore()
+        return [_to_expr_ref(c, Context(self)) for c in core]
 
 
 def SolverFor(logic, ctx=None, logFile=None):
