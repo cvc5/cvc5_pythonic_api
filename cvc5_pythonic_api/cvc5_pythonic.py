@@ -6217,16 +6217,16 @@ class Solver(object):
         unsat
         >>> s.proof()
         (SCOPE: Not(And(a + 2 == 0, a == 0)),
-          (SCOPE: Not(And(a + 2 == 0, a == 0)),
-           [a + 2 == 0, a == 0],
-           (EQ_RESOLVE: False,
-            (ASSUME: a == 0, [a == 0]),
-            (MACRO_SR_EQ_INTRO: (a == 0) == False,
-             [a == 0, 7, 12],
-             (EQ_RESOLVE: a == -2,
-              (ASSUME: a + 2 == 0, [a + 2 == 0]),
-              (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
-               [a + 2 == 0, 7, 12]))))))
+         (SCOPE: Not(And(a + 2 == 0, a == 0)),
+          [a + 2 == 0, a == 0],
+          (EQ_RESOLVE: False,
+           (ASSUME: a == 0, [a == 0]),
+           (MACRO_SR_EQ_INTRO: (a == 0) == False,
+            [a == 0, 7, 12],
+            (EQ_RESOLVE: a == -2,
+             (ASSUME: a + 2 == 0, [a + 2 == 0]),
+             (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
+              [a + 2 == 0, 7, 12]))))))
         """
         p = self.solver.getProof()[0]
         return ProofRef(self, p)
