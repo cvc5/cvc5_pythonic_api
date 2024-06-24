@@ -1080,6 +1080,21 @@ class Formatter:
                 arg1_pp, indent(2, compose(to_format("["), arg2_pp, to_format("]")))
             )
 
+    def pp_sexpr(self, a, d, xs):
+        r = []
+        sz = 0
+        for child in a.children():
+            r.append(self.pp_expr(child, d + 1, xs))
+            sz = sz + 1
+            if sz > self.max_args:
+                r.append(self.pp_ellipses())
+                break
+        return group(
+            indent(
+                len("("), compose(to_format("("), seq(r, " ", False), to_format(")"))
+            )
+        )
+
     def pp_unary_param(self, a, d, xs, param_on_right):
         p = a.ast.getOp()[0].toPythonObj()
         arg = self.pp_expr(a.arg(0), d + 1, xs)
@@ -1194,6 +1209,8 @@ class Formatter:
                 return self.pp_uf_apply(a, d, xs)
             elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
+            elif k == Kind.SEXPR:
+                return self.pp_sexpr(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
 
