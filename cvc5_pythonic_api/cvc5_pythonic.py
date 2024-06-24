@@ -6345,7 +6345,6 @@ class Solver(object):
         True
         >>> s.check(a,b)
         sat
-
         """
         core = self.solver.getUnsatCore()
         return [_to_expr_ref(c, Context(self)) for c in core]
