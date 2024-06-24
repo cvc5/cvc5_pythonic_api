@@ -6212,6 +6212,13 @@ class Solver(object):
         >>> s.set('produce-proofs','true')
         >>> a = Int('a')
         >>> s.add(a + 2 == 0)
+        >>> s.check()
+        sat
+        >>> try:
+        ...   s.proof()
+        ... except RuntimeError:
+        ...   print("failed to get proof (last `check()` must have returned unsat)")
+        failed to get proof (last `check()` must have returned unsat)
         >>> s.add(a == 0)
         >>> s.check()
         unsat
@@ -6797,22 +6804,77 @@ class ProofRef:
         return obj_to_string(self)
 
     def getRule(self):
-        """Returns the proof rule used by the root step of the proof."""
+        """Returns the proof rule used by the root step of the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getRule()
+        <ProofRule.SCOPE: 1>
+        """
         return self.proof.getRule()
 
     def getResult(self):
-        """Returns the conclusion of the root step of the proof."""
+        """Returns the conclusion of the root step of the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getResult()
+        Not(And(a + 2 == 0, a == 0))
+        """
         return _to_expr_ref(self.proof.getResult(), Context(self.solver))
 
     def getChildren(self):
         """Returns the premises, i.e., proofs themselvels, of the root step of
-        the proof."""
+        the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p = p.getChildren()[0].getChildren()[0]
+        >>> p
+        (EQ_RESOLVE: False,
+         (ASSUME: a == 0, [a == 0]),
+         (MACRO_SR_EQ_INTRO: (a == 0) == False,
+          [a == 0, 7, 12],
+          (EQ_RESOLVE: a == -2,
+           (ASSUME: a + 2 == 0, [a + 2 == 0]),
+           (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
+            [a + 2 == 0, 7, 12]))))
+        """
         children = self.proof.getChildren()
         return [ProofRef(self.solver, cp) for cp in children]
 
     def getArguments(self):
         """Returns the arguments of the root step of the proof as a list of
-        expressions."""
+        expressions.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getArguments()
+        []
+        >>> p = p.getChildren()[0]
+        >>> p.getArguments()
+        [a + 2 == 0, a == 0]
+        """
         args = self.proof.getArguments()
         return [_to_expr_ref(a, Context(self.solver)) for a in args]
 
