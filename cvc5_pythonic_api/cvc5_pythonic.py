@@ -1312,6 +1312,15 @@ def FreshConst(sort, prefix="c"):
     return Const(name, sort)
 
 
+def Sexpr(*args):
+    """Create an SEXPR term.
+
+    >>> p, q, r = Bools('p q r')
+    >>> Sexpr(p, q, r)
+    (p q r)
+    """
+    return _nary_kind_builder(Kind.SEXPR, *args)
+
 #########################################
 #
 # Booleans

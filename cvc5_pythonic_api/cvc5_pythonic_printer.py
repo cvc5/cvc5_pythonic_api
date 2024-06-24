@@ -1089,7 +1089,7 @@ class Formatter:
             if sz > self.max_args:
                 r.append(self.pp_ellipses())
                 break
-        return seq3(r)
+        return group(indent(len("("), compose(to_format("("), seq(r, " ", False), to_format(")"))))
 
     def pp_unary_param(self, a, d, xs, param_on_right):
         p = a.ast.getOp()[0].toPythonObj()
