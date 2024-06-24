@@ -1321,6 +1321,7 @@ def Sexpr(*args):
     """
     return _nary_kind_builder(Kind.SEXPR, *args)
 
+
 #########################################
 #
 # Booleans
