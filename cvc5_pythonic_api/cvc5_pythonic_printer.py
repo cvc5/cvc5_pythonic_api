@@ -1318,6 +1318,27 @@ class Formatter:
                 break
         return seq3(r, "[", "]")
 
+    def pp_proof(self, p, d):
+        if d > self.max_depth:
+            return self.pp_ellipses()
+        r = []
+        rule = str(p.getRule())[10:]
+        result = p.getResult()
+        childrenProofs = p.getChildren()
+        args = p.getArguments()
+        result_pp = self.pp_expr(result, 0, [])
+        r.append(
+            compose(to_format("{}: ".format(rule)), indent(_len(rule) + 2, result_pp))
+        )
+        if args:
+            r_args = []
+            for arg in args:
+                r_args.append(self.pp_expr(arg, 0, []))
+            r.append(seq3(r_args, "[", "]"))
+        for cPf in childrenProofs:
+            r.append(self.pp_proof(cPf, d + 1))
+        return seq3(r)
+
     def pp_func_entry(self, e):
         num = e.num_args()
         if num > 1:
@@ -1377,6 +1398,8 @@ class Formatter:
             return self.pp_seq(a.assertions(), 0, [])
         elif isinstance(a, cvc.ModelRef):
             return self.pp_model(a)
+        elif isinstance(a, cvc.ProofRef):
+            return self.pp_proof(a, 0)
         elif isinstance(a, list) or isinstance(a, tuple):
             return self.pp_list(a)
         else:
