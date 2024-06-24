@@ -1310,12 +1310,13 @@ class Formatter:
         childrenProofs = p.getChildren()
         args = p.getArguments()
         result_pp = self.pp_expr(result, 0, [])
-        r.append(compose(to_format("{}: ".format(rule)),
-                         indent(_len(rule) + 2, result_pp)))
+        r.append(
+            compose(to_format("{}: ".format(rule)), indent(_len(rule) + 2, result_pp))
+        )
         if args:
             r_args = []
             for arg in args:
-              r_args.append(self.pp_expr(arg, 0, []))
+                r_args.append(self.pp_expr(arg, 0, []))
             r.append(seq3(r_args, "[", "]"))
         for cPf in childrenProofs:
             r.append(self.pp_proof(cPf, d + 1))

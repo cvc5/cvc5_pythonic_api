@@ -6779,10 +6779,12 @@ def evaluate(t):
     m = s.model()
     return m[t]
 
+
 class ProofRef:
-    """A proofs tree where every proof reference corresponds to the
+    """A proof tree where every proof reference corresponds to the
     root step of a proof.  The branches of the root step are the
     premises of the step."""
+
     def __init__(self, solver, proof):
         self.proof = proof
         self.solver = solver
@@ -6792,7 +6794,7 @@ class ProofRef:
             self.solver = None
 
     def __repr__(self):
-      return obj_to_string(self)
+        return obj_to_string(self)
 
     def getRule(self):
         """Returns the proof rule used by the root step of the proof."""
@@ -6813,6 +6815,7 @@ class ProofRef:
         expressions."""
         args = self.proof.getArguments()
         return [_to_expr_ref(a, Context(self.solver)) for a in args]
+
 
 def simplify(a):
     """Simplify the expression `a`.
