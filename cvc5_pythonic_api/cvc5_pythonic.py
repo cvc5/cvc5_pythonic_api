@@ -1429,6 +1429,38 @@ class BoolRef(ExprRef):
             return 0
         return If(self, other, 0)
 
+    def __and__(self, other):
+        """Create the SMT and expression `self & other`.
+
+        >>> solve(Bool("x") & Bool("y"))
+        [x = True, y = True]
+        """
+        return And(self, other)
+
+    def __or__(self, other):
+        """Create the SMT or expression `self | other`.
+
+        >>> solve(Bool("x") | Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Or(self, other)
+
+    def __xor__(self, other):
+        """Create the SMT xor expression `self ^ other`.
+
+        >>> solve(Bool("x") ^ Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Xor(self, other)
+
+    def __invert__(self):
+        """Create the SMT not expression `~self`.
+
+        >>> solve(~Bool("x"))
+        [x = False]
+        """
+        return Not(self)
+
 
 def is_bool(a):
     """Return `True` if `a` is an SMT Boolean expression.
