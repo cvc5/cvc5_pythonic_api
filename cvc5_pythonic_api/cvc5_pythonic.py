@@ -52,6 +52,7 @@ Differences with Z3py:
 * Missing features:
   * Patterns
   * Models for uninterpreted sorts
+  * The `Model` function
   * Pseudo-boolean counting constraints
     * AtMost, AtLeast, PbLe, PbGe, PbEq
   * HTML integration
