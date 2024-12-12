@@ -56,7 +56,7 @@ jobs:
     - name: Build cvc5
       run: |
         cd cvc5/
-        ./configure.sh production --auto-download --python-bindings --cocoa
+        ./configure.sh production --auto-download --python-bindings --cocoa --gpl
         cd build/
         make -j${{ env.num_proc }}
 
