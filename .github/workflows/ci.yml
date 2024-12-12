@@ -18,7 +18,7 @@ jobs:
       with:
         options: "--check --verbose"
         src: "cvc5_pythonic_api"
-        version: "23.7.0"
+        version: "24"
 
     - uses: actions/checkout@v2
       with:

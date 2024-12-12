@@ -6238,12 +6238,22 @@ class Solver(object):
           [a + 2 == 0, a == 0],
           (EQ_RESOLVE: False,
            (ASSUME: a == 0, [a == 0]),
-           (MACRO_SR_EQ_INTRO: (a == 0) == False,
-            [a == 0, 7, 12],
-            (EQ_RESOLVE: a == -2,
-             (ASSUME: a + 2 == 0, [a + 2 == 0]),
-             (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
-              [a + 2 == 0, 7, 12]))))))
+           (TRANS: (a == 0) == False,
+            (CONG: (a == 0) == (-2 == 0),
+             [5],
+             (EQ_RESOLVE: a == -2,
+              (ASSUME: a + 2 == 0, [a + 2 == 0]),
+              (TRANS: (a + 2 == 0) == (a == -2),
+               (CONG: (a + 2 == 0) == (2 + a == 0),
+                [5],
+                (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
+                 [a + 2 == 2 + a, 3, 7]),
+                (REFL: 0 == 0, [0])),
+               (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
+                [(2 + a == 0) == (a == -2), 3, 7]))),
+             (REFL: 0 == 0, [0])),
+            (TRUST_THEORY_REWRITE: (-2 == 0) == False,
+             [(-2 == 0) == False, 3, 7])))))
         """
         p = self.solver.getProof()[0]
         return ProofRef(self, p)
@@ -6857,12 +6867,22 @@ class ProofRef:
         >>> p
         (EQ_RESOLVE: False,
          (ASSUME: a == 0, [a == 0]),
-         (MACRO_SR_EQ_INTRO: (a == 0) == False,
-          [a == 0, 7, 12],
-          (EQ_RESOLVE: a == -2,
-           (ASSUME: a + 2 == 0, [a + 2 == 0]),
-           (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
-            [a + 2 == 0, 7, 12]))))
+         (TRANS: (a == 0) == False,
+          (CONG: (a == 0) == (-2 == 0),
+           [5],
+           (EQ_RESOLVE: a == -2,
+            (ASSUME: a + 2 == 0, [a + 2 == 0]),
+            (TRANS: (a + 2 == 0) == (a == -2),
+             (CONG: (a + 2 == 0) == (2 + a == 0),
+              [5],
+              (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
+               [a + 2 == 2 + a, 3, 7]),
+              (REFL: 0 == 0, [0])),
+             (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
+              [(2 + a == 0) == (a == -2), 3, 7]))),
+           (REFL: 0 == 0, [0])),
+          (TRUST_THEORY_REWRITE: (-2 == 0) == False,
+           [(-2 == 0) == False, 3, 7])))
         """
         children = self.proof.getChildren()
         return [ProofRef(self.solver, cp) for cp in children]
