@@ -53,6 +53,7 @@ Differences with Z3py:
   * Patterns
   * Models for uninterpreted sorts
   * The `Model` function
+    * In our API, this function returns an object whose only method is `evaluate`.
   * Pseudo-boolean counting constraints
     * AtMost, AtLeast, PbLe, PbGe, PbEq
   * HTML integration
@@ -6825,10 +6826,29 @@ def evaluate(t):
     >>> evaluate(evaluate(BitVecVal(1, 8) + BitVecVal(2, 8)) + BitVecVal(3, 8))
     6
     """
+    if not isinstance(t, ExprRef):
+        raise TypeError("Can only evaluation `ExprRef`s")
     s = Solver()
     s.check()
     m = s.model()
     return m[t]
+
+
+class EmptyModel:
+    def evaluate(self, t):
+        return evaluate(t)
+
+
+def Model(ctx=None):
+    """Return an object for evaluating terms.
+
+    We recommend using the standalone `evaluate` function for this instead,
+    but we also provide this function and its return object for z3 compatibility.
+
+    >>> Model().evaluate(BitVecVal(1, 8) + BitVecVal(2, 8))
+    3
+    """
+    return EmptyModel()
 
 
 class ProofRef:
