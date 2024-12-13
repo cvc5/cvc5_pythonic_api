@@ -559,9 +559,6 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
         if is_ast(a):
             if ctx is None:
                 ctx = a.ctx
-            else:
-                if debugging():
-                    _assert(ctx == a.ctx, "Context mismatch")
     if ctx is None:
         ctx = default_ctx
     return ctx
@@ -1246,8 +1243,6 @@ def If(a, b, c, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b, c = _coerce_exprs(b, c, ctx)
-    if debugging():
-        _assert(a.ctx == b.ctx, "Context mismatch")
     return _to_expr_ref(ctx.solver.mkTerm(Kind.ITE, a.ast, b.ast, c.ast), ctx)
 
 
@@ -1908,8 +1903,6 @@ class StringSortRef(SeqSortRef):
         String
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -2650,8 +2643,6 @@ class ArithSortRef(SortRef):
         failed
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -4100,8 +4091,6 @@ class BitVecSortRef(SortRef):
         '#b00000000000000000000000000001010'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
@@ -5527,7 +5516,6 @@ def ArraySort(*sig):
     if debugging():
         for s in sig:
             _assert(is_sort(s), "SMT sort expected")
-            _assert(s.ctx == r.ctx, "Context mismatch")
     ctx = d.ctx
     if len(sig) == 2:
         return ArraySortRef(ctx.solver.mkArraySort(d.ast, r.ast), ctx)
@@ -6832,7 +6820,11 @@ class ModelRef:
 
 
 def evaluate(t):
-    """Evaluates the given term (assuming it is constant!)"""
+    """Evaluates the given term (assuming it is constant!)
+
+    >>> evaluate(evaluate(BitVecVal(1, 8) + BitVecVal(2, 8)) + BitVecVal(3, 8))
+    6
+    """
     s = Solver()
     s.check()
     m = s.model()
@@ -7018,8 +7010,6 @@ class FPSortRef(SortRef):
         '(fp #b0 #b01111111 #b00000000000000000000000)'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             return val
         else:
             return FPVal(val, None, self, self.ctx)
@@ -8686,7 +8676,6 @@ def CreateDatatypes(*ds):
         _assert(
             all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes"
         )
-        _assert(all([d.ctx == ds[0].ctx for d in ds]), "Context mismatch")
         _assert(all([d.constructors != [] for d in ds]), "Non-empty Datatypes expected")
     ctx = ds[0].ctx
     s = ctx.solver
@@ -9293,9 +9282,6 @@ class FiniteFieldSortRef(SortRef):
         '#f10m31'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
-            # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
             return FiniteFieldVal(val, self)
