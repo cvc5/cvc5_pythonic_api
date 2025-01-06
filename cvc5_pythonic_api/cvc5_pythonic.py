@@ -52,6 +52,8 @@ Differences with Z3py:
 * Missing features:
   * Patterns
   * Models for uninterpreted sorts
+  * The `Model` function
+    * In our API, this function returns an object whose only method is `evaluate`.
   * Pseudo-boolean counting constraints
     * AtMost, AtLeast, PbLe, PbGe, PbEq
   * HTML integration
@@ -558,9 +560,6 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
         if is_ast(a):
             if ctx is None:
                 ctx = a.ctx
-            else:
-                if debugging():
-                    _assert(ctx == a.ctx, "Context mismatch")
     if ctx is None:
         ctx = default_ctx
     return ctx
@@ -1245,8 +1244,6 @@ def If(a, b, c, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b, c = _coerce_exprs(b, c, ctx)
-    if debugging():
-        _assert(a.ctx == b.ctx, "Context mismatch")
     return _to_expr_ref(ctx.solver.mkTerm(Kind.ITE, a.ast, b.ast, c.ast), ctx)
 
 
@@ -1428,6 +1425,38 @@ class BoolRef(ExprRef):
         if other == 0:
             return 0
         return If(self, other, 0)
+
+    def __and__(self, other):
+        """Create the SMT and expression `self & other`.
+
+        >>> solve(Bool("x") & Bool("y"))
+        [x = True, y = True]
+        """
+        return And(self, other)
+
+    def __or__(self, other):
+        """Create the SMT or expression `self | other`.
+
+        >>> solve(Bool("x") | Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Or(self, other)
+
+    def __xor__(self, other):
+        """Create the SMT xor expression `self ^ other`.
+
+        >>> solve(Bool("x") ^ Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Xor(self, other)
+
+    def __invert__(self):
+        """Create the SMT not expression `~self`.
+
+        >>> solve(~Bool("x"))
+        [x = False]
+        """
+        return Not(self)
 
 
 def is_bool(a):
@@ -1875,8 +1904,6 @@ class StringSortRef(SeqSortRef):
         String
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -2617,8 +2644,6 @@ class ArithSortRef(SortRef):
         failed
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -4067,8 +4092,6 @@ class BitVecSortRef(SortRef):
         '#b00000000000000000000000000001010'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
@@ -5494,7 +5517,6 @@ def ArraySort(*sig):
     if debugging():
         for s in sig:
             _assert(is_sort(s), "SMT sort expected")
-            _assert(s.ctx == r.ctx, "Context mismatch")
     ctx = d.ctx
     if len(sig) == 2:
         return ArraySortRef(ctx.solver.mkArraySort(d.ast, r.ast), ctx)
@@ -6238,12 +6260,22 @@ class Solver(object):
           [a + 2 == 0, a == 0],
           (EQ_RESOLVE: False,
            (ASSUME: a == 0, [a == 0]),
-           (MACRO_SR_EQ_INTRO: (a == 0) == False,
-            [a == 0, 7, 12],
-            (EQ_RESOLVE: a == -2,
-             (ASSUME: a + 2 == 0, [a + 2 == 0]),
-             (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
-              [a + 2 == 0, 7, 12]))))))
+           (TRANS: (a == 0) == False,
+            (CONG: (a == 0) == (-2 == 0),
+             [5],
+             (EQ_RESOLVE: a == -2,
+              (ASSUME: a + 2 == 0, [a + 2 == 0]),
+              (TRANS: (a + 2 == 0) == (a == -2),
+               (CONG: (a + 2 == 0) == (2 + a == 0),
+                [5],
+                (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
+                 [a + 2 == 2 + a, 3, 7]),
+                (REFL: 0 == 0, [0])),
+               (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
+                [(2 + a == 0) == (a == -2), 3, 7]))),
+             (REFL: 0 == 0, [0])),
+            (TRUST_THEORY_REWRITE: (-2 == 0) == False,
+             [(-2 == 0) == False, 3, 7])))))
         """
         p = self.solver.getProof()[0]
         return ProofRef(self, p)
@@ -6789,11 +6821,34 @@ class ModelRef:
 
 
 def evaluate(t):
-    """Evaluates the given term (assuming it is constant!)"""
+    """Evaluates the given term (assuming it is constant!)
+
+    >>> evaluate(evaluate(BitVecVal(1, 8) + BitVecVal(2, 8)) + BitVecVal(3, 8))
+    6
+    """
+    if not isinstance(t, ExprRef):
+        raise TypeError("Can only evaluate `ExprRef`s")
     s = Solver()
     s.check()
     m = s.model()
     return m[t]
+
+
+class EmptyModel:
+    def evaluate(self, t):
+        return evaluate(t)
+
+
+def Model(ctx=None):
+    """Return an object for evaluating terms.
+
+    We recommend using the standalone `evaluate` function for this instead,
+    but we also provide this function and its return object for z3 compatibility.
+
+    >>> Model().evaluate(BitVecVal(1, 8) + BitVecVal(2, 8))
+    3
+    """
+    return EmptyModel()
 
 
 class ProofRef:
@@ -6857,12 +6912,22 @@ class ProofRef:
         >>> p
         (EQ_RESOLVE: False,
          (ASSUME: a == 0, [a == 0]),
-         (MACRO_SR_EQ_INTRO: (a == 0) == False,
-          [a == 0, 7, 12],
-          (EQ_RESOLVE: a == -2,
-           (ASSUME: a + 2 == 0, [a + 2 == 0]),
-           (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
-            [a + 2 == 0, 7, 12]))))
+         (TRANS: (a == 0) == False,
+          (CONG: (a == 0) == (-2 == 0),
+           [5],
+           (EQ_RESOLVE: a == -2,
+            (ASSUME: a + 2 == 0, [a + 2 == 0]),
+            (TRANS: (a + 2 == 0) == (a == -2),
+             (CONG: (a + 2 == 0) == (2 + a == 0),
+              [5],
+              (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
+               [a + 2 == 2 + a, 3, 7]),
+              (REFL: 0 == 0, [0])),
+             (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
+              [(2 + a == 0) == (a == -2), 3, 7]))),
+           (REFL: 0 == 0, [0])),
+          (TRUST_THEORY_REWRITE: (-2 == 0) == False,
+           [(-2 == 0) == False, 3, 7])))
         """
         children = self.proof.getChildren()
         return [ProofRef(self.solver, cp) for cp in children]
@@ -6965,8 +7030,6 @@ class FPSortRef(SortRef):
         '(fp #b0 #b01111111 #b00000000000000000000000)'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             return val
         else:
             return FPVal(val, None, self, self.ctx)
@@ -8633,7 +8696,6 @@ def CreateDatatypes(*ds):
         _assert(
             all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes"
         )
-        _assert(all([d.ctx == ds[0].ctx for d in ds]), "Context mismatch")
         _assert(all([d.constructors != [] for d in ds]), "Non-empty Datatypes expected")
     ctx = ds[0].ctx
     s = ctx.solver
@@ -9240,9 +9302,6 @@ class FiniteFieldSortRef(SortRef):
         '#f10m31'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
-            # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
             return FiniteFieldVal(val, self)
