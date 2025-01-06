@@ -6827,7 +6827,7 @@ def evaluate(t):
     6
     """
     if not isinstance(t, ExprRef):
-        raise TypeError("Can only evaluation `ExprRef`s")
+        raise TypeError("Can only evaluate `ExprRef`s")
     s = Solver()
     s.check()
     m = s.model()
