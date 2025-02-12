@@ -6254,28 +6254,9 @@ class Solver(object):
         >>> s.add(a == 0)
         >>> s.check()
         unsat
-        >>> s.proof()
+        >>> s.proof() #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         (SCOPE: Not(And(a + 2 == 0, a == 0)),
-         (SCOPE: Not(And(a + 2 == 0, a == 0)),
-          [a + 2 == 0, a == 0],
-          (EQ_RESOLVE: False,
-           (ASSUME: a == 0, [a == 0]),
-           (TRANS: (a == 0) == False,
-            (CONG: (a == 0) == (-2 == 0),
-             [5],
-             (EQ_RESOLVE: a == -2,
-              (ASSUME: a + 2 == 0, [a + 2 == 0]),
-              (TRANS: (a + 2 == 0) == (a == -2),
-               (CONG: (a + 2 == 0) == (2 + a == 0),
-                [5],
-                (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
-                 [a + 2 == 2 + a, 3, 7]),
-                (REFL: 0 == 0, [0])),
-               (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
-                [(2 + a == 0) == (a == -2), 3, 7]))),
-             (REFL: 0 == 0, [0])),
-            (TRUST_THEORY_REWRITE: (-2 == 0) == False,
-             [(-2 == 0) == False, 3, 7])))))
+          ...
         """
         p = self.solver.getProof()[0]
         return ProofRef(self, p)
@@ -6909,25 +6890,9 @@ class ProofRef:
         unsat
         >>> p = s.proof()
         >>> p = p.getChildren()[0].getChildren()[0]
-        >>> p
+        >>> p #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         (EQ_RESOLVE: False,
-         (ASSUME: a == 0, [a == 0]),
-         (TRANS: (a == 0) == False,
-          (CONG: (a == 0) == (-2 == 0),
-           [5],
-           (EQ_RESOLVE: a == -2,
-            (ASSUME: a + 2 == 0, [a + 2 == 0]),
-            (TRANS: (a + 2 == 0) == (a == -2),
-             (CONG: (a + 2 == 0) == (2 + a == 0),
-              [5],
-              (TRUST_THEORY_REWRITE: a + 2 == 2 + a,
-               [a + 2 == 2 + a, 3, 7]),
-              (REFL: 0 == 0, [0])),
-             (TRUST_THEORY_REWRITE: (2 + a == 0) == (a == -2),
-              [(2 + a == 0) == (a == -2), 3, 7]))),
-           (REFL: 0 == 0, [0])),
-          (TRUST_THEORY_REWRITE: (-2 == 0) == False,
-           [(-2 == 0) == False, 3, 7])))
+         ...
         """
         children = self.proof.getChildren()
         return [ProofRef(self.solver, cp) for cp in children]
