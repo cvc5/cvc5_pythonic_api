@@ -29,7 +29,6 @@ jobs:
       uses: ./cvc5/.github/actions/install-dependencies
       with:
         with-documentation: false
-        with-python-bindings: true
 
     - name: Setup ccache cache
       uses: actions/cache@v2
