@@ -6011,16 +6011,16 @@ class Solver(object):
     * get-model,
     * etc."""
 
-    def __init__(self, logic=None, ctx=None, logFile=None):
-        # save logic so that we can re-build the solver if needed.
-        self.logic = logic
+    def __init__(self, ctx=None, logFile=None):
         # ignore ctx (the paramter is kept for z3 compatibility)
         self.solver = None
+        self.logic = None
         self.initFromLogic()
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
         self.resetAssertions()
+        assert ctx is None or type(ctx) == Context
 
     def initFromLogic(self):
         """Create the base-API solver from the logic"""
@@ -6426,7 +6426,10 @@ def SolverFor(logic, ctx=None, logFile=None):
     # sat
     # >>> s.model()
     # [x = 1]
-    return Solver(logic=logic, ctx=ctx, logFile=logFile)
+    s = Solver(ctx=ctx, logFile=logFile)
+    s.logic = logic
+    s.initFromLogic()
+    return s
 
 
 def SimpleSolver(ctx=None, logFile=None):
