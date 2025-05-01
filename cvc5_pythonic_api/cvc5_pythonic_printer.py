@@ -84,6 +84,7 @@ _cvc5_kinds_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
+    Kind.BITVECTOR_UBV_TO_INT: "BV2Int",
     Kind.FINITE_FIELD_ADD: "+",
     Kind.FINITE_FIELD_MULT: "*",
     Kind.FINITE_FIELD_NEG: "-",
