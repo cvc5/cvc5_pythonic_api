@@ -1832,9 +1832,7 @@ class SeqRef(ExprRef):
         """
         if _is_int(i):
             i = IntVal(i, self.ctx)
-        return _to_expr_ref(
-            self.ctx.tm.mkTerm(Kind.SEQ_NTH, self.ast, i.ast), self.ctx
-        )
+        return _to_expr_ref(self.ctx.tm.mkTerm(Kind.SEQ_NTH, self.ast, i.ast), self.ctx)
 
     def at(self, i):
         """Return the sequence at index i
@@ -2257,9 +2255,7 @@ def IndexOf(s, substr, offset=None):
         return ArithRef(
             ctx.tm.mkTerm(Kind.STRING_INDEXOF, s.ast, substr.ast, offset.ast), ctx
         )
-    return ArithRef(
-        ctx.tm.mkTerm(Kind.SEQ_INDEXOF, s.ast, substr.ast, offset.ast), ctx
-    )
+    return ArithRef(ctx.tm.mkTerm(Kind.SEQ_INDEXOF, s.ast, substr.ast, offset.ast), ctx)
 
 
 def Replace(s, src, dst):
@@ -4145,9 +4141,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -4157,9 +4151,7 @@ class BitVecRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -4199,9 +4191,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -4211,9 +4201,7 @@ class BitVecRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx)
 
     def __or__(self, other):
         """Create the SMT expression bitwise-or `self | other`.
@@ -4226,9 +4214,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx)
 
     def __ror__(self, other):
         """Create the SMT expression bitwise-or `other | self`.
@@ -4238,9 +4224,7 @@ class BitVecRef(ExprRef):
         10 | x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx)
 
     def __and__(self, other):
         """Create the SMT expression bitwise-and `self & other`.
@@ -4253,9 +4237,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx)
 
     def __rand__(self, other):
         """Create the SMT expression bitwise-or `other & self`.
@@ -4265,9 +4247,7 @@ class BitVecRef(ExprRef):
         10 & x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx)
 
     def __xor__(self, other):
         """Create the SMT expression bitwise-xor `self ^ other`.
@@ -4280,9 +4260,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx)
 
     def __rxor__(self, other):
         """Create the SMT expression bitwise-xor `other ^ self`.
@@ -4292,9 +4270,7 @@ class BitVecRef(ExprRef):
         10 ^ x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -4431,9 +4407,7 @@ class BitVecRef(ExprRef):
         '(bvule x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx)
 
     def __lt__(self, other):
         """Create the SMT expression (signed) `other < self`.
@@ -4449,9 +4423,7 @@ class BitVecRef(ExprRef):
         '(bvult x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx)
 
     def __gt__(self, other):
         """Create the SMT expression (signed) `other > self`.
@@ -4467,9 +4439,7 @@ class BitVecRef(ExprRef):
         '(bvugt x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression (signed) `other >= self`.
@@ -4485,9 +4455,7 @@ class BitVecRef(ExprRef):
         '(bvuge x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx)
 
     def __rshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `self >> other`
@@ -4533,9 +4501,7 @@ class BitVecRef(ExprRef):
         4
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx)
 
     def __rrshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `other` >> `self`.
@@ -4565,9 +4531,7 @@ class BitVecRef(ExprRef):
         '(bvshl #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx)
 
 
 class BitVecNumRef(BitVecRef):
@@ -4826,9 +4790,7 @@ def Extract(high, low, a):
         )
         _assert(is_bv(a), "Third argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.tm.mkTerm(
-            a.ctx.tm.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast
-        ),
+        a.ctx.tm.mkTerm(a.ctx.tm.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast),
         a.ctx,
     )
 
@@ -7327,9 +7289,7 @@ def RoundTowardPositive(ctx=None):
     fpMul(RTP(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(
-        ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx
-    )
+    return FPRMRef(ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx)
 
 
 def RTP(ctx=None):
@@ -7358,9 +7318,7 @@ def RoundTowardNegative(ctx=None):
     fpMul(RTN(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(
-        ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx
-    )
+    return FPRMRef(ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx)
 
 
 def RTN(ctx=None):
@@ -8259,9 +8217,7 @@ def fpFP(sgn, exp, sig, ctx=None):
     _assert(sgn.sort().size() == 1, "sort mismatch")
     ctx = _get_ctx(ctx)
     _assert(ctx == sgn.ctx == exp.ctx == sig.ctx, "context mismatch")
-    bv = BitVecRef(
-        ctx.tm.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx
-    )
+    bv = BitVecRef(ctx.tm.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx)
     sort = FPSort(exp.size(), sig.size() + 1)
     return fpBVToFP(bv, sort)
 
@@ -8344,9 +8300,7 @@ def fpFPToFP(rm, v, sort, ctx=None):
     _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.tm.mkOp(
-        Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits()
-    )
+    to_fp_op = ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits())
     return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
@@ -8459,9 +8413,7 @@ def fpToSBV(rm, x, s, ctx=None):
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
     return BitVecRef(
-        ctx.tm.mkTerm(
-            ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast
-        ),
+        ctx.tm.mkTerm(ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast),
         ctx,
     )
 
@@ -8489,9 +8441,7 @@ def fpToUBV(rm, x, s, ctx=None):
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
     return BitVecRef(
-        ctx.tm.mkTerm(
-            ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast
-        ),
+        ctx.tm.mkTerm(ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast),
         ctx,
     )
 
