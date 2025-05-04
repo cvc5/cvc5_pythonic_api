@@ -3,24 +3,21 @@ from cvc5_pythonic_api import *
 
 def reset_solver(s):
     s.reset()
-    s.set('produce-unsat-assumptions','true')
+    s.set('produce-unsat-cores','true')
 
-def validate_unsat_assumptions(assumptions, core):
-    # checks that the produced unsat assumptions (core) match the assumptions (assumptions) sent to the check function
-    return sum([c in assumptions for c in core]) == len(core) 
+def validate_unsat_core(input_formulas, core):
+    # checks that the produced unsat core match the input formulas sent to the check function
+    return sum([c in input_formulas for c in core]) == len(core)
 
 
-def check_unsat_assumptions(assertions, core):
-    # This function checks wether, given assertions,  the produced unsat assumptions (core) also lead to unsat result
+def check_unsat_core(core):
+    # This function checks whether the unsat core is unsatisfiable
     slvr = Solver()
-    slvr.set('produce-unsat-assumptions','true')
-    for a in assertions:
-        slvr.add(a)
     return s.check(*core) == unsat
 
 
 # To make make sure the unsat_core function works there should be at least one nontrivial solution - a solution that doesn't contain all the assumptions sent in the check function.
-nontrivial_counter = 0  
+nontrivial_counter = 0
 
 p1, p2, p3 = Bools('p1 p2 p3')
 x, y = Ints('x y')
@@ -37,10 +34,9 @@ s.check(*assumptions)
 
 core = s.unsat_core()
 
-
-assert validate_unsat_assumptions(assumptions,core)
-assert check_unsat_assumptions(assertions,core)
-if len(core) < len(assumptions):
+assert validate_unsat_core(assertions + assumptions,core)
+assert check_unsat_core(core)
+if len(core) < len(assumptions) + len(assertions):
     nontrivial_counter += 1
 
 # example 2 - booleans
@@ -60,11 +56,11 @@ for c in assertions:
 assumptions = [a,b,c]
 result = s.check(*assumptions)
 
-unsat_core = s.unsat_core()
+core = s.unsat_core()
 
-assert validate_unsat_assumptions(assumptions,unsat_core) 
-assert check_unsat_assumptions(assertions,assumptions)
-if len(unsat_core) < len(assumptions):
+assert validate_unsat_core(assertions + assumptions, core)
+assert check_unsat_core(core)
+if len(core) < len(assumptions) + len(assertions):
     nontrivial_counter += 1
 
 # example 3 - booleans
@@ -83,11 +79,11 @@ for a in assertions:
 assumptions = [a,b,c,d]
 result = s.check(*assumptions)
 
-unsat_core = s.unsat_core()
+core = s.unsat_core()
 
-assert validate_unsat_assumptions(assumptions,unsat_core)
-assert check_unsat_assumptions(assertions,assumptions)
-if len(unsat_core) < len(assumptions):
+assert validate_unsat_core(assumptions + assertions, core)
+assert check_unsat_core(core)
+if len(core) < len(assumptions) + len(assertions):
     nontrivial_counter += 1
 
 # example 4 - reals
@@ -108,13 +104,13 @@ for a in assertions:
 assumptions = [x > 0, y > 0, z > 0]
 result = s.check(*assumptions)
 
-unsat_core = s.unsat_core()
+core = s.unsat_core()
 
-assert validate_unsat_assumptions(assumptions,unsat_core)
-assert check_unsat_assumptions(assertions,assumptions)
-if len(unsat_core) < len(assumptions):
+assert validate_unsat_core(assumptions + assertions, core)
+assert check_unsat_core(core)
+if len(core) < len(assumptions) + len(assertions):
     nontrivial_counter += 1
-    
+
 
 # example 5 - strings
 
@@ -135,16 +131,14 @@ for a in assertions:
 
 result = s.check( Length(s2) < 2)
 
-unsat_core = s.unsat_core()
+core = s.unsat_core()
 
-assert validate_unsat_assumptions([Length(s2) < 2], unsat_core)
-assert check_unsat_assumptions(assertions,[ Length(s2) < 2 ])
-if len(unsat_core) < len([ Length(s2) < 2 ]):
+assert validate_unsat_core([Length(s2) < 2] + assertions, core)
+assert check_unsat_core(core)
+if len(core) < len([ Length(s2) < 2 ]) + len(assertions):
     nontrivial_counter += 1
 
 # check that there is at least one nontrivial unsat core
 assert nontrivial_counter >= 1
 
 print('success')
-
-

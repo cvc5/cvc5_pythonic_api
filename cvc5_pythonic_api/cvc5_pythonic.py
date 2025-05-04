@@ -52,6 +52,8 @@ Differences with Z3py:
 * Missing features:
   * Patterns
   * Models for uninterpreted sorts
+  * The `Model` function
+    * In our API, this function returns an object whose only method is `evaluate`.
   * Pseudo-boolean counting constraints
     * AtMost, AtLeast, PbLe, PbGe, PbEq
   * HTML integration
@@ -133,25 +135,24 @@ class Context(object):
     is that essentially all functions have a context threaded through them.
     There is a default "main" context.
 
-    In cvc5's API, terms and sorts are created using a solver, but stored
-    globally and are freely transferable.
+    Similarly, terms and sorts are created using a term manager in cvc5's API.
 
     Our compatibility solution is:
-    * a context wraps a solver, so that a context can be used to create terms
+    * a context wraps a term manager, so that a context can be used to create terms
     * also, a context does these things:
         * making fresh identifiers for a given sort
         * looking up previously defined constants
     """
 
-    def __init__(self, solver=None):
-        self.solver = solver.solver if solver is not None else SimpleSolver().solver
+    def __init__(self):
+        self.tm = pc.TermManager()
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
         self.next_fresh_var = 0
 
     def __del__(self):
-        self.solver = None
+        self.tm = None
 
     def get_var(self, name, sort):
         """Get the variable identified by `name`.
@@ -162,7 +163,7 @@ class Context(object):
         Returns a Term
         """
         if (name, sort) not in self.vars:
-            self.vars[(name, sort)] = self.solver.mkConst(sort.ast, name)
+            self.vars[(name, sort)] = self.tm.mkConst(sort.ast, name)
         return self.vars[(name, sort)]
 
     def next_fresh(self, sort, prefix):
@@ -176,7 +177,7 @@ class Context(object):
         return name
 
     def __eq__(self, o):
-        return self.solver is o.solver
+        return self.tm is o.tm
 
 
 # Global SMT context
@@ -372,7 +373,7 @@ class ExprRef(object):
             return False
         a, b = _coerce_exprs(self, other)
         c = self.ctx
-        return BoolRef(c.solver.mkTerm(Kind.EQUAL, a.as_ast(), b.as_ast()), c)
+        return BoolRef(c.tm.mkTerm(Kind.EQUAL, a.as_ast(), b.as_ast()), c)
 
     def __hash__(self):
         """Hash code."""
@@ -396,7 +397,7 @@ class ExprRef(object):
             return True
         a, b = _coerce_exprs(self, other)
         c = self.ctx
-        return BoolRef(c.solver.mkTerm(Kind.DISTINCT, a.as_ast(), b.as_ast()), c)
+        return BoolRef(c.tm.mkTerm(Kind.DISTINCT, a.as_ast(), b.as_ast()), c)
 
     def decl(self):
         """Return the SMT function declaration associated with an SMT application.
@@ -558,9 +559,6 @@ def _ctx_from_ast_arg_list(args, default_ctx=None):
         if is_ast(a):
             if ctx is None:
                 ctx = a.ctx
-            else:
-                if debugging():
-                    _assert(ctx == a.ctx, "Context mismatch")
     if ctx is None:
         ctx = default_ctx
     return ctx
@@ -735,7 +733,7 @@ def DeclareSort(name, ctx=None):
     [a = (as @A_0 A), b = (as @A_0 A)]
     """
     ctx = _get_ctx(ctx)
-    return SortRef(ctx.solver.mkUninterpretedSort(name), ctx)
+    return SortRef(ctx.tm.mkUninterpretedSort(name), ctx)
 
 
 def is_sort(s):
@@ -882,7 +880,7 @@ def _higherorder_apply(func, args, kind):
     for i in range(num):
         tmp = func.domain(i).cast(args[i])
         _args.append(tmp.as_ast())
-    return _to_expr_ref(func.ctx.solver.mkTerm(kind, func.ast, *_args), func.ctx)
+    return _to_expr_ref(func.ctx.tm.mkTerm(kind, func.ast, *_args), func.ctx)
 
 
 def is_func_decl(a):
@@ -913,7 +911,7 @@ def Function(name, *sig):
     if debugging():
         _assert(is_sort(rng), "SMT sort expected")
     ctx = rng.ctx
-    sort = ctx.solver.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
+    sort = ctx.tm.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
     e = ctx.get_var(name, _to_sort_ref(sort, ctx))
     return FuncDeclRef(e, ctx)
 
@@ -934,7 +932,7 @@ def FreshFunction(*sig):
     if debugging():
         _assert(is_sort(rng), "SMT sort expected")
     ctx = rng.ctx
-    sort = ctx.solver.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
+    sort = ctx.tm.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
     name = ctx.next_fresh(sort, "freshfn")
     return Function(name, *sig)
 
@@ -1122,7 +1120,7 @@ def _nary_kind_builder(kind, *args):
             "At least one of the arguments must be an SMT expression",
         )
     args = _coerce_expr_list(args, ctx)
-    return _to_expr_ref(ctx.solver.mkTerm(kind, *[a.ast for a in args]), ctx)
+    return _to_expr_ref(ctx.tm.mkTerm(kind, *[a.ast for a in args]), ctx)
 
 
 def is_expr(a):
@@ -1245,9 +1243,7 @@ def If(a, b, c, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b, c = _coerce_exprs(b, c, ctx)
-    if debugging():
-        _assert(a.ctx == b.ctx, "Context mismatch")
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.ITE, a.ast, b.ast, c.ast), ctx)
+    return _to_expr_ref(ctx.tm.mkTerm(Kind.ITE, a.ast, b.ast, c.ast), ctx)
 
 
 def Distinct(*args):
@@ -1268,7 +1264,7 @@ def Distinct(*args):
             ctx is not None, "At least one of the arguments must be an SMT expression"
         )
     args = _coerce_expr_list(args, ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.DISTINCT, *[a.ast for a in args]), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.DISTINCT, *[a.ast for a in args]), ctx)
 
 
 def Const(name, sort):
@@ -1310,6 +1306,16 @@ def FreshConst(sort, prefix="c"):
     ctx = sort.ctx
     name = ctx.next_fresh(sort, prefix)
     return Const(name, sort)
+
+
+def Sexpr(*args):
+    """Create an SEXPR term.
+
+    >>> p, q, r = Bools('p q r')
+    >>> Sexpr(p, q, r)
+    (p q r)
+    """
+    return _nary_kind_builder(Kind.SEXPR, *args)
 
 
 #########################################
@@ -1419,6 +1425,38 @@ class BoolRef(ExprRef):
             return 0
         return If(self, other, 0)
 
+    def __and__(self, other):
+        """Create the SMT and expression `self & other`.
+
+        >>> solve(Bool("x") & Bool("y"))
+        [x = True, y = True]
+        """
+        return And(self, other)
+
+    def __or__(self, other):
+        """Create the SMT or expression `self | other`.
+
+        >>> solve(Bool("x") | Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Or(self, other)
+
+    def __xor__(self, other):
+        """Create the SMT xor expression `self ^ other`.
+
+        >>> solve(Bool("x") ^ Bool("y"), Not(Bool("x")))
+        [x = False, y = True]
+        """
+        return Xor(self, other)
+
+    def __invert__(self):
+        """Create the SMT not expression `~self`.
+
+        >>> solve(~Bool("x"))
+        [x = False]
+        """
+        return Not(self)
+
 
 def is_bool(a):
     """Return `True` if `a` is an SMT Boolean expression.
@@ -1451,7 +1489,7 @@ def is_true(a):
     >>> is_true(True)
     False
     """
-    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.solver.mkTrue()
+    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.tm.mkTrue()
 
 
 def is_false(a):
@@ -1465,7 +1503,7 @@ def is_false(a):
     >>> is_false(BoolVal(False))
     True
     """
-    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.solver.mkFalse()
+    return is_app_of(a, Kind.CONST_BOOLEAN) and a.ast == a.ctx.tm.mkFalse()
 
 
 def is_and(a):
@@ -1565,7 +1603,7 @@ def BoolSort(ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return BoolSortRef(ctx.solver.getBooleanSort(), ctx)
+    return BoolSortRef(ctx.tm.getBooleanSort(), ctx)
 
 
 def BoolVal(val, ctx=None):
@@ -1583,9 +1621,9 @@ def BoolVal(val, ctx=None):
     """
     ctx = _get_ctx(ctx)
     if not val:
-        return BoolRef(ctx.solver.mkFalse(), ctx)
+        return BoolRef(ctx.tm.mkFalse(), ctx)
     else:
-        return BoolRef(ctx.solver.mkTrue(), ctx)
+        return BoolRef(ctx.tm.mkTrue(), ctx)
 
 
 def Bool(name, ctx=None):
@@ -1659,7 +1697,7 @@ def Implies(a, b, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b = s.cast(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.IMPLIES, a.as_ast(), b.as_ast()), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.IMPLIES, a.as_ast(), b.as_ast()), ctx)
 
 
 def Xor(a, b, ctx=None):
@@ -1673,7 +1711,7 @@ def Xor(a, b, ctx=None):
     s = BoolSort(ctx)
     a = s.cast(a)
     b = s.cast(b)
-    return BoolRef(ctx.solver.mkTerm(Kind.XOR, a.as_ast(), b.as_ast()), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.XOR, a.as_ast(), b.as_ast()), ctx)
 
 
 def Not(a, ctx=None):
@@ -1686,7 +1724,7 @@ def Not(a, ctx=None):
     ctx = _get_ctx(_ctx_from_ast_arg_list([a], ctx))
     s = BoolSort(ctx)
     a = s.cast(a)
-    return BoolRef(ctx.solver.mkTerm(Kind.NOT, a.as_ast()), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.NOT, a.as_ast()), ctx)
 
 
 def mk_not(a):
@@ -1810,9 +1848,7 @@ class SeqRef(ExprRef):
         """
         if _is_int(i):
             i = IntVal(i, self.ctx)
-        return _to_expr_ref(
-            self.ctx.solver.mkTerm(Kind.SEQ_NTH, self.ast, i.ast), self.ctx
-        )
+        return _to_expr_ref(self.ctx.tm.mkTerm(Kind.SEQ_NTH, self.ast, i.ast), self.ctx)
 
     def at(self, i):
         """Return the sequence at index i
@@ -1825,7 +1861,7 @@ class SeqRef(ExprRef):
         """
         if _is_int(i):
             i = IntVal(i, self.ctx)
-        return SeqRef(self.ctx.solver.mkTerm(Kind.SEQ_AT, self.ast, i.ast), self.ctx)
+        return SeqRef(self.ctx.tm.mkTerm(Kind.SEQ_AT, self.ast, i.ast), self.ctx)
 
     def is_string(self):
         return isinstance(self, StringRef)
@@ -1881,8 +1917,6 @@ class StringSortRef(SeqSortRef):
         String
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -1908,7 +1942,7 @@ class StringRef(SeqRef):
         if isinstance(i, int):
             i = IntVal(i, self.ctx)
         return StringRef(
-            self.ctx.solver.mkTerm(Kind.STRING_CHARAT, self.ast, i.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.STRING_CHARAT, self.ast, i.ast), self.ctx
         )
 
     def at(self, i):
@@ -1922,7 +1956,7 @@ class StringRef(SeqRef):
         s <= t
         """
         return BoolRef(
-            self.ctx.solver.mkTerm(Kind.STRING_LEQ, self.ast, other.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.STRING_LEQ, self.ast, other.ast), self.ctx
         )
 
     def __lt__(self, other):
@@ -1933,7 +1967,7 @@ class StringRef(SeqRef):
         s < t
         """
         return BoolRef(
-            self.ctx.solver.mkTerm(Kind.STRING_LT, self.ast, other.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.STRING_LT, self.ast, other.ast), self.ctx
         )
 
     def __ge__(self, other):
@@ -1944,7 +1978,7 @@ class StringRef(SeqRef):
         t <= s
         """
         return BoolRef(
-            self.ctx.solver.mkTerm(Kind.STRING_LEQ, other.ast, self.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.STRING_LEQ, other.ast, self.ast), self.ctx
         )
 
     def __gt__(self, other):
@@ -1955,7 +1989,7 @@ class StringRef(SeqRef):
         t < s
         """
         return BoolRef(
-            self.ctx.solver.mkTerm(Kind.STRING_LT, other.ast, self.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.STRING_LT, other.ast, self.ast), self.ctx
         )
 
 
@@ -1969,7 +2003,7 @@ def StringSort(ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return StringSortRef(ctx.solver.getStringSort(), ctx)
+    return StringSortRef(ctx.tm.getStringSort(), ctx)
 
 
 def String(name, ctx=None):
@@ -2005,7 +2039,7 @@ def SeqSort(s):
     >>> s == Unit(IntVal(1)).sort()
     True
     """
-    return SeqSortRef(s.ctx.solver.mkSequenceSort(s.ast), s.ctx)
+    return SeqSortRef(s.ctx.tm.mkSequenceSort(s.ast), s.ctx)
 
 
 def Empty(s):
@@ -2020,10 +2054,10 @@ def Empty(s):
     (as seq.empty (Seq Int))()
     """
     if isinstance(s, ReSortRef):
-        return ReRef(s.ctx.solver.mkRegexpNone(), s.ctx)
+        return ReRef(s.ctx.tm.mkRegexpNone(), s.ctx)
     if isinstance(s, StringSortRef):
-        return StringRef(s.ctx.solver.mkString(""), s.ctx)
-    return _to_expr_ref(s.ctx.solver.mkEmptySequence(s.elem_sort().ast), s.ctx)
+        return StringRef(s.ctx.tm.mkString(""), s.ctx)
+    return _to_expr_ref(s.ctx.tm.mkEmptySequence(s.elem_sort().ast), s.ctx)
 
 
 def is_seq(a):
@@ -2068,7 +2102,7 @@ def Unit(a):
     >>> i.sort()
     (Seq Int)
     """
-    return SeqRef(a.ctx.solver.mkTerm(Kind.SEQ_UNIT, a.ast), a.ctx)
+    return SeqRef(a.ctx.tm.mkTerm(Kind.SEQ_UNIT, a.ast), a.ctx)
 
 
 def StringVal(val, ctx=None):
@@ -2083,7 +2117,7 @@ def StringVal(val, ctx=None):
     String
     """
     ctx = _get_ctx(ctx)
-    return StringRef(ctx.solver.mkString(str(val)), ctx)
+    return StringRef(ctx.tm.mkString(str(val)), ctx)
 
 
 def Length(s, ctx=None):
@@ -2096,7 +2130,7 @@ def Length(s, ctx=None):
     """
     s = _py2expr(s)
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.SEQ_LENGTH, s.ast), ctx)
+    return ArithRef(ctx.tm.mkTerm(Kind.SEQ_LENGTH, s.ast), ctx)
 
 
 def SubString(s, offset, length, ctx=None):
@@ -2112,7 +2146,7 @@ def SubString(s, offset, length, ctx=None):
     offset = _py2expr(offset)
     length = _py2expr(length)
     return StringRef(
-        ctx.solver.mkTerm(Kind.STRING_SUBSTR, s.ast, offset.ast, length.ast), ctx
+        ctx.tm.mkTerm(Kind.STRING_SUBSTR, s.ast, offset.ast, length.ast), ctx
     )
 
 
@@ -2129,7 +2163,7 @@ def SubSeq(s, offset, length):
     offset = _py2expr(offset)
     length = _py2expr(length)
     return SeqRef(
-        s.ctx.solver.mkTerm(Kind.SEQ_EXTRACT, s.ast, offset.ast, length.ast), s.ctx
+        s.ctx.tm.mkTerm(Kind.SEQ_EXTRACT, s.ast, offset.ast, length.ast), s.ctx
     )
 
 
@@ -2145,7 +2179,7 @@ def SeqUpdate(s, t, i):
     (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))()
     """
     i = _py2expr(i)
-    return SeqRef(t.ctx.solver.mkTerm(Kind.SEQ_UPDATE, s.ast, i.ast, t.ast), t.ctx)
+    return SeqRef(t.ctx.tm.mkTerm(Kind.SEQ_UPDATE, s.ast, i.ast, t.ast), t.ctx)
 
 
 def Full(ctx=None):
@@ -2159,7 +2193,7 @@ def Full(ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return ReRef(ctx.solver.mkRegexpAll(), ctx)
+    return ReRef(ctx.tm.mkRegexpAll(), ctx)
 
 
 def Contains(a, b, ctx=None):
@@ -2176,8 +2210,8 @@ def Contains(a, b, ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_CONTAINS, a.ast, b.ast), ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_CONTAINS, a.ast, b.ast), ctx)
+        return BoolRef(ctx.tm.mkTerm(Kind.STRING_CONTAINS, a.ast, b.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.SEQ_CONTAINS, a.ast, b.ast), ctx)
 
 
 def PrefixOf(a, b, ctx=None):
@@ -2194,8 +2228,8 @@ def PrefixOf(a, b, ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_PREFIX, a.ast, b.ast), ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_PREFIX, a.ast, b.ast), ctx)
+        return BoolRef(ctx.tm.mkTerm(Kind.STRING_PREFIX, a.ast, b.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.SEQ_PREFIX, a.ast, b.ast), ctx)
 
 
 def SuffixOf(a, b, ctx=None):
@@ -2212,8 +2246,8 @@ def SuffixOf(a, b, ctx=None):
     a = _py2expr(a)
     b = _py2expr(b)
     if is_string(a) and is_string(b):
-        return BoolRef(ctx.solver.mkTerm(Kind.STRING_SUFFIX, a.ast, b.ast), ctx)
-    return BoolRef(ctx.solver.mkTerm(Kind.SEQ_SUFFIX, a.ast, b.ast), ctx)
+        return BoolRef(ctx.tm.mkTerm(Kind.STRING_SUFFIX, a.ast, b.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.SEQ_SUFFIX, a.ast, b.ast), ctx)
 
 
 def IndexOf(s, substr, offset=None):
@@ -2235,11 +2269,9 @@ def IndexOf(s, substr, offset=None):
         offset = IntVal(offset, ctx)
     if is_string(s) and is_string(substr):
         return ArithRef(
-            ctx.solver.mkTerm(Kind.STRING_INDEXOF, s.ast, substr.ast, offset.ast), ctx
+            ctx.tm.mkTerm(Kind.STRING_INDEXOF, s.ast, substr.ast, offset.ast), ctx
         )
-    return ArithRef(
-        ctx.solver.mkTerm(Kind.SEQ_INDEXOF, s.ast, substr.ast, offset.ast), ctx
-    )
+    return ArithRef(ctx.tm.mkTerm(Kind.SEQ_INDEXOF, s.ast, substr.ast, offset.ast), ctx)
 
 
 def Replace(s, src, dst):
@@ -2259,9 +2291,9 @@ def Replace(s, src, dst):
     ctx = _get_ctx(None)
     if is_string(s) and is_string(src) and is_string(dst):
         return StringRef(
-            ctx.solver.mkTerm(Kind.STRING_REPLACE, s.ast, src.ast, dst.ast), ctx
+            ctx.tm.mkTerm(Kind.STRING_REPLACE, s.ast, src.ast, dst.ast), ctx
         )
-    return SeqRef(ctx.solver.mkTerm(Kind.SEQ_REPLACE, s.ast, src.ast, dst.ast), ctx)
+    return SeqRef(ctx.tm.mkTerm(Kind.SEQ_REPLACE, s.ast, src.ast, dst.ast), ctx)
 
 
 def StrToInt(s):
@@ -2276,7 +2308,7 @@ def StrToInt(s):
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.STRING_TO_INT, s.ast), ctx)
+    return ArithRef(ctx.tm.mkTerm(Kind.STRING_TO_INT, s.ast), ctx)
 
 
 def IntToStr(s):
@@ -2291,7 +2323,7 @@ def IntToStr(s):
     """
     s = _py2expr(s)
     ctx = _get_ctx(s.ctx)
-    return StringRef(ctx.solver.mkTerm(Kind.STRING_FROM_INT, s.ast), ctx)
+    return StringRef(ctx.tm.mkTerm(Kind.STRING_FROM_INT, s.ast), ctx)
 
 
 def StrToCode(s):
@@ -2304,7 +2336,7 @@ def StrToCode(s):
     """
     if not is_expr(s):
         s = _py2expr(s)
-    return ArithRef(s.ctx.solver.mkTerm(Kind.STRING_TO_CODE, s.ast), s.ctx)
+    return ArithRef(s.ctx.tm.mkTerm(Kind.STRING_TO_CODE, s.ast), s.ctx)
 
 
 def StrFromCode(c):
@@ -2316,7 +2348,7 @@ def StrFromCode(c):
     """
     if not is_expr(c):
         c = _py2expr(c)
-    return StringRef(c.ctx.solver.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
+    return StringRef(c.ctx.tm.mkTerm(Kind.STRING_FROM_CODE, c.ast), c.ctx)
 
 
 #########################################
@@ -2355,7 +2387,7 @@ def ReSort(ctx=None):
 
     if ctx is None or isinstance(ctx, Context):
         ctx = _get_ctx(ctx)
-        return ReSortRef(ctx.solver.getRegExpSort(), ctx)
+        return ReSortRef(ctx.tm.getRegExpSort(), ctx)
 
 
 def Re(s, ctx=None):
@@ -2368,7 +2400,7 @@ def Re(s, ctx=None):
     False
     """
     s = _py2expr(s)
-    return ReRef(s.ctx.solver.mkTerm(Kind.STRING_TO_REGEXP, s.ast), s.ctx)
+    return ReRef(s.ctx.tm.mkTerm(Kind.STRING_TO_REGEXP, s.ast), s.ctx)
 
 
 def is_re(s):
@@ -2395,7 +2427,7 @@ def InRe(s, re):
     False
     """
     s = _py2expr(s)
-    return BoolRef(s.ctx.solver.mkTerm(Kind.STRING_IN_REGEXP, s.ast, re.ast), s.ctx)
+    return BoolRef(s.ctx.tm.mkTerm(Kind.STRING_IN_REGEXP, s.ast, re.ast), s.ctx)
 
 
 def Union(*args):
@@ -2414,9 +2446,9 @@ def Union(*args):
     if sz == 1:
         return args[0]
     ctx = args[0].ctx
-    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION, args[0].ast, args[1].ast), ctx)
+    v = ReRef(ctx.tm.mkTerm(Kind.REGEXP_UNION, args[0].ast, args[1].ast), ctx)
     for i in range(2, sz):
-        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_UNION, v.ast, args[i].ast), ctx)
+        v = ReRef(ctx.tm.mkTerm(Kind.REGEXP_UNION, v.ast, args[i].ast), ctx)
     return v
 
 
@@ -2437,9 +2469,9 @@ def Intersect(*args):
     if sz == 1:
         return args[0]
     ctx = args[0].ctx
-    v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER, args[0].ast, args[1].ast), ctx)
+    v = ReRef(ctx.tm.mkTerm(Kind.REGEXP_INTER, args[0].ast, args[1].ast), ctx)
     for i in range(2, sz):
-        v = ReRef(ctx.solver.mkTerm(Kind.REGEXP_INTER, v.ast, args[i].ast), ctx)
+        v = ReRef(ctx.tm.mkTerm(Kind.REGEXP_INTER, v.ast, args[i].ast), ctx)
     return v
 
 
@@ -2454,7 +2486,7 @@ def Option(re):
     >>> print(simplify(InRe("aa", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_OPT, re.ast), re.ctx)
+    return ReRef(re.ctx.tm.mkTerm(Kind.REGEXP_OPT, re.ast), re.ctx)
 
 
 def Complement(re):
@@ -2467,7 +2499,7 @@ def Complement(re):
     >>> simplify(InRe('aa',comp_re))
     True
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_COMPLEMENT, re.ast), re.ctx)
+    return ReRef(re.ctx.tm.mkTerm(Kind.REGEXP_COMPLEMENT, re.ast), re.ctx)
 
 
 def Plus(re):
@@ -2481,7 +2513,7 @@ def Plus(re):
     >>> print(simplify(InRe("", re)))
     False
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_PLUS, re.ast), re.ctx)
+    return ReRef(re.ctx.tm.mkTerm(Kind.REGEXP_PLUS, re.ast), re.ctx)
 
 
 def Star(re):
@@ -2495,7 +2527,7 @@ def Star(re):
     >>> print(simplify(InRe("", re)))
     True
     """
-    return ReRef(re.ctx.solver.mkTerm(Kind.REGEXP_STAR, re.ast), re.ctx)
+    return ReRef(re.ctx.tm.mkTerm(Kind.REGEXP_STAR, re.ast), re.ctx)
 
 
 def Loop(re, lo, hi=0):
@@ -2510,7 +2542,7 @@ def Loop(re, lo, hi=0):
     False
     """
     return ReRef(
-        re.ctx.solver.mkTerm(re.ctx.solver.mkOp(Kind.REGEXP_LOOP, lo, hi), re.ast),
+        re.ctx.tm.mkTerm(re.ctx.tm.mkOp(Kind.REGEXP_LOOP, lo, hi), re.ast),
         re.ctx,
     )
 
@@ -2526,7 +2558,7 @@ def Range(lo, hi, ctx=None):
     """
     lo = _py2expr(lo, ctx)
     hi = _py2expr(hi, ctx)
-    return ReRef(lo.ctx.solver.mkTerm(Kind.REGEXP_RANGE, lo.ast, hi.ast), lo.ctx)
+    return ReRef(lo.ctx.tm.mkTerm(Kind.REGEXP_RANGE, lo.ast, hi.ast), lo.ctx)
 
 
 def Diff(a, b, ctx=None):
@@ -2539,7 +2571,7 @@ def Diff(a, b, ctx=None):
     >>> simplify(InRe('b',Diff(r2,r1)))
     True
     """
-    return ReRef(a.ctx.solver.mkTerm(Kind.REGEXP_DIFF, a.ast, b.ast), a.ctx)
+    return ReRef(a.ctx.tm.mkTerm(Kind.REGEXP_DIFF, a.ast, b.ast), a.ctx)
 
 
 def AllChar():
@@ -2554,7 +2586,7 @@ def AllChar():
     False
     """
     ctx = _get_ctx(None)
-    return ReRef(ctx.solver.mkRegexpAllchar(), ctx)
+    return ReRef(ctx.tm.mkRegexpAllchar(), ctx)
 
 
 #########################################
@@ -2579,7 +2611,7 @@ class ArithSortRef(SortRef):
         >>> x.is_real()
         False
         """
-        return self.ast == self.ctx.solver.getRealSort()
+        return self.ast == self.ctx.tm.getRealSort()
 
     def is_int(self):
         """Return `True` if `self` is of the sort Integer.
@@ -2593,7 +2625,7 @@ class ArithSortRef(SortRef):
         >>> x.is_int()
         False
         """
-        return self.ast == self.ctx.solver.getIntegerSort()
+        return self.ast == self.ctx.tm.getIntegerSort()
 
     def subsort(self, other):
         """Return `True` if `self` is a subsort of `other`."""
@@ -2623,8 +2655,6 @@ class ArithSortRef(SortRef):
         failed
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             val_s = val.sort()
             if self.eq(val_s):
                 return val
@@ -2716,7 +2746,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.ADD, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.ADD, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -2726,7 +2756,7 @@ class ArithRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.ADD, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.ADD, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -2743,7 +2773,7 @@ class ArithRef(ExprRef):
         if isinstance(other, BoolRef):
             return other.__mul__(self)
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.MULT, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.MULT, a.ast, b.ast), self.ctx)
 
     def __rmul__(self, other):
         """Create the SMT expression `other * self`.
@@ -2753,7 +2783,7 @@ class ArithRef(ExprRef):
         10*x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.MULT, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.MULT, b.ast, a.ast), self.ctx)
 
     def __sub__(self, other):
         """Create the SMT expression `self - other`.
@@ -2766,7 +2796,7 @@ class ArithRef(ExprRef):
         Int
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.SUB, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.SUB, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -2776,7 +2806,7 @@ class ArithRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.SUB, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.SUB, b.ast, a.ast), self.ctx)
 
     def __pow__(self, other):
         """Create the SMT expression `self**other` (** is the power operator).
@@ -2790,7 +2820,7 @@ class ArithRef(ExprRef):
         [x = 1]
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.POW, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.POW, a.ast, b.ast), self.ctx)
 
     def __rpow__(self, other):
         """Create the SMT expression `other**self` (** is the power operator).
@@ -2802,7 +2832,7 @@ class ArithRef(ExprRef):
         Real
         """
         a, b = _coerce_exprs(self, other)
-        return ArithRef(a.ctx.solver.mkTerm(Kind.POW, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.POW, b.ast, a.ast), self.ctx)
 
     def __div__(self, other):
         """Create the SMT expression `other/self`.
@@ -2829,7 +2859,7 @@ class ArithRef(ExprRef):
             k = Kind.INTS_DIVISION
         else:
             k = Kind.DIVISION
-        return ArithRef(a.ctx.solver.mkTerm(k, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(k, a.ast, b.ast), self.ctx)
 
     def __truediv__(self, other):
         """Create the SMT expression `other/self`."""
@@ -2854,7 +2884,7 @@ class ArithRef(ExprRef):
             k = Kind.INTS_DIVISION
         else:
             k = Kind.DIVISION
-        return ArithRef(a.ctx.solver.mkTerm(k, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(k, b.ast, a.ast), self.ctx)
 
     def __rtruediv__(self, other):
         """Create the SMT expression `other/self`."""
@@ -2871,7 +2901,7 @@ class ArithRef(ExprRef):
         a, b = _coerce_exprs(self, other)
         if debugging():
             _assert(a.sort().is_int(), "SMT integer expression expected")
-        return ArithRef(a.ctx.solver.mkTerm(Kind.INTS_MODULUS, a.ast, b.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.INTS_MODULUS, a.ast, b.ast), self.ctx)
 
     def __rmod__(self, other):
         """Create the SMT expression `other%self`.
@@ -2883,7 +2913,7 @@ class ArithRef(ExprRef):
         a, b = _coerce_exprs(self, other)
         if debugging():
             _assert(a.sort().is_int(), "SMT integer expression expected")
-        return ArithRef(a.ctx.solver.mkTerm(Kind.INTS_MODULUS, b.ast, a.ast), self.ctx)
+        return ArithRef(a.ctx.tm.mkTerm(Kind.INTS_MODULUS, b.ast, a.ast), self.ctx)
 
     def __neg__(self):
         """Return an expression representing `-self`.
@@ -2892,7 +2922,7 @@ class ArithRef(ExprRef):
         >>> -x
         -x
         """
-        return ArithRef(self.ctx.solver.mkTerm(Kind.NEG, self.ast), self.ctx)
+        return ArithRef(self.ctx.tm.mkTerm(Kind.NEG, self.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -2914,7 +2944,7 @@ class ArithRef(ExprRef):
         ToReal(x) <= y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.LEQ, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.tm.mkTerm(Kind.LEQ, a.ast, b.ast), self.ctx)
 
     def __lt__(self, other):
         """Create the SMT expression `other < self`.
@@ -2927,7 +2957,7 @@ class ArithRef(ExprRef):
         ToReal(x) < y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.LT, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.tm.mkTerm(Kind.LT, a.ast, b.ast), self.ctx)
 
     def __gt__(self, other):
         """Create the SMT expression `other > self`.
@@ -2940,7 +2970,7 @@ class ArithRef(ExprRef):
         ToReal(x) > y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.GT, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.tm.mkTerm(Kind.GT, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression `other >= self`.
@@ -2953,7 +2983,7 @@ class ArithRef(ExprRef):
         ToReal(x) >= y
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(a.ctx.solver.mkTerm(Kind.GEQ, a.ast, b.ast), self.ctx)
+        return BoolRef(a.ctx.tm.mkTerm(Kind.GEQ, a.ast, b.ast), self.ctx)
 
 
 def is_arith(a):
@@ -3446,7 +3476,7 @@ def IntVal(val, ctx=None):
     100
     """
     ctx = _get_ctx(ctx)
-    return IntNumRef(ctx.solver.mkInteger(_to_int_str(val)), ctx)
+    return IntNumRef(ctx.tm.mkInteger(_to_int_str(val)), ctx)
 
 
 def RealVal(val, ctx=None):
@@ -3465,7 +3495,7 @@ def RealVal(val, ctx=None):
     3/2
     """
     ctx = _get_ctx(ctx)
-    return RatNumRef(ctx.solver.mkReal(str(val)), ctx)
+    return RatNumRef(ctx.tm.mkReal(str(val)), ctx)
 
 
 def RatVal(a, b, ctx=None):
@@ -3488,7 +3518,7 @@ def RatVal(a, b, ctx=None):
             _is_int(b) or isinstance(b, str),
             "Second argument cannot be converted into an integer",
         )
-    return RatNumRef(ctx.solver.mkReal(a, b), ctx)
+    return RatNumRef(ctx.tm.mkReal(a, b), ctx)
 
 
 def Q(a, b, ctx=None):
@@ -3521,7 +3551,7 @@ def ToReal(a):
     if debugging():
         _assert(a.is_int(), "SMT integer expression expected.")
     ctx = a.ctx
-    return ArithRef(ctx.solver.mkTerm(Kind.TO_REAL, a.ast), ctx)
+    return ArithRef(ctx.tm.mkTerm(Kind.TO_REAL, a.ast), ctx)
 
 
 def ToInt(a):
@@ -3539,7 +3569,7 @@ def ToInt(a):
     if debugging():
         _assert(a.is_real(), "SMT real expression expected.")
     ctx = a.ctx
-    return ArithRef(ctx.solver.mkTerm(Kind.TO_INTEGER, a.ast), ctx)
+    return ArithRef(ctx.tm.mkTerm(Kind.TO_INTEGER, a.ast), ctx)
 
 
 def IntSort(ctx=None):
@@ -3556,7 +3586,7 @@ def IntSort(ctx=None):
     False
     """
     ctx = _get_ctx(ctx)
-    return ArithSortRef(ctx.solver.getIntegerSort(), ctx)
+    return ArithSortRef(ctx.tm.getIntegerSort(), ctx)
 
 
 def RealSort(ctx=None):
@@ -3573,7 +3603,7 @@ def RealSort(ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return ArithSortRef(ctx.solver.getRealSort(), ctx)
+    return ArithSortRef(ctx.tm.getRealSort(), ctx)
 
 
 def Int(name, ctx=None):
@@ -3706,7 +3736,7 @@ def IsInt(a):
     if debugging():
         _assert(a.is_real(), "SMT real expression expected.")
     ctx = a.ctx
-    return BoolRef(ctx.solver.mkTerm(Kind.IS_INTEGER, a.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.IS_INTEGER, a.ast), ctx)
 
 
 def Sqrt(a, ctx=None):
@@ -3912,7 +3942,7 @@ def Pi(ctx=None):
     Pi
     """
     ctx = get_ctx(ctx)
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.PI), ctx)
+    return _to_expr_ref(ctx.tm.mkTerm(Kind.PI), ctx)
 
 
 def Exponential(x):
@@ -4073,8 +4103,6 @@ class BitVecSortRef(SortRef):
         '#b00000000000000000000000000001010'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
@@ -4129,9 +4157,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, a.ast, b.ast), self.ctx)
 
     def __radd__(self, other):
         """Create the SMT expression `other + self`.
@@ -4141,9 +4167,7 @@ class BitVecRef(ExprRef):
         10 + x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_ADD, b.ast, a.ast), self.ctx)
 
     def __mul__(self, other):
         """Create the SMT expression `self * other`.
@@ -4157,7 +4181,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, a.ast, b.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_MULT, a.ast, b.ast), self.ctx
         )
 
     def __rmul__(self, other):
@@ -4169,7 +4193,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_MULT, b.ast, a.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_MULT, b.ast, a.ast), self.ctx
         )
 
     def __sub__(self, other):
@@ -4183,9 +4207,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, a.ast, b.ast), self.ctx)
 
     def __rsub__(self, other):
         """Create the SMT expression `other - self`.
@@ -4195,9 +4217,7 @@ class BitVecRef(ExprRef):
         10 - x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SUB, b.ast, a.ast), self.ctx)
 
     def __or__(self, other):
         """Create the SMT expression bitwise-or `self | other`.
@@ -4210,9 +4230,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, a.ast, b.ast), self.ctx)
 
     def __ror__(self, other):
         """Create the SMT expression bitwise-or `other | self`.
@@ -4222,9 +4240,7 @@ class BitVecRef(ExprRef):
         10 | x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_OR, b.ast, a.ast), self.ctx)
 
     def __and__(self, other):
         """Create the SMT expression bitwise-and `self & other`.
@@ -4237,9 +4253,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, a.ast, b.ast), self.ctx)
 
     def __rand__(self, other):
         """Create the SMT expression bitwise-or `other & self`.
@@ -4249,9 +4263,7 @@ class BitVecRef(ExprRef):
         10 & x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_AND, b.ast, a.ast), self.ctx)
 
     def __xor__(self, other):
         """Create the SMT expression bitwise-xor `self ^ other`.
@@ -4264,9 +4276,7 @@ class BitVecRef(ExprRef):
         BitVec(32)
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, a.ast, b.ast), self.ctx)
 
     def __rxor__(self, other):
         """Create the SMT expression bitwise-xor `other ^ self`.
@@ -4276,9 +4286,7 @@ class BitVecRef(ExprRef):
         10 ^ x
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_XOR, b.ast, a.ast), self.ctx)
 
     def __pos__(self):
         """Return `self`.
@@ -4298,7 +4306,7 @@ class BitVecRef(ExprRef):
         >>> solve([-(-x) != x])
         no solution
         """
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_NEG, self.ast), self.ctx)
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_NEG, self.ast), self.ctx)
 
     def __invert__(self):
         """Create the SMT expression bitwise-not `~self`.
@@ -4309,7 +4317,7 @@ class BitVecRef(ExprRef):
         >>> solve([~(~x) != x])
         no solution
         """
-        return BitVecRef(self.ctx.solver.mkTerm(Kind.BITVECTOR_NOT, self.ast), self.ctx)
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_NOT, self.ast), self.ctx)
 
     def __div__(self, other):
         """Create the SMT expression (signed) division `self / other`.
@@ -4329,7 +4337,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, a.ast, b.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_SDIV, a.ast, b.ast), self.ctx
         )
 
     def __truediv__(self, other):
@@ -4351,7 +4359,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SDIV, b.ast, a.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_SDIV, b.ast, a.ast), self.ctx
         )
 
     def __rtruediv__(self, other):
@@ -4378,7 +4386,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, a.ast, b.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_SMOD, a.ast, b.ast), self.ctx
         )
 
     def __rmod__(self, other):
@@ -4398,7 +4406,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SMOD, b.ast, a.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_SMOD, b.ast, a.ast), self.ctx
         )
 
     def __le__(self, other):
@@ -4415,9 +4423,7 @@ class BitVecRef(ExprRef):
         '(bvule x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), self.ctx)
 
     def __lt__(self, other):
         """Create the SMT expression (signed) `other < self`.
@@ -4433,9 +4439,7 @@ class BitVecRef(ExprRef):
         '(bvult x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), self.ctx)
 
     def __gt__(self, other):
         """Create the SMT expression (signed) `other > self`.
@@ -4451,9 +4455,7 @@ class BitVecRef(ExprRef):
         '(bvugt x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), self.ctx)
 
     def __ge__(self, other):
         """Create the SMT expression (signed) `other >= self`.
@@ -4469,9 +4471,7 @@ class BitVecRef(ExprRef):
         '(bvuge x y)'
         """
         a, b = _coerce_exprs(self, other)
-        return BoolRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx
-        )
+        return BoolRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), self.ctx)
 
     def __rshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `self >> other`
@@ -4502,7 +4502,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, a.ast, b.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_ASHR, a.ast, b.ast), self.ctx
         )
 
     def __lshift__(self, other):
@@ -4517,9 +4517,7 @@ class BitVecRef(ExprRef):
         4
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, a.ast, b.ast), self.ctx)
 
     def __rrshift__(self, other):
         """Create the SMT expression (arithmetical) right shift `other` >> `self`.
@@ -4534,7 +4532,7 @@ class BitVecRef(ExprRef):
         """
         a, b = _coerce_exprs(self, other)
         return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_ASHR, b.ast, a.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.BITVECTOR_ASHR, b.ast, a.ast), self.ctx
         )
 
     def __rlshift__(self, other):
@@ -4549,9 +4547,7 @@ class BitVecRef(ExprRef):
         '(bvshl #b00000000000000000000000000001010 x)'
         """
         a, b = _coerce_exprs(self, other)
-        return BitVecRef(
-            self.ctx.solver.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx
-        )
+        return BitVecRef(self.ctx.tm.mkTerm(Kind.BITVECTOR_SHL, b.ast, a.ast), self.ctx)
 
 
 class BitVecNumRef(BitVecRef):
@@ -4651,7 +4647,7 @@ def BV2Int(a, is_signed=False):
         nat = BV2Int(a)
         return If(a < 0, nat - (2**w), nat)
     else:
-        return ArithRef(ctx.solver.mkTerm(Kind.BITVECTOR_TO_NAT, a.ast), ctx)
+        return ArithRef(ctx.tm.mkTerm(Kind.BITVECTOR_TO_NAT, a.ast), ctx)
 
 
 def Int2BV(a, num_bits):
@@ -4667,7 +4663,7 @@ def Int2BV(a, num_bits):
     """
     ctx = a.ctx
     return BitVecRef(
-        ctx.solver.mkTerm(ctx.solver.mkOp(Kind.INT_TO_BITVECTOR, num_bits), a.ast), ctx
+        ctx.tm.mkTerm(ctx.tm.mkOp(Kind.INT_TO_BITVECTOR, num_bits), a.ast), ctx
     )
 
 
@@ -4683,7 +4679,7 @@ def BitVecSort(sz, ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return BitVecSortRef(ctx.solver.mkBitVectorSort(sz), ctx)
+    return BitVecSortRef(ctx.tm.mkBitVectorSort(sz), ctx)
 
 
 def BitVecVal(val, bv, ctx=None):
@@ -4708,7 +4704,7 @@ def BitVecVal(val, bv, ctx=None):
         ctx = _get_ctx(ctx)
     modulus = 2**size
     val = (val + modulus) % modulus
-    return BitVecNumRef(ctx.solver.mkBitVector(size, str(val), 10), ctx)
+    return BitVecNumRef(ctx.tm.mkBitVector(size, str(val), 10), ctx)
 
 
 def BitVec(name, bv, ctx=None):
@@ -4782,12 +4778,12 @@ def Concat(*args):
             "All arguments must be SMT bit-vector, string, sequence or re expressions.",
         )
     if is_string(args[0]):
-        return StringRef(ctx.solver.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
+        return StringRef(ctx.tm.mkTerm(Kind.STRING_CONCAT, *[a.ast for a in args]))
     if is_seq(args[0]):
-        return SeqRef(ctx.solver.mkTerm(Kind.SEQ_CONCAT, *[a.ast for a in args]), ctx)
+        return SeqRef(ctx.tm.mkTerm(Kind.SEQ_CONCAT, *[a.ast for a in args]), ctx)
     if is_re(args[0]):
-        return ReRef(ctx.solver.mkTerm(Kind.REGEXP_CONCAT, *[a.ast for a in args]))
-    return BitVecRef(ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
+        return ReRef(ctx.tm.mkTerm(Kind.REGEXP_CONCAT, *[a.ast for a in args]))
+    return BitVecRef(ctx.tm.mkTerm(Kind.BITVECTOR_CONCAT, *[a.ast for a in args]))
 
 
 def Extract(high, low, a):
@@ -4810,9 +4806,7 @@ def Extract(high, low, a):
         )
         _assert(is_bv(a), "Third argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.solver.mkTerm(
-            a.ctx.solver.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast
-        ),
+        a.ctx.tm.mkTerm(a.ctx.tm.mkOp(Kind.BITVECTOR_EXTRACT, high, low), a.ast),
         a.ctx,
     )
 
@@ -4840,7 +4834,7 @@ def ULE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_ULE, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_ULE, a.ast, b.ast), a.ctx)
 
 
 def ULT(a, b):
@@ -4858,7 +4852,7 @@ def ULT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_ULT, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_ULT, a.ast, b.ast), a.ctx)
 
 
 def UGE(a, b):
@@ -4876,7 +4870,7 @@ def UGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UGE, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_UGE, a.ast, b.ast), a.ctx)
 
 
 def UGT(a, b):
@@ -4894,7 +4888,7 @@ def UGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UGT, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_UGT, a.ast, b.ast), a.ctx)
 
 
 def SLE(a, b):
@@ -4908,7 +4902,7 @@ def SLE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_SLE, a.ast, b.ast), a.ctx)
 
 
 def SLT(a, b):
@@ -4922,7 +4916,7 @@ def SLT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_SLT, a.ast, b.ast), a.ctx)
 
 
 def SGE(a, b):
@@ -4936,7 +4930,7 @@ def SGE(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_SGE, a.ast, b.ast), a.ctx)
 
 
 def SGT(a, b):
@@ -4950,7 +4944,7 @@ def SGT(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BoolRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), a.ctx)
+    return BoolRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_SGT, a.ast, b.ast), a.ctx)
 
 
 def UDiv(a, b):
@@ -4971,7 +4965,7 @@ def UDiv(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UDIV, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_UDIV, a.ast, b.ast), a.ctx)
 
 
 def URem(a, b):
@@ -4992,7 +4986,7 @@ def URem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_UREM, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_UREM, a.ast, b.ast), a.ctx)
 
 
 def SDiv(a, b):
@@ -5039,7 +5033,7 @@ def SRem(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_SREM, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_SREM, a.ast, b.ast), a.ctx)
 
 
 def LShR(a, b):
@@ -5071,7 +5065,7 @@ def LShR(a, b):
     """
     _check_bv_args(a, b)
     a, b = _coerce_exprs(a, b)
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_LSHR, a.ast, b.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_LSHR, a.ast, b.ast), a.ctx)
 
 
 def _check_rotate_args(a, b):
@@ -5092,7 +5086,7 @@ def RotateLeft(a, b):
     >>> simplify(RotateLeft(a, 16))
     a
     """
-    s = a.ctx.solver
+    s = a.ctx.tm
     _check_rotate_args(a, b)
     return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_ROTATE_LEFT, b), a.ast), a.ctx)
 
@@ -5108,7 +5102,7 @@ def RotateRight(a, b):
     >>> simplify(RotateRight(a, 16))
     a
     """
-    s = a.ctx.solver
+    s = a.ctx.tm
     _check_rotate_args(a, b)
     return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_ROTATE_RIGHT, b), a.ast), a.ctx)
 
@@ -5140,7 +5134,7 @@ def SignExt(n, a):
     if debugging():
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
-    s = a.ctx.solver
+    s = a.ctx.tm
     return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_SIGN_EXTEND, n), a.ast), a.ctx)
 
 
@@ -5169,7 +5163,7 @@ def ZeroExt(n, a):
     if debugging():
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
-    s = a.ctx.solver
+    s = a.ctx.tm
     return BitVecRef(s.mkTerm(s.mkOp(Kind.BITVECTOR_ZERO_EXTEND, n), a.ast), a.ctx)
 
 
@@ -5195,7 +5189,7 @@ def RepeatBitVec(n, a):
         _assert(_is_int(n), "First argument must be an integer")
         _assert(is_bv(a), "Second argument must be an SMT bit-vector expression")
     return BitVecRef(
-        a.ctx.solver.mkTerm(a.ctx.solver.mkOp(Kind.BITVECTOR_REPEAT, n), a.ast), a.ctx
+        a.ctx.tm.mkTerm(a.ctx.tm.mkOp(Kind.BITVECTOR_REPEAT, n), a.ast), a.ctx
     )
 
 
@@ -5208,7 +5202,7 @@ def BVRedAnd(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_REDAND, a.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_REDAND, a.ast), a.ctx)
 
 
 def BVRedOr(a):
@@ -5220,7 +5214,7 @@ def BVRedOr(a):
     """
     if debugging():
         _assert(is_bv(a), "First argument must be an SMT bit-vector expression")
-    return BitVecRef(a.ctx.solver.mkTerm(Kind.BITVECTOR_REDOR, a.ast), a.ctx)
+    return BitVecRef(a.ctx.tm.mkTerm(Kind.BITVECTOR_REDOR, a.ast), a.ctx)
 
 
 def BVAdd(*args):
@@ -5392,7 +5386,7 @@ class ArrayRef(ExprRef):
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
-            self.ctx.solver.mkTerm(Kind.SELECT, self.ast, arg.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.SELECT, self.ast, arg.ast), self.ctx
         )
 
     def arg(self, idx):
@@ -5500,10 +5494,9 @@ def ArraySort(*sig):
     if debugging():
         for s in sig:
             _assert(is_sort(s), "SMT sort expected")
-            _assert(s.ctx == r.ctx, "Context mismatch")
     ctx = d.ctx
     if len(sig) == 2:
-        return ArraySortRef(ctx.solver.mkArraySort(d.ast, r.ast), ctx)
+        return ArraySortRef(ctx.tm.mkArraySort(d.ast, r.ast), ctx)
     else:
         unimplemented("multi-domain array")
 
@@ -5518,7 +5511,7 @@ def Array(name, dom, rng):
     a[0]
     """
     ctx = dom.ctx
-    s = ctx.solver.mkArraySort(dom.ast, rng.ast)
+    s = ctx.tm.mkArraySort(dom.ast, rng.ast)
     e = ctx.get_var(name, _to_sort_ref(s, ctx))
     return ArrayRef(e, ctx)
 
@@ -5560,7 +5553,7 @@ def Store(a, i, v):
     i = a.sort().domain().cast(i)
     v = a.sort().range().cast(v)
     ctx = a.ctx
-    return _to_expr_ref(ctx.solver.mkTerm(Kind.STORE, a.ast, i.ast, v.ast), ctx)
+    return _to_expr_ref(ctx.tm.mkTerm(Kind.STORE, a.ast, i.ast, v.ast), ctx)
 
 
 def Select(a, i):
@@ -5615,7 +5608,7 @@ def ConstArray(dom, v):
     if not is_expr(v):
         v = _py2expr(v, ctx)
     sort = ArraySort(dom, v.sort())
-    return ArrayRef(ctx.solver.mkConstArray(sort.ast, v.ast), ctx)
+    return ArrayRef(ctx.tm.mkConstArray(sort.ast, v.ast), ctx)
 
 
 def is_select(a):
@@ -5730,7 +5723,7 @@ class SetRef(ExprRef):
         """
         arg = self.domain().cast(arg)
         return _to_expr_ref(
-            self.ctx.solver.mkTerm(Kind.SET_MEMBER, arg.ast, self.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.SET_MEMBER, arg.ast, self.ast), self.ctx
         )
 
     def default(self):
@@ -5743,7 +5736,7 @@ class SetRef(ExprRef):
         False
 
         """
-        return BoolRef(self.ctx.solver.mkFalse(), self.ctx)
+        return BoolRef(self.ctx.tm.mkFalse(), self.ctx)
 
     def __and__(self, other):
         """Intersection
@@ -5772,7 +5765,7 @@ def SetSort(s):
     """Create a set sort over element sort s"""
     ctx = s.ctx
     instance_check(s, SortRef)
-    sort = ctx.solver.mkSetSort(s.ast)
+    sort = ctx.tm.mkSetSort(s.ast)
     return SetSortRef(sort, ctx)
 
 
@@ -5792,7 +5785,7 @@ def EmptySet(s):
     """
     ctx = s.ctx
     sort = SetSort(s)
-    return SetRef(ctx.solver.mkEmptySet(sort.ast), ctx)
+    return SetRef(ctx.tm.mkEmptySet(sort.ast), ctx)
 
 
 def FullSet(s):
@@ -5803,7 +5796,7 @@ def FullSet(s):
     """
     ctx = s.ctx
     sort = SetSort(s)
-    return SetRef(ctx.solver.mkUniverseSet(sort.ast), ctx)
+    return SetRef(ctx.tm.mkUniverseSet(sort.ast), ctx)
 
 
 def SetUnion(*args):
@@ -5816,7 +5809,7 @@ def SetUnion(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SET_UNION, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.tm.mkTerm(Kind.SET_UNION, *[a.ast for a in args]), ctx)
 
 
 def SetIntersect(*args):
@@ -5829,7 +5822,7 @@ def SetIntersect(*args):
     """
     args = _get_args(args)
     ctx = _ctx_from_ast_arg_list(args)
-    return SetRef(ctx.solver.mkTerm(Kind.SET_INTER, *[a.ast for a in args]), ctx)
+    return SetRef(ctx.tm.mkTerm(Kind.SET_INTER, *[a.ast for a in args]), ctx)
 
 
 def SetAdd(s, e):
@@ -5843,7 +5836,7 @@ def SetAdd(s, e):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     e = _py2expr(e, ctx)
-    return SetRef(ctx.solver.mkTerm(Kind.SET_INSERT, e.ast, s.ast), ctx, True)
+    return SetRef(ctx.tm.mkTerm(Kind.SET_INSERT, e.ast, s.ast), ctx, True)
 
 
 def SetDel(s, e):
@@ -5864,7 +5857,7 @@ def SetComplement(s):
     SetComplement(a)
     """
     ctx = s.ctx
-    return ArrayRef(ctx.solver.mkTerm(Kind.SET_COMPLEMENT, s.ast), ctx)
+    return ArrayRef(ctx.tm.mkTerm(Kind.SET_COMPLEMENT, s.ast), ctx)
 
 
 def Singleton(s):
@@ -5875,7 +5868,7 @@ def Singleton(s):
     """
     s = _py2expr(s)
     ctx = s.ctx
-    return SetRef(ctx.solver.mkTerm(Kind.SET_SINGLETON, s.ast), ctx)
+    return SetRef(ctx.tm.mkTerm(Kind.SET_SINGLETON, s.ast), ctx)
 
 
 def SetDifference(a, b):
@@ -5887,7 +5880,7 @@ def SetDifference(a, b):
     SetDifference(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return SetRef(ctx.solver.mkTerm(Kind.SET_MINUS, a.ast, b.ast), ctx)
+    return SetRef(ctx.tm.mkTerm(Kind.SET_MINUS, a.ast, b.ast), ctx)
 
 
 def SetMinus(a, b):
@@ -5910,7 +5903,7 @@ def IsMember(e, s):
     """
     ctx = _ctx_from_ast_arg_list([s, e])
     arg = s.domain().cast(e)
-    return BoolRef(ctx.solver.mkTerm(Kind.SET_MEMBER, arg.ast, s.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.SET_MEMBER, arg.ast, s.ast), ctx)
 
 
 def IsSubset(a, b):
@@ -5922,7 +5915,7 @@ def IsSubset(a, b):
     IsSubset(a, b)
     """
     ctx = _ctx_from_ast_arg_list([a, b])
-    return BoolRef(ctx.solver.mkTerm(Kind.SET_SUBSET, a.ast, b.ast), ctx)
+    return BoolRef(ctx.tm.mkTerm(Kind.SET_SUBSET, a.ast, b.ast), ctx)
 
 
 #########################################
@@ -5995,20 +5988,20 @@ class Solver(object):
     * get-model,
     * etc."""
 
-    def __init__(self, logic=None, ctx=None, logFile=None):
-        # save logic so that we can re-build the solver if needed.
-        self.logic = logic
-        # ignore ctx (the paramter is kept for z3 compatibility)
+    def __init__(self, ctx=None, logFile=None):
+        self.ctx = _get_ctx(ctx)
         self.solver = None
+        self.logic = None
         self.initFromLogic()
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
         self.resetAssertions()
+        assert ctx is None or type(ctx) == Context
 
     def initFromLogic(self):
         """Create the base-API solver from the logic"""
-        self.solver = pc.Solver()
+        self.solver = pc.Solver(self.ctx.tm)
         if self.logic is not None:
             self.solver.setLogic(self.logic)
         self.solver.setOption("produce-models", "true")
@@ -6127,7 +6120,7 @@ class Solver(object):
         [x > 0, x < 2]
         """
         args = _get_args(args)
-        s = BoolSort()
+        s = BoolSort(self.ctx)
         for arg in args:
             arg = s.cast(arg)
             self.assertions_[-1].append(arg)
@@ -6217,6 +6210,33 @@ class Solver(object):
         [a = -2]
         """
         return ModelRef(self)
+
+    def proof(self):
+        """Return a proof for the last `check()`.
+
+        This function raises an exception if
+        a proof is not available (e.g., last `check()` does not return unsat).
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0)
+        >>> s.check()
+        sat
+        >>> try:
+        ...   s.proof()
+        ... except RuntimeError:
+        ...   print("failed to get proof (last `check()` must have returned unsat)")
+        failed to get proof (last `check()` must have returned unsat)
+        >>> s.add(a == 0)
+        >>> s.check()
+        unsat
+        >>> s.proof() #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        (SCOPE: Not(And(a + 2 == 0, a == 0)),
+          ...
+        """
+        p = self.solver.getProof()[0]
+        return ProofRef(self, p)
 
     def assertions(self):
         """Return an AST vector containing all added constraints.
@@ -6341,15 +6361,14 @@ class Solver(object):
         return self.solver.getStatistics()
 
     def unsat_core(self):
-        """Return a subset (as a list of Bool expressions) of the assumptions provided to the last check().
+        """Return a subset (as a list of Bool expressions) of the
+        assertions and assumptions provided to the last check().
 
-        These are the unsat ("failed") assumptions.
-
-        To enable this, set the option "produce-unsat-assumptions" to true.
+        To enable this, set the option "produce-unsat-cores" to true.
 
         >>> a,b,c = Bools('a b c')
         >>> s = Solver()
-        >>> s.set('produce-unsat-assumptions','true')
+        >>> s.set('produce-unsat-cores','true')
         >>> s.add(Or(a,b),Or(b,c),Not(c))
         >>> s.check(a,b,c)
         unsat
@@ -6363,8 +6382,8 @@ class Solver(object):
         >>> s.check(a,b)
         sat
         """
-        core = self.solver.getUnsatAssumptions()
-        return [BoolRef(c) for c in core]
+        core = self.solver.getUnsatCore()
+        return [_to_expr_ref(c, self.ctx) for c in core]
 
 
 def SolverFor(logic, ctx=None, logFile=None):
@@ -6384,7 +6403,10 @@ def SolverFor(logic, ctx=None, logFile=None):
     # sat
     # >>> s.model()
     # [x = 1]
-    return Solver(logic=logic, ctx=ctx, logFile=logFile)
+    s = Solver(ctx=ctx, logFile=logFile)
+    s.logic = logic
+    s.initFromLogic()
+    return s
 
 
 def SimpleSolver(ctx=None, logFile=None):
@@ -6673,7 +6695,7 @@ class ModelRef:
         >>> m.eval(x == 1)
         True
         """
-        return _to_expr_ref(self.solver.solver.getValue(t.ast), Context(self.solver))
+        return _to_expr_ref(self.solver.solver.getValue(t.ast), self.solver.ctx)
 
     def evaluate(self, t, model_completion=False):
         """Alias for `eval`.
@@ -6760,11 +6782,120 @@ class ModelRef:
 
 
 def evaluate(t):
-    """Evaluates the given term (assuming it is constant!)"""
+    """Evaluates the given term (assuming it is constant!)
+
+    >>> evaluate(evaluate(BitVecVal(1, 8) + BitVecVal(2, 8)) + BitVecVal(3, 8))
+    6
+    """
+    if not isinstance(t, ExprRef):
+        raise TypeError("Can only evaluate `ExprRef`s")
     s = Solver()
     s.check()
     m = s.model()
     return m[t]
+
+
+class EmptyModel:
+    def evaluate(self, t):
+        return evaluate(t)
+
+
+def Model(ctx=None):
+    """Return an object for evaluating terms.
+
+    We recommend using the standalone `evaluate` function for this instead,
+    but we also provide this function and its return object for z3 compatibility.
+
+    >>> Model().evaluate(BitVecVal(1, 8) + BitVecVal(2, 8))
+    3
+    """
+    return EmptyModel()
+
+
+class ProofRef:
+    """A proof tree where every proof reference corresponds to the
+    root step of a proof.  The branches of the root step are the
+    premises of the step."""
+
+    def __init__(self, solver, proof):
+        self.proof = proof
+        self.solver = solver
+
+    def __del__(self):
+        if self.solver is not None:
+            self.solver = None
+
+    def __repr__(self):
+        return obj_to_string(self)
+
+    def getRule(self):
+        """Returns the proof rule used by the root step of the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getRule()
+        <ProofRule.SCOPE: 1>
+        """
+        return self.proof.getRule()
+
+    def getResult(self):
+        """Returns the conclusion of the root step of the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getResult()
+        Not(And(a + 2 == 0, a == 0))
+        """
+        return _to_expr_ref(self.proof.getResult(), self.solver.ctx)
+
+    def getChildren(self):
+        """Returns the premises, i.e., proofs themselvels, of the root step of
+        the proof.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p = p.getChildren()[0].getChildren()[0]
+        >>> p #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        (EQ_RESOLVE: False,
+         ...
+        """
+        children = self.proof.getChildren()
+        return [ProofRef(self.solver, cp) for cp in children]
+
+    def getArguments(self):
+        """Returns the arguments of the root step of the proof as a list of
+        expressions.
+
+        >>> s = Solver()
+        >>> s.set('produce-proofs','true')
+        >>> a = Int('a')
+        >>> s.add(a + 2 == 0, a == 0)
+        >>> s.check()
+        unsat
+        >>> p = s.proof()
+        >>> p.getArguments()
+        []
+        >>> p = p.getChildren()[0]
+        >>> p.getArguments()
+        [a + 2 == 0, a == 0]
+        """
+        args = self.proof.getArguments()
+        return [_to_expr_ref(a, self.solver.ctx) for a in args]
 
 
 def simplify(a):
@@ -6778,7 +6909,7 @@ def simplify(a):
     if debugging():
         _assert(is_expr(a), "SMT expression expected")
     instance_check(a, ExprRef)
-    return _to_expr_ref(a.ctx.solver.simplify(a.ast), a.ctx)
+    return _to_expr_ref(Solver(ctx=a.ctx).solver.simplify(a.ast), a.ctx)
 
 
 #########################################
@@ -6844,8 +6975,6 @@ class FPSortRef(SortRef):
         '(fp #b0 #b01111111 #b00000000000000000000000)'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
             return val
         else:
             return FPVal(val, None, self, self.ctx)
@@ -6854,7 +6983,7 @@ class FPSortRef(SortRef):
 def Float16(ctx=None):
     """Floating-point 16-bit (half) sort."""
     ctx = _get_ctx(ctx)
-    return FPSortRef(ctx.solver.mkFloatingPointSort(5, 11), ctx)
+    return FPSortRef(ctx.tm.mkFloatingPointSort(5, 11), ctx)
 
 
 def FloatHalf(ctx=None):
@@ -6865,7 +6994,7 @@ def FloatHalf(ctx=None):
 def Float32(ctx=None):
     """Floating-point 32-bit (single) sort."""
     ctx = _get_ctx(ctx)
-    return FPSortRef(ctx.solver.mkFloatingPointSort(8, 24), ctx)
+    return FPSortRef(ctx.tm.mkFloatingPointSort(8, 24), ctx)
 
 
 def FloatSingle(ctx=None):
@@ -6876,7 +7005,7 @@ def FloatSingle(ctx=None):
 def Float64(ctx=None):
     """Floating-point 64-bit (double) sort."""
     ctx = _get_ctx(ctx)
-    return FPSortRef(ctx.solver.mkFloatingPointSort(11, 53), ctx)
+    return FPSortRef(ctx.tm.mkFloatingPointSort(11, 53), ctx)
 
 
 def FloatDouble(ctx=None):
@@ -6887,7 +7016,7 @@ def FloatDouble(ctx=None):
 def Float128(ctx=None):
     """Floating-point 128-bit (quadruple) sort."""
     ctx = _get_ctx(ctx)
-    return FPSortRef(ctx.solver.mkFloatingPointSort(15, 113), ctx)
+    return FPSortRef(ctx.tm.mkFloatingPointSort(15, 113), ctx)
 
 
 def FloatQuadruple(ctx=None):
@@ -7115,7 +7244,7 @@ def RoundNearestTiesToEven(ctx=None):
     """
     ctx = _get_ctx(ctx)
     return FPRMRef(
-        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_EVEN), ctx
+        ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_EVEN), ctx
     )
 
 
@@ -7146,7 +7275,7 @@ def RoundNearestTiesToAway(ctx=None):
     """
     ctx = _get_ctx(ctx)
     return FPRMRef(
-        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_AWAY), ctx
+        ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_NEAREST_TIES_TO_AWAY), ctx
     )
 
 
@@ -7176,9 +7305,7 @@ def RoundTowardPositive(ctx=None):
     fpMul(RTP(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(
-        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx
-    )
+    return FPRMRef(ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_POSITIVE), ctx)
 
 
 def RTP(ctx=None):
@@ -7207,9 +7334,7 @@ def RoundTowardNegative(ctx=None):
     fpMul(RTN(), x, y)
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(
-        ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx
-    )
+    return FPRMRef(ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_NEGATIVE), ctx)
 
 
 def RTN(ctx=None):
@@ -7238,7 +7363,7 @@ def RoundTowardZero(ctx=None):
     x * y
     """
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_ZERO), ctx)
+    return FPRMRef(ctx.tm.mkRoundingMode(pc.RoundingMode.ROUND_TOWARD_ZERO), ctx)
 
 
 def RTZ(ctx=None):
@@ -7286,7 +7411,7 @@ def get_default_rounding_mode(ctx=None):
             isinstance(_dflt_rounding_mode, pc.RoundingMode), "illegal rounding mode"
         )
     ctx = _get_ctx(ctx)
-    return FPRMRef(ctx.solver.mkRoundingMode(_dflt_rounding_mode), ctx)
+    return FPRMRef(ctx.tm.mkRoundingMode(_dflt_rounding_mode), ctx)
 
 
 def set_default_rounding_mode(rm, ctx=None):
@@ -7503,7 +7628,7 @@ def FPSort(ebits, sbits, ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return FPSortRef(ctx.solver.mkFloatingPointSort(ebits, sbits), ctx)
+    return FPSortRef(ctx.tm.mkFloatingPointSort(ebits, sbits), ctx)
 
 
 def _to_float_str(val, exp=0):
@@ -7564,7 +7689,7 @@ def fpNaN(s):
     >>> set_fpa_pretty(pb)
     """
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkFloatingPointNaN(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.tm.mkFloatingPointNaN(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpPlusInfinity(s):
@@ -7581,13 +7706,13 @@ def fpPlusInfinity(s):
     >>> set_fpa_pretty(pb)
     """
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkFloatingPointPosInf(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.tm.mkFloatingPointPosInf(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpMinusInfinity(s):
     """Create a SMT floating-point -oo term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkFloatingPointNegInf(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.tm.mkFloatingPointNegInf(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpInfinity(s, negative):
@@ -7600,13 +7725,13 @@ def fpInfinity(s, negative):
 def fpPlusZero(s):
     """Create a SMT floating-point +0.0 term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkFloatingPointPosZero(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.tm.mkFloatingPointPosZero(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpMinusZero(s):
     """Create a SMT floating-point -0.0 term."""
     _assert(isinstance(s, FPSortRef), "sort mismatch")
-    return FPNumRef(s.ctx.solver.mkFloatingPointNegZero(s.ebits(), s.sbits()), s.ctx)
+    return FPNumRef(s.ctx.tm.mkFloatingPointNegZero(s.ebits(), s.sbits()), s.ctx)
 
 
 def fpZero(s, negative):
@@ -7662,12 +7787,12 @@ def FPVal(val, exp=None, fps=None, ctx=None):
         bv_str = bin(ctypes.c_uint64.from_buffer(ctypes.c_double(val)).value)[2:]
         bv_str = "0" * (64 - len(bv_str)) + bv_str
         dub = Float64(ctx)
-        bv = ctx.solver.mkBitVector(len(bv_str), bv_str, 2)
-        fp64 = ctx.solver.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
-        fp_to_fp_op = ctx.solver.mkOp(
+        bv = ctx.tm.mkBitVector(len(bv_str), bv_str, 2)
+        fp64 = ctx.tm.mkFloatingPoint(dub.ebits(), dub.sbits(), bv)
+        fp_to_fp_op = ctx.tm.mkOp(
             Kind.FLOATINGPOINT_TO_FP_FROM_FP, fps.ebits(), fps.sbits()
         )
-        fp = ctx.solver.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
+        fp = ctx.tm.mkTerm(fp_to_fp_op, _dflt_rm(ctx).ast, fp64)
         presimp = FPNumRef(fp, ctx)
         post = simplify(presimp)
         return post
@@ -7740,7 +7865,7 @@ def fpAbs(a, ctx=None):
     """
     ctx = _get_ctx(ctx)
     [a] = _coerce_fp_expr_list([a], ctx)
-    return FPRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_ABS, a.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(Kind.FLOATINGPOINT_ABS, a.ast), ctx)
 
 
 def fpNeg(a, ctx=None):
@@ -7756,7 +7881,7 @@ def fpNeg(a, ctx=None):
     """
     ctx = _get_ctx(ctx)
     [a] = _coerce_fp_expr_list([a], ctx)
-    return FPRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_NEG, a.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(Kind.FLOATINGPOINT_NEG, a.ast), ctx)
 
 
 def _mk_fp_unary(kind, rm, a, ctx):
@@ -7768,7 +7893,7 @@ def _mk_fp_unary(kind, rm, a, ctx):
             "First argument must be a SMT floating-point rounding mode expression",
         )
         _assert(is_fp(a), "Second argument must be a SMT floating-point expression")
-    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast()), ctx)
+    return FPRef(ctx.tm.mkTerm(kind, rm.as_ast(), a.as_ast()), ctx)
 
 
 def _mk_fp_unary_pred(kind, a, ctx):
@@ -7776,7 +7901,7 @@ def _mk_fp_unary_pred(kind, a, ctx):
     [a] = _coerce_fp_expr_list([a], ctx)
     if debugging():
         _assert(is_fp(a), "First argument must be a SMT floating-point expression")
-    return BoolRef(ctx.solver.mkTerm(kind, a.as_ast()), ctx)
+    return BoolRef(ctx.tm.mkTerm(kind, a.as_ast()), ctx)
 
 
 def _mk_fp_bin(kind, rm, a, b, ctx):
@@ -7791,7 +7916,7 @@ def _mk_fp_bin(kind, rm, a, b, ctx):
             is_fp(a) or is_fp(b),
             "Second or third argument must be a SMT floating-point expression",
         )
-    return FPRef(ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast()), ctx)
+    return FPRef(ctx.tm.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast()), ctx)
 
 
 def _mk_fp_bin_norm(kind, a, b, ctx):
@@ -7802,7 +7927,7 @@ def _mk_fp_bin_norm(kind, a, b, ctx):
             is_fp(a) or is_fp(b),
             "First or second argument must be a SMT floating-point expression",
         )
-    return FPRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
+    return FPRef(ctx.tm.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
 
 
 def _mk_fp_bin_pred(kind, a, b, ctx):
@@ -7813,7 +7938,7 @@ def _mk_fp_bin_pred(kind, a, b, ctx):
             is_fp(a) or is_fp(b),
             "First or second argument must be a SMT floating-point expression",
         )
-    return BoolRef(ctx.solver.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
+    return BoolRef(ctx.tm.mkTerm(kind, a.as_ast(), b.as_ast()), ctx)
 
 
 def _mk_fp_tern(kind, rm, a, b, c, ctx):
@@ -7829,7 +7954,7 @@ def _mk_fp_tern(kind, rm, a, b, c, ctx):
             "Second, third or fourth argument must be a SMT floating-point expression",
         )
     return FPRef(
-        ctx.solver.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast(), c.as_ast()), ctx
+        ctx.tm.mkTerm(kind, rm.as_ast(), a.as_ast(), b.as_ast(), c.as_ast()), ctx
     )
 
 
@@ -8108,9 +8233,7 @@ def fpFP(sgn, exp, sig, ctx=None):
     _assert(sgn.sort().size() == 1, "sort mismatch")
     ctx = _get_ctx(ctx)
     _assert(ctx == sgn.ctx == exp.ctx == sig.ctx, "context mismatch")
-    bv = BitVecRef(
-        ctx.solver.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx
-    )
+    bv = BitVecRef(ctx.tm.mkTerm(Kind.BITVECTOR_CONCAT, sgn.ast, exp.ast, sig.ast), ctx)
     sort = FPSort(exp.size(), sig.size() + 1)
     return fpBVToFP(bv, sort)
 
@@ -8167,10 +8290,10 @@ def fpBVToFP(v, sort, ctx=None):
     _assert(is_bv(v), "First argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Second argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(
+    to_fp_op = ctx.tm.mkOp(
         Kind.FLOATINGPOINT_TO_FP_FROM_IEEE_BV, sort.ebits(), sort.sbits()
     )
-    return FPRef(ctx.solver.mkTerm(to_fp_op, v.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(to_fp_op, v.ast), ctx)
 
 
 def fpFPToFP(rm, v, sort, ctx=None):
@@ -8193,10 +8316,8 @@ def fpFPToFP(rm, v, sort, ctx=None):
     _assert(is_fp(v), "Second argument must be a SMT floating-point expression.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(
-        Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits()
-    )
-    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+    to_fp_op = ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_FP, sort.ebits(), sort.sbits())
+    return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
 def fpRealToFP(rm, v, sort, ctx=None):
@@ -8217,10 +8338,10 @@ def fpRealToFP(rm, v, sort, ctx=None):
     _assert(is_real(v), "Second argument must be a SMT expression or real sort.")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(
+    to_fp_op = ctx.tm.mkOp(
         Kind.FLOATINGPOINT_TO_FP_FROM_REAL, sort.ebits(), sort.sbits()
     )
-    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
 def fpSignedToFP(rm, v, sort, ctx=None):
@@ -8241,10 +8362,10 @@ def fpSignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(
+    to_fp_op = ctx.tm.mkOp(
         Kind.FLOATINGPOINT_TO_FP_FROM_SBV, sort.ebits(), sort.sbits()
     )
-    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
 def fpUnsignedToFP(rm, v, sort, ctx=None):
@@ -8265,10 +8386,10 @@ def fpUnsignedToFP(rm, v, sort, ctx=None):
     _assert(is_bv(v), "Second argument must be a SMT bit-vector expression")
     _assert(is_fp_sort(sort), "Third argument must be a SMT floating-point sort.")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(
+    to_fp_op = ctx.tm.mkOp(
         Kind.FLOATINGPOINT_TO_FP_FROM_UBV, sort.ebits(), sort.sbits()
     )
-    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
+    return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, v.ast), ctx)
 
 
 def fpToFPUnsigned(rm, x, s, ctx=None):
@@ -8281,8 +8402,8 @@ def fpToFPUnsigned(rm, x, s, ctx=None):
         _assert(is_bv(x), "Second argument must be a SMT bit-vector expression")
         _assert(is_fp_sort(s), "Third argument must be SMT floating-point sort")
     ctx = _get_ctx(ctx)
-    to_fp_op = ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_UBV, s.ebits(), s.sbits())
-    return FPRef(ctx.solver.mkTerm(to_fp_op, rm.ast, x.ast), ctx)
+    to_fp_op = ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_FP_FROM_UBV, s.ebits(), s.sbits())
+    return FPRef(ctx.tm.mkTerm(to_fp_op, rm.ast, x.ast), ctx)
 
 
 def fpToSBV(rm, x, s, ctx=None):
@@ -8308,9 +8429,7 @@ def fpToSBV(rm, x, s, ctx=None):
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
     return BitVecRef(
-        ctx.solver.mkTerm(
-            ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast
-        ),
+        ctx.tm.mkTerm(ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_SBV, s.size()), rm.ast, x.ast),
         ctx,
     )
 
@@ -8338,9 +8457,7 @@ def fpToUBV(rm, x, s, ctx=None):
         _assert(is_bv_sort(s), "Third argument must be SMT bit-vector sort")
     ctx = _get_ctx(ctx)
     return BitVecRef(
-        ctx.solver.mkTerm(
-            ctx.solver.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast
-        ),
+        ctx.tm.mkTerm(ctx.tm.mkOp(Kind.FLOATINGPOINT_TO_UBV, s.size()), rm.ast, x.ast),
         ctx,
     )
 
@@ -8362,7 +8479,7 @@ def fpToReal(x, ctx=None):
     if debugging():
         _assert(is_fp(x), "First argument must be a SMT floating-point expression")
     ctx = _get_ctx(ctx)
-    return ArithRef(ctx.solver.mkTerm(Kind.FLOATINGPOINT_TO_REAL, x.ast), ctx)
+    return ArithRef(ctx.tm.mkTerm(Kind.FLOATINGPOINT_TO_REAL, x.ast), ctx)
 
 
 #########################################
@@ -8512,10 +8629,9 @@ def CreateDatatypes(*ds):
         _assert(
             all([isinstance(d, Datatype) for d in ds]), "Arguments must be Datatypes"
         )
-        _assert(all([d.ctx == ds[0].ctx for d in ds]), "Context mismatch")
         _assert(all([d.constructors != [] for d in ds]), "Non-empty Datatypes expected")
     ctx = ds[0].ctx
-    s = ctx.solver
+    s = ctx.tm
     num = len(ds)
     uninterp_sorts = {}
     for d in ds:
@@ -9044,11 +9160,11 @@ def _mk_quant(vs, body, kind):
     if not isinstance(vs, list):
         vs = [vs]
     c = vs[0].ctx
-    s = c.solver
+    tm = c.tm
     consts = [v.ast for v in vs]
-    vars_ = [s.mkVar(v.sort().ast, str(v)) for v in vs]
+    vars_ = [tm.mkVar(v.sort().ast, str(v)) for v in vs]
     subbed_body = body.ast.substitute(consts, vars_)
-    ast = s.mkTerm(kind, s.mkTerm(Kind.VARIABLE_LIST, *vars_), subbed_body)
+    ast = tm.mkTerm(kind, tm.mkTerm(Kind.VARIABLE_LIST, *vars_), subbed_body)
     return QuantifierRef(ast, c)
 
 
@@ -9119,9 +9235,6 @@ class FiniteFieldSortRef(SortRef):
         '#f10m31'
         """
         if is_expr(val):
-            if debugging():
-                _assert(self.ctx == val.ctx, "Context mismatch")
-            # Idea: use sign_extend if sort of val is a bitvector of smaller size
             return val
         else:
             return FiniteFieldVal(val, self)
@@ -9246,7 +9359,7 @@ class FiniteFieldRef(ExprRef):
         no solution
         """
         return FiniteFieldRef(
-            self.ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, self.ast), self.ctx
+            self.ctx.tm.mkTerm(Kind.FINITE_FIELD_NEG, self.ast), self.ctx
         )
 
 
@@ -9324,7 +9437,7 @@ def FiniteFieldSort(sz, ctx=None):
     True
     """
     ctx = _get_ctx(ctx)
-    return FiniteFieldSortRef(ctx.solver.mkFiniteFieldSort(sz), ctx)
+    return FiniteFieldSortRef(ctx.tm.mkFiniteFieldSort(sz), ctx)
 
 
 def FiniteFieldVal(val, ff, ctx=None):
@@ -9348,8 +9461,8 @@ def FiniteFieldVal(val, ff, ctx=None):
         if debugging():
             _assert(isinstance(ff, int), "non-integer in FiniteFieldVal")
         ctx = _get_ctx(ctx)
-        sort = ctx.solver.mkFiniteFieldSort(ff)
-    return FiniteFieldNumRef(ctx.solver.mkFiniteFieldElem(val, sort), ctx)
+        sort = ctx.tm.mkFiniteFieldSort(ff)
+    return FiniteFieldNumRef(ctx.tm.mkFiniteFieldElem(val, sort), ctx)
 
 
 def FiniteFieldElem(name, ff, ctx=None):
@@ -9431,8 +9544,8 @@ def FFSub(a, b):
     """
     a, b = _coerce_exprs(a, b)
     ctx = a.ctx
-    neg_b = ctx.solver.mkTerm(Kind.FINITE_FIELD_NEG, b.ast)
-    return FiniteFieldRef(ctx.solver.mkTerm(Kind.FINITE_FIELD_ADD, a.ast, neg_b), ctx)
+    neg_b = ctx.tm.mkTerm(Kind.FINITE_FIELD_NEG, b.ast)
+    return FiniteFieldRef(ctx.tm.mkTerm(Kind.FINITE_FIELD_ADD, a.ast, neg_b), ctx)
 
 
 def FFNeg(a):

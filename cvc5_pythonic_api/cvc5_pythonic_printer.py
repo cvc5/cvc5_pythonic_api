@@ -84,6 +84,7 @@ _cvc5_kinds_to_str = {
     Kind.BITVECTOR_CONCAT: "Concat",
     Kind.BITVECTOR_EXTRACT: "Extract",
     Kind.BITVECTOR_TO_NAT: "BV2Int",
+    Kind.BITVECTOR_UBV_TO_INT: "BV2Int",
     Kind.FINITE_FIELD_ADD: "+",
     Kind.FINITE_FIELD_MULT: "*",
     Kind.FINITE_FIELD_NEG: "-",
@@ -1080,6 +1081,21 @@ class Formatter:
                 arg1_pp, indent(2, compose(to_format("["), arg2_pp, to_format("]")))
             )
 
+    def pp_sexpr(self, a, d, xs):
+        r = []
+        sz = 0
+        for child in a.children():
+            r.append(self.pp_expr(child, d + 1, xs))
+            sz = sz + 1
+            if sz > self.max_args:
+                r.append(self.pp_ellipses())
+                break
+        return group(
+            indent(
+                len("("), compose(to_format("("), seq(r, " ", False), to_format(")"))
+            )
+        )
+
     def pp_unary_param(self, a, d, xs, param_on_right):
         p = a.ast.getOp()[0].toPythonObj()
         arg = self.pp_expr(a.arg(0), d + 1, xs)
@@ -1194,6 +1210,8 @@ class Formatter:
                 return self.pp_uf_apply(a, d, xs)
             elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
+            elif k == Kind.SEXPR:
+                return self.pp_sexpr(a, d, xs)
             else:
                 return self.pp_prefix(a, d, xs)
 
@@ -1301,6 +1319,27 @@ class Formatter:
                 break
         return seq3(r, "[", "]")
 
+    def pp_proof(self, p, d):
+        if d > self.max_depth:
+            return self.pp_ellipses()
+        r = []
+        rule = str(p.getRule())[10:]
+        result = p.getResult()
+        childrenProofs = p.getChildren()
+        args = p.getArguments()
+        result_pp = self.pp_expr(result, 0, [])
+        r.append(
+            compose(to_format("{}: ".format(rule)), indent(_len(rule) + 2, result_pp))
+        )
+        if args:
+            r_args = []
+            for arg in args:
+                r_args.append(self.pp_expr(arg, 0, []))
+            r.append(seq3(r_args, "[", "]"))
+        for cPf in childrenProofs:
+            r.append(self.pp_proof(cPf, d + 1))
+        return seq3(r)
+
     def pp_func_entry(self, e):
         num = e.num_args()
         if num > 1:
@@ -1360,6 +1399,8 @@ class Formatter:
             return self.pp_seq(a.assertions(), 0, [])
         elif isinstance(a, cvc.ModelRef):
             return self.pp_model(a)
+        elif isinstance(a, cvc.ProofRef):
+            return self.pp_proof(a, 0)
         elif isinstance(a, list) or isinstance(a, tuple):
             return self.pp_list(a)
         else:
