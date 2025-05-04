@@ -1754,7 +1754,15 @@ def And(*args):
     >>> P = BoolVector('p', 5)
     >>> And(P)
     And(p__0, p__1, p__2, p__3, p__4)
+    >>> And()
+    True
+    >>> And(p)
+    p
     """
+    if len(args) == 0:
+        return True
+    if len(args) == 1 and type(args[0]) is not list:
+        return args[0]
     return _nary_kind_builder(Kind.AND, *args)
 
 
@@ -1769,7 +1777,15 @@ def Or(*args):
     >>> P = BoolVector('p', 5)
     >>> Or(P)
     Or(p__0, p__1, p__2, p__3, p__4)
+    >>> Or()
+    False
+    >>> Or(p)
+    p
     """
+    if len(args) == 0:
+        return False
+    if len(args) == 1 and type(args[0]) is not list:
+        return args[0]
     return _nary_kind_builder(Kind.OR, *args)
 
 
