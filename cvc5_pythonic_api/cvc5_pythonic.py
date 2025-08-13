@@ -146,6 +146,7 @@ class Context(object):
 
     def __init__(self):
         self.tm = pc.TermManager()
+        self.solver = pc.Solver(self.tm)
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
@@ -5990,9 +5991,8 @@ class Solver(object):
 
     def __init__(self, ctx=None, logFile=None):
         self.ctx = _get_ctx(ctx)
-        self.solver = None
+        self.solver = self.ctx.solver
         self.logic = None
-        self.initFromLogic()
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
@@ -6002,6 +6002,7 @@ class Solver(object):
     def initFromLogic(self):
         """Create the base-API solver from the logic"""
         self.solver = pc.Solver(self.ctx.tm)
+        self.ctx.solver = self.solver
         if self.logic is not None:
             self.solver.setLogic(self.logic)
         self.solver.setOption("produce-models", "true")
