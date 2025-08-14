@@ -42,3 +42,18 @@ if __name__ == '__main__':
     solve(List.head(List.cons(a, List.nil)) > 50)
 
     prove(Not(List.is_nil(List.cons(a, List.nil))))
+
+    print()
+
+    # Test DatatypeSort for unresolved datatype sorts.
+    SomeType = Datatype('SomeType')
+    SomeTypeSort = DatatypeSort('SomeType')
+    SomeType.declare('nil')
+    SomeType.declare('some', ('someof', SeqSort(SomeTypeSort), ))
+    SomeTypeSort = SomeType.create()
+
+    nil = SomeTypeSort.nil
+    some = SomeTypeSort.some(Unit(nil))
+
+    print("Sorts match:", SomeTypeSort == SomeTypeSort.someof(some)[0].sort())
+    print("Operation on resolved sort works:", simplify(SomeTypeSort.is_nil(SomeTypeSort.someof(some)[0])))

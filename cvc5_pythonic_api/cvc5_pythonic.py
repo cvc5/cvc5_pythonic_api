@@ -8688,6 +8688,14 @@ def CreateDatatypes(*ds):
         result.append(dref)
     return tuple(result)
 
+class DatatypeSort:
+    """Unresolved datatype sorts."""
+    
+    def __init__(self, name, ctx=None):
+        self.name = name
+        self.ctx = _get_ctx(ctx)
+        self.ast = self.ctx.tm.mkUnresolvedDatatypeSort(name)
+        
 
 class DatatypeSortRef(SortRef):
     """Datatype sorts."""
