@@ -8688,14 +8688,11 @@ def CreateDatatypes(*ds):
         result.append(dref)
     return tuple(result)
 
-class DatatypeSort:
-    """Unresolved datatype sorts."""
-    
-    def __init__(self, name, ctx=None):
-        self.name = name
-        self.ctx = _get_ctx(ctx)
-        self.ast = self.ctx.tm.mkUnresolvedDatatypeSort(name)
-        
+def DatatypeSort(name, ctx=None):
+    """Create a reference to a sort that will be declared as a recursive datatype"""
+    ctx = _get_ctx(ctx)
+    s = ctx.tm.mkUnresolvedDatatypeSort(name)
+    return SortRef(s, ctx)
 
 class DatatypeSortRef(SortRef):
     """Datatype sorts."""
