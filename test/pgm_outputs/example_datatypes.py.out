@@ -13,3 +13,6 @@ t is a 'cons': True
 
 [a = 51]
 proved
+
+Sorts match: True
+Operation on resolved sort works: True
