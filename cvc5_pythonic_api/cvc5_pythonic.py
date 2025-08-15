@@ -64,7 +64,6 @@ Differences with Z3py:
   * FiniteDomainSort
   * Fixedpoint API
   * SMT2 file support
-  * recursive functions
 * Not missing, but different
   * Options
     * as expected
@@ -146,6 +145,7 @@ class Context(object):
 
     def __init__(self):
         self.tm = pc.TermManager()
+        self.solver = pc.Solver(self.tm)
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
         # An increasing identifier used to make fresh identifiers
@@ -935,6 +935,44 @@ def FreshFunction(*sig):
     sort = ctx.tm.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
     name = ctx.next_fresh(sort, "freshfn")
     return Function(name, *sig)
+
+
+def RecAddDefinition(func, args, body):
+    """Define a new SMT recursive function with the given function declaration.
+    Replaces constants in `args` with bound variables.
+
+    >>> fact = Function('fact', IntSort(), IntSort())
+    >>> n = Int('n')
+    >>> RecAddDefinition(fact, n, If(n == 0, 1, n * fact(n - 1)))
+    >>> solve(Not(fact(5) == 120))
+    unsat
+    """
+    if is_app(args):
+        args = [args]
+    ctx = func.ctx
+    consts = [a.ast for a in args]
+    vars_ = [ctx.solver.mkVar(a.sort().ast, str(a)) for a in args]
+    subbed_body = body.ast.substitute(consts, vars_)
+    ctx.solver.defineFunRec(func.ast, vars_, subbed_body)
+
+
+def AddDefinition(name, args, body):
+    """Define a new SMT function with the given function declaration.
+    Replaces constants in `args` with bound variables.
+
+    >>> x, y = Ints('x y')
+    >>> minus = AddDefinition(minus, [x, y], x - y)
+    >>> solve(Not(minus(10, 5) == 5))
+    unsat
+    """
+    if is_app(args):
+        args = [args]
+    ctx = body.ctx
+    consts = [a.ast for a in args]
+    vars_ = [ctx.solver.mkVar(a.sort().ast, str(a)) for a in args]
+    subbed_body = body.ast.substitute(consts, vars_)
+    func = ctx.solver.defineFun(name, vars_, subbed_body.getSort(), subbed_body)
+    return FuncDeclRef(func, ctx)
 
 
 #########################################
@@ -5990,9 +6028,8 @@ class Solver(object):
 
     def __init__(self, ctx=None, logFile=None):
         self.ctx = _get_ctx(ctx)
-        self.solver = None
+        self.solver = self.ctx.solver
         self.logic = None
-        self.initFromLogic()
         self.scopes = 0
         self.assertions_ = [[]]
         self.last_result = None
@@ -6002,6 +6039,7 @@ class Solver(object):
     def initFromLogic(self):
         """Create the base-API solver from the logic"""
         self.solver = pc.Solver(self.ctx.tm)
+        self.ctx.solver = self.solver
         if self.logic is not None:
             self.solver.setLogic(self.logic)
         self.solver.setOption("produce-models", "true")
