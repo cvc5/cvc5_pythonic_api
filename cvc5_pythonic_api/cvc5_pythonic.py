@@ -977,7 +977,9 @@ def AddDefinition(name, args, body):
     consts = [a.ast for a in args]
     vars_ = [ctx.tm.mkVar(a.sort().ast, str(a)) for a in args]
     subbed_body = body.ast.substitute(consts, vars_)
-    ctx.defined_functions.append(((name, vars_, subbed_body.getSort(), subbed_body), False))
+    ctx.defined_functions.append(
+        ((name, vars_, subbed_body.getSort(), subbed_body), False)
+    )
 
 
 #########################################
@@ -6058,7 +6060,7 @@ class Solver(object):
                 self.solver.defineFunRec(*func[0])
             else:
                 self.solver.defineFun(*func[0])
-        
+
     def __del__(self):
         if self.solver is not None:
             self.solver = None
