@@ -6337,7 +6337,7 @@ class Solver(object):
         >>> s = Solver()
         >>> s.setOption(incremental=False)
         >>> s.getOptionInfo("incremental")
-        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'type': <class 'bool'>, 'current': False, 'default': True}
+        {'name': 'incremental', 'aliases': [], 'setByUser': True, 'category': <OptionCategory.COMMON: 2>, 'type': <class 'bool'>, 'current': False, 'default': True}
         """
         return self.solver.getOptionInfo(name)
 
