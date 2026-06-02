@@ -3507,6 +3507,12 @@ def RealVal(val, ctx=None):
     3/2
     """
     ctx = _get_ctx(ctx)
+    if isinstance(val, float):
+        if abs(val) > 1e-10:
+            return RatNumRef(ctx.tm.mkReal(f"{val:.10f}"), ctx)
+        else:
+            num, den = val.as_integer_ratio()
+            return RatVal(num, den, ctx)
     return RatNumRef(ctx.tm.mkReal(str(val)), ctx)
 
 
