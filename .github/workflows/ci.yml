@@ -5,6 +5,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      # The configuration cvc5 is built with. The cache keys below track this
+      # value instead of the workflow file, so that unrelated changes to the
+      # workflow do not invalidate the cached artifacts.
+      CVC5_CONFIG: production --auto-download --python-bindings --cocoa --gpl
+
     # cancel already running jobs for the same branch/pr/tag
     concurrency:
       group: build-${{ github.ref }}
@@ -12,7 +18,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
 
     - uses: psf/black@stable
       with:
@@ -20,24 +26,76 @@ jobs:
         src: "cvc5_pythonic_api"
         version: "24.10.0"
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
       with:
         repository: cvc5/cvc5
         path: cvc5
-      
+
+    - name: Identify cvc5 build inputs
+      id: cvc5-info
+      shell: bash
+      run: |
+        echo "sha=$(git -C cvc5 rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        echo "python=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')" >> "$GITHUB_OUTPUT"
+        echo "config=$(printf '%s' "$CVC5_CONFIG" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+    # The artifacts needed to run the tests: the Python bindings package and
+    # the cvc5 shared libraries it is linked against. The bindings embed an
+    # absolute rpath to ${{ github.workspace }}/cvc5/build/src{,/parser}, which
+    # is stable across runs, so they can be restored and used as-is.
+    - name: Setup cvc5 artifacts cache
+      id: cvc5-cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          cvc5/build/src/api/python/cvc5
+          cvc5/build/src/*.so*
+          cvc5/build/src/parser/*.so*
+        key: cvc5-pythonic-api-artifacts-${{ runner.os }}-py${{ steps.cvc5-info.outputs.python }}-${{ steps.cvc5-info.outputs.sha }}-${{ steps.cvc5-info.outputs.config }}
+
+    # In a shared build (required by --python-bindings) some dependencies, e.g.
+    # libpoly, are built as shared libraries under deps/install/lib that cvc5
+    # loads at run time, so this cache is needed for testing too, not just for
+    # building.
+    - name: Setup dependencies cache
+      id: deps-cache
+      uses: actions/cache@v6
+      with:
+        path: cvc5/build/deps
+        key: cvc5-pythonic-api-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ steps.cvc5-info.outputs.config }}
+
+    - name: Check whether cvc5 has to be built
+      id: build-cvc5
+      shell: bash
+      run: |
+        if [ "${{ steps.cvc5-cache.outputs.cache-hit }}" = "true" ] &&
+           [ "${{ steps.deps-cache.outputs.cache-hit }}" = "true" ]; then
+          echo "Reusing the cached cvc5 artifacts for ${{ steps.cvc5-info.outputs.sha }}"
+          echo "needed=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "needed=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    # Everything this installs is only needed to build cvc5: the compilers and
+    # headers, ccache, and the num_proc variable. The libraries that the cached
+    # artifacts load at run time are either part of the runner image (libgmp10,
+    # libstdc++) or come from the cached cvc5/build/deps.
     - name: Install dependencies
+      if: steps.build-cvc5.outputs.needed == 'true'
       uses: ./cvc5/.github/actions/install-dependencies
       with:
         with-documentation: false
 
     - name: Setup ccache cache
-      uses: actions/cache@v4
+      if: steps.build-cvc5.outputs.needed == 'true'
+      uses: actions/cache@v6
       with:
         path: ccache-dir
         key: cvc5-pythonic-api-ccache-${{ github.sha }}
         restore-keys: cvc5-pythonic-api-ccache-
 
     - name: Configure ccache
+      if: steps.build-cvc5.outputs.needed == 'true'
       shell: bash
       run: |
         ccache --set-config=cache_dir=${{ github.workspace }}/ccache-dir
@@ -46,18 +104,28 @@ jobs:
         ccache -M 500M
         ccache -z
 
-    - name: Setup dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: cvc5/build/deps
-        key: cvc5-pythonic-api-deps-${{ hashFiles('cvc5/cmake/**') }}-${{ hashFiles('.github/**') }}
-
     - name: Build cvc5
+      if: steps.build-cvc5.outputs.needed == 'true'
       run: |
         cd cvc5/
-        ./configure.sh production --auto-download --python-bindings --cocoa --gpl
+        # $CVC5_CONFIG is unquoted on purpose: the flags must be split into
+        # separate arguments. cvc5 only uses ccache when it is told to, so the
+        # compiler launchers have to be passed explicitly, as its own CI does.
+        ./configure.sh $CVC5_CONFIG \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         cd build/
+        ccache --set-config="base_dir=$(pwd)"
         make -j${{ env.num_proc }}
+
+    - name: Report the ccache statistics
+      if: steps.build-cvc5.outputs.needed == 'true'
+      run: ccache -s
+
+    - name: Check the cached cvc5 artifacts
+      if: steps.build-cvc5.outputs.needed != 'true'
+      run: python3 -c 'import cvc5; print(cvc5.__file__)'
+      env:
+        PYTHONPATH: cvc5/build/src/api/python
 
     - name: Test cvc5 pythonic API
       run: |
