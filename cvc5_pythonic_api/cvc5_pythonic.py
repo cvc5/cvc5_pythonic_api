@@ -3505,8 +3505,20 @@ def RealVal(val, ctx=None):
     3/5
     >>> RealVal("1.5")
     3/2
+    >>> RealVal(1.5)
+    3/2
+    >>> RealVal(1e-5)
+    1/100000
+    >>> RealVal(1e-11).eq(RatVal(1, 10**11))
+    True
     """
     ctx = _get_ctx(ctx)
+    if isinstance(val, float):
+        # `str` may use scientific notation (e.g. `str(1e-5) == '1e-05'`),
+        # which `mkReal` does not accept. `repr` gives the shortest decimal
+        # that round-trips to `val`, and formatting the resulting `Decimal`
+        # with `'f'` expands it without an exponent and without rounding.
+        return RatNumRef(ctx.tm.mkReal(format(Decimal(repr(val)), "f")), ctx)
     return RatNumRef(ctx.tm.mkReal(str(val)), ctx)
 
 
