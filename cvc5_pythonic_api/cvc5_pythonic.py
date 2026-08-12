@@ -793,6 +793,8 @@ def _to_sort_ref(s, ctx):
         return FPSortRef(s, ctx)
     elif s.isRoundingMode():
         return FPRMSortRef(s, ctx)
+    elif s.isFunction():
+        return FuncSortRef(s, ctx)
     return SortRef(s, ctx)
 
 
@@ -801,6 +803,75 @@ def _to_sort_ref(s, ctx):
 # Function Declarations
 #
 #########################################
+
+
+class FuncSortRef(SortRef):
+    """Function sorts.
+
+    The sort of an uninterpreted function or of a lambda expression: it maps a
+    tuple of domain sorts to a range sort.
+
+    >>> Function('f', IntSort(), RealSort(), BoolSort()).sort()
+    (-> Int Real Bool)
+
+    Z3Py models lambdas as arrays, so its lambda sorts are array sorts. cvc5
+    keeps function and array sorts distinct, but this class offers the same
+    accessors as `ArraySortRef` so that code written against Z3Py's array
+    sorts carries over.
+    """
+
+    def arity(self):
+        """Return the number of arguments of the function sort `self`.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.sort().arity()
+        2
+        """
+        return self.ast.getFunctionArity()
+
+    def domain(self):
+        """Return the first domain of the function sort `self`.
+
+        Use `domain_n` to reach the domains of a function of arity two or more.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.sort().domain()
+        Int
+        """
+        return self.domain_n(0)
+
+    def domain_n(self, i):
+        """Return the sort of the argument `i` of the function sort `self`.
+        This method assumes that `0 <= i < self.arity()`.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.sort().domain_n(0)
+        Int
+        >>> f.sort().domain_n(1)
+        Real
+        """
+        return _to_sort_ref(self.ast.getFunctionDomainSorts()[i], self.ctx)
+
+    def range(self):
+        """Return the range of the function sort `self`.
+
+        >>> f = Function('f', IntSort(), RealSort(), BoolSort())
+        >>> f.sort().range()
+        Bool
+        """
+        return _to_sort_ref(self.ast.getFunctionCodomainSort(), self.ctx)
+
+
+def is_func_sort(s):
+    """Is this a function sort?
+
+    >>> is_func_sort(Function('f', IntSort(), BoolSort()).sort())
+    True
+    >>> is_func_sort(ArraySort(IntSort(), BoolSort()))
+    False
+    """
+    instance_check(s, SortRef)
+    return s.ast.isFunction()
 
 
 class FuncDeclRef(ExprRef):
@@ -831,7 +902,8 @@ class FuncDeclRef(ExprRef):
         >>> f.arity()
         2
         """
-        return self.ast.getSort().getFunctionArity()
+        # safe b/c a declaration always has a function sort
+        return self.sort().arity()  # type: ignore
 
     def domain(self, i):
         """Return the sort of the argument `i` of a function declaration.
@@ -843,7 +915,8 @@ class FuncDeclRef(ExprRef):
         >>> f.domain(1)
         Real
         """
-        return _to_sort_ref(self.ast.getSort().getFunctionDomainSorts()[i], self.ctx)
+        # safe b/c a declaration always has a function sort
+        return self.sort().domain_n(i)  # type: ignore
 
     def range(self):
         """Return the sort of the range of a function declaration.
@@ -853,7 +926,8 @@ class FuncDeclRef(ExprRef):
         >>> f.range()
         Bool
         """
-        return _to_sort_ref(self.ast.getSort().getFunctionCodomainSort(), self.ctx)
+        # safe b/c a declaration always has a function sort
+        return self.sort().range()  # type: ignore
 
     def __call__(self, *args):
         """Create an SMT application expression using the function `self`,
@@ -9050,7 +9124,21 @@ class QuantifierRef(BoolRef):
         return self.ast
 
     def sort(self):
-        """Return the Boolean sort"""
+        """Return the Boolean sort, or the function sort of a lambda.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x, y = Ints('x y')
+        >>> ForAll(x, f(x) == 0).sort()
+        Bool
+        >>> Lambda(x, f(x)).sort()
+        (-> Int Int)
+        >>> Lambda(x, f(x)).sort().domain()
+        Int
+        >>> Lambda([x, y], f(x) + y).sort().range()
+        Int
+        """
+        if self.is_lambda():
+            return _sort(self.ctx, self.as_ast())
         return BoolSort(self.ctx)
 
     def is_forall(self):
