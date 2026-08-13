@@ -1208,6 +1208,8 @@ class Formatter:
                 return self.pp_unary(a, d, xs)
             elif k == Kind.APPLY_UF:
                 return self.pp_uf_apply(a, d, xs)
+            elif k == Kind.HO_APPLY:
+                return self.pp_ho_apply(a, d, xs)
             elif k in [Kind.APPLY_CONSTRUCTOR, Kind.APPLY_SELECTOR, Kind.APPLY_TESTER]:
                 return self.pp_dt_apply(a, d, xs)
             elif k == Kind.SEXPR:
@@ -1226,6 +1228,38 @@ class Formatter:
                 r.append(self.pp_ellipses())
                 break
         return seq1(self.pp_name(first), r)
+
+    def pp_ho_apply(self, a, d, xs):
+        # A partial application is a spine of binary HO_APPLY nodes. Collapse
+        # it into a single application, so that a term built as f(x)(y) reads
+        # as f(x, y) -- the same way a saturated application of f is printed,
+        # and the two are equal terms.
+        args = []
+        head = a
+        while head.kind() == Kind.HO_APPLY:
+            children = head.children()
+            head = children[0]
+            args.append(children[1])
+        args.reverse()
+        r = []
+        sz = 0
+        for child in args:
+            r.append(self.pp_expr(child, d + 1, xs))
+            sz = sz + 1
+            if sz > self.max_args:
+                r.append(self.pp_ellipses())
+                break
+        # Not seq1: the head of the spine need not be a plain name -- it can
+        # be any term of function sort, such as an If over two functions --
+        # and seq1 measures its header, which only works for a name.
+        return group(
+            compose(
+                self.pp_expr(head, d + 1, xs),
+                to_format("("),
+                indent(1, seq(r)),
+                to_format(")"),
+            )
+        )
 
     def pp_dt_apply(self, a, d, xs):
         r = []

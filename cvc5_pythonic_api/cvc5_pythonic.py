@@ -949,8 +949,48 @@ class FuncDeclRef(ExprRef):
         f(x, y)
         >>> f(x, x)
         f(x, ToReal(x))
+
+        Supplying fewer arguments than the arity builds a partial
+        application, whose sort is the rest of the function sort:
+
+        >>> f(x).sort()
+        (-> Real Bool)
+        >>> f(x)
+        f(x)
+
+        Applying that to the remaining arguments gives the same term as
+        applying `f` to all of them at once, and prints the same way:
+
+        >>> f(x)(y)
+        f(x, y)
+
+        Note that cvc5 only reasons about function terms under a
+        higher-order logic, one whose name carries the `HO_` prefix:
+
+        >>> s = SolverFor('HO_ALL')
+        >>> s.add(f(x)(y) != f(x, y))
+        >>> s.check()
+        unsat
         """
+        args = _get_args(args)
+        if 0 < len(args) and (len(args) < self.arity() or self.kind() == Kind.HO_APPLY):
+            return _partial_apply(self, args)
         return _higherorder_apply(self, args, Kind.APPLY_UF)
+
+
+def _partial_apply(func, args):
+    """Apply `func` to `args`, one argument at a time.
+
+    Used when there are too few arguments to saturate `func`, and when `func`
+    is itself a partial application: neither can be expressed with APPLY_UF.
+    The result is a term of whatever is left of the function sort, which is
+    the range sort once the arguments run out.
+    """
+    t = func.ast
+    for i in range(len(args)):
+        arg = func.domain(i).cast(args[i])
+        t = func.ctx.tm.mkTerm(Kind.HO_APPLY, t, arg.as_ast())
+    return _to_expr_ref(t, func.ctx)
 
 
 def _higherorder_apply(func, args, kind):
@@ -982,23 +1022,68 @@ def is_func_decl(a):
     return isinstance(a, FuncDeclRef)
 
 
+def _to_function_sort(ctx, sig):
+    """Build the base function sort for the signature `sig`.
+
+    `sig` is a list of domain sorts followed by the range sort.
+
+    cvc5 normalizes higher-order sorts, so a function sort cannot appear as a
+    codomain. When the range is one, its own domains are spliced onto the
+    arguments instead: `Int -> (-> Real Bool)` is built as `(-> Int Real Bool)`.
+    Applying such a function to an argument for each of the leading domains
+    yields a term of the range sort again, so the distinction stays invisible.
+    """
+    arity = len(sig) - 1
+    rng = sig[arity]
+    doms = [sig[i].ast for i in range(arity)]
+    if isinstance(rng, FuncSortRef):
+        doms += [rng.domain_n(i).ast for i in range(rng.arity())]
+        cod = rng.range().ast
+    else:
+        cod = rng.ast
+    return ctx.tm.mkFunctionSort(doms, cod)
+
+
 def Function(name, *sig):
     """Create a new SMT uninterpreted function with the given sorts.
 
     >>> f = Function('f', IntSort(), IntSort())
     >>> f(f(0))
     f(f(0))
+
+    The range may itself be a function sort, as it is for a function defined
+    by a lambda expression:
+
+    >>> x = Real('x')
+    >>> lo, hi = Reals('lo hi')
+    >>> body = Lambda([x], And(lo <= x, x <= hi))
+    >>> setof = Function('setof', RealSort(), RealSort(), body.sort())
+    >>> setof.sort()
+    (-> Real Real Real Bool)
+    >>> setof(lo, hi).sort() == body.sort()
+    True
+
+    A partial application of `setof` can then be defined by `body`, which is
+    what a Z3Py definition of a function returning a lambda amounts to.
+    Reasoning about it needs a higher-order logic, and the quantified
+    definition needs `ho-elim` to be discharged rather than answered
+    `unknown`:
+
+    >>> s = SolverFor('HO_ALL')
+    >>> s.set('ho-elim', True)
+    >>> s.add(ForAll([lo, hi], setof(lo, hi) == body))
+    >>> s.add(Not(setof(0, 10)(3)))
+    >>> s.check()
+    unsat
     """
     sig = _get_args(sig)
     if debugging():
         _assert(len(sig) > 0, "At least two arguments expected")
-    arity = len(sig) - 1
-    rng = sig[arity]
+    rng = sig[len(sig) - 1]
     if debugging():
         _assert(is_sort(rng), "SMT sort expected")
     ctx = rng.ctx
-    sort = ctx.tm.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
-    e = ctx.get_var(name, _to_sort_ref(sort, ctx))
+    e = ctx.get_var(name, _to_sort_ref(_to_function_sort(ctx, sig), ctx))
     return FuncDeclRef(e, ctx)
 
 
@@ -1013,13 +1098,11 @@ def FreshFunction(*sig):
     sig = _get_args(sig)
     if debugging():
         _assert(len(sig) > 0, "At least two arguments expected")
-    arity = len(sig) - 1
-    rng = sig[arity]
+    rng = sig[len(sig) - 1]
     if debugging():
         _assert(is_sort(rng), "SMT sort expected")
     ctx = rng.ctx
-    sort = ctx.tm.mkFunctionSort([sig[i].ast for i in range(arity)], rng.ast)
-    name = ctx.next_fresh(sort, "freshfn")
+    name = ctx.next_fresh(_to_function_sort(ctx, sig), "freshfn")
     return Function(name, *sig)
 
 
