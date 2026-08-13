@@ -977,6 +977,31 @@ class FuncDeclRef(ExprRef):
             return _partial_apply(self, args)
         return _higherorder_apply(self, args, Kind.APPLY_UF)
 
+    def __getitem__(self, arg):
+        """Shorthand for `self(arg)`.
+
+        Z3Py gives a lambda expression an array sort, so it spells the
+        application of one, and of anything defined by one, with `[]`. That
+        spelling is accepted here too, so such code carries over:
+
+        >>> x = Real('x')
+        >>> lo, hi = Reals('lo hi')
+        >>> body = Lambda([x], And(lo <= x, x <= hi))
+        >>> setof = Function('setof', RealSort(), RealSort(), body.sort())
+        >>> setof(lo, hi)[3]
+        setof(lo, hi, 3)
+
+        Several indices at once are applied in order:
+
+        >>> f = Function('f', IntSort(), IntSort(), IntSort())
+        >>> i = Int('i')
+        >>> f[i, i]
+        f(i, i)
+        """
+        if not isinstance(arg, tuple):
+            arg = (arg,)
+        return self(*arg)
+
 
 def _partial_apply(func, args):
     """Apply `func` to `args`, one argument at a time.
@@ -5740,6 +5765,11 @@ def Store(a, i, v):
 def Select(a, i):
     """Return an SMT select array expression.
 
+    `Select` is an array operation. A lambda expression has a function sort
+    here, not an array sort, so it is applied with `[]` instead: Z3Py defines
+    `Select(a, i)` as `a[i]`, so rewriting a select of a lambda that way keeps
+    working under both.
+
     >>> a = Array('a', IntSort(), IntSort())
     >>> i = Int('i')
     >>> Select(a, i)
@@ -9252,6 +9282,38 @@ class QuantifierRef(BoolRef):
         if self.is_lambda():
             return _sort(self.ctx, self.as_ast())
         return BoolSort(self.ctx)
+
+    def __getitem__(self, arg):
+        """Apply the lambda expression `self` to `arg`.
+
+        Z3Py gives a lambda an array sort and applies it with `[]`; the same
+        spelling works here, even though the sort is a function sort. Note
+        that `Select` stays an array operation, so Z3Py code written as
+        `Select(L, i)` should be rewritten as `L[i]`, which Z3Py accepts too.
+
+        >>> x, y = Ints('x y')
+        >>> i = Int('i')
+        >>> Lambda([x], x + 1)[i]
+        Lambda(x, x + 1)(i)
+        >>> simplify(Lambda([x], x + 1)[3])
+        4
+        >>> simplify(Lambda([x, y], x + y)[3, 4])
+        7
+        """
+        if debugging():
+            _assert(self.is_lambda(), "Only lambda expressions can be applied")
+        if not isinstance(arg, tuple):
+            arg = (arg,)
+        # Applied one argument at a time rather than through a FuncDeclRef
+        # view of `self`: the wrapper would claim a type the term does not
+        # have, and a lambda is not printable as a declaration.
+        sort = self.sort()
+        t = self.as_ast()
+        for i in range(len(arg)):
+            t = self.ctx.tm.mkTerm(
+                Kind.HO_APPLY, t, sort.domain_n(i).cast(arg[i]).as_ast()  # type: ignore
+            )
+        return _to_expr_ref(t, self.ctx)
 
     def is_forall(self):
         """Return `True` if `self` is a universal quantifier.

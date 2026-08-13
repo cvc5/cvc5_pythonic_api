@@ -48,3 +48,21 @@ print(s.check())
 g = Function('g', IntSort(), IntSort(), IntSort())
 print(If(Bool('c'), f, g)(y))
 print(If(Bool('c'), f, g)(y)(y))
+
+# Z3Py spells the application of a lambda, and of anything defined by one,
+# with []. Both spellings work here, and build the same term. Select stays
+# an array operation, and does not accept a function.
+print(setof(i)[x])
+print(setof(i)[x].eq(setof(i)(x)))
+try:
+    Select(setof(i), x)
+except SMTException as e:
+    print(e)
+print(body[3])
+print(simplify(Lambda([y], y + 1)[3]))
+
+s = SolverFor('HO_ALL')
+s.set('ho-elim', True)
+s.add(defn)
+s.add(Not(setof(Interval.mk(0, 10))[3]))
+print(s.check())
