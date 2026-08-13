@@ -795,6 +795,8 @@ def _to_sort_ref(s, ctx):
         return FPRMSortRef(s, ctx)
     elif s.isFunction():
         return FuncSortRef(s, ctx)
+    elif s.isDatatype():
+        return DatatypeSortRef(s, ctx)
     return SortRef(s, ctx)
 
 
@@ -1088,6 +1090,8 @@ def _to_expr_ref(a, ctx, r=None):
         return SeqRef(ast, ctx, r)
     if sort.isFunction():
         return FuncDeclRef(ast, ctx, r)
+    if sort.isDatatype():
+        return DatatypeRef(ast, ctx, r)
     return ExprRef(ast, ctx, r)
 
 
@@ -9054,11 +9058,36 @@ class DatatypeRecognizerRef(FuncDeclRef):
 
 
 class DatatypeRef(ExprRef):
-    """Datatype expressions."""
+    """Datatype expressions.
+
+    Constants and applications of a datatype sort are instances of this class.
+
+    >>> List = Datatype('List')
+    >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+    >>> List.declare('nil')
+    >>> List = List.create()
+    >>> isinstance(Const('l', List), DatatypeRef)
+    True
+    >>> isinstance(List.cons(10, List.nil), DatatypeRef)
+    True
+    """
 
     def sort(self):
-        """Return the datatype sort of the datatype expression `self`."""
-        return DatatypeSortRef(self.as_ast().getSort(), self.ctx)
+        """Return the datatype sort of the datatype expression `self`.
+
+        >>> List = Datatype('List')
+        >>> List.declare('cons', ('car', IntSort()), ('cdr', List))
+        >>> List.declare('nil')
+        >>> List = List.create()
+        >>> l = Const('l', List)
+        >>> l.sort()
+        List
+        >>> l.sort().num_constructors()
+        2
+        >>> l.sort().accessor(0, 0)
+        car
+        """
+        return _sort(self.ctx, self.ast)
 
 
 def TupleSort(name, sorts, ctx=None):
