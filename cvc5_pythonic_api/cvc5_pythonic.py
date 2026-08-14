@@ -760,10 +760,10 @@ def is_sort(s):
 
 
 def instance_check(item, instance):
-    _assert(
-        isinstance(item, instance),
-        "Expected {}, but got a {}".format(instance, type(item)),
-    )
+    # The message is built only on failure. Formatting it up front costs most
+    # of the time this check takes, and it is on the path of every `sort()`.
+    if not isinstance(item, instance):
+        raise SMTException("Expected {}, but got a {}".format(instance, type(item)))
 
 
 def _to_sort_ref(s, ctx):
@@ -957,11 +957,11 @@ def _higherorder_apply(func, args, kind):
     """Create an SMT application from a FuncDeclRef and a kind of application"""
     args = _get_args(args)
     num = len(args)
-    if debugging():
-        _assert(
-            num == func.arity(),
-            "Incorrect number of arguments to %s" % func,
-        )
+    # The message is built only on failure: printing `func` is a quarter of
+    # the time an application takes, and it can raise for a function that the
+    # printer has no case for.
+    if debugging() and num != func.arity():
+        raise SMTException("Incorrect number of arguments to %s" % func)
     _args = []
     for i in range(num):
         tmp = func.domain(i).cast(args[i])
@@ -6399,7 +6399,8 @@ class Solver(object):
         if name is not None:
             kwargs[name] = value
         for k, v in kwargs.items():
-            _assert(isinstance(k, str), "non-string key " + str(k))
+            if not isinstance(k, str):
+                raise SMTException("non-string key " + str(k))
             if isinstance(v, bool):
                 v = "true" if v else "false"
             elif not isinstance(v, str):
@@ -8752,11 +8753,8 @@ def CreateDatatypes(*ds):
                 fname = fs[k][0]
                 ftype = fs[k][1]
                 if isinstance(ftype, Datatype):
-                    if debugging():
-                        _assert(
-                            ftype.name in uninterp_sorts,
-                            "Missing datatype: " + ftype.name,
-                        )
+                    if debugging() and ftype.name not in uninterp_sorts:
+                        raise SMTException("Missing datatype: " + ftype.name)
                     ftype = uninterp_sorts[ftype.name]
                 else:
                     if debugging():
