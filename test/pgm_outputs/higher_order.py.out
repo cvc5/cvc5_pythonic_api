@@ -1,0 +1,19 @@
+(-> Interval Real Bool)
+(-> Real Bool)
+True
+setof(i)
+setof(i, x)
+ForAll(i,
+       setof(i) == Lambda(x, And(lo(i) <= x, x <= hi(i))))
+unsat
+unsat
+False
+unsat
+If(c, f, g)(y)
+If(c, f, g)(y, y)
+setof(i, x)
+True
+First argument must be an SMT array expression
+Lambda(x, And(lo(i) <= x, x <= hi(i)))(3)
+4
+unsat
