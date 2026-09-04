@@ -9,7 +9,7 @@ jobs:
       # The configuration cvc5 is built with. The cache keys below track this
       # value instead of the workflow file, so that unrelated changes to the
       # workflow do not invalidate the cached artifacts.
-      CVC5_CONFIG: production --auto-download --python-bindings --cocoa --gpl
+      CVC5_CONFIG: unrestricted --auto-download --python-bindings --cocoa --gpl
 
     # cancel already running jobs for the same branch/pr/tag
     concurrency:
