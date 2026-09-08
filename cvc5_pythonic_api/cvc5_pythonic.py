@@ -148,6 +148,9 @@ class Context(object):
         self.tm = pc.TermManager()
         # Map from (name, sort) pairs to constant terms
         self.vars = {}
+        # The names of all constants created so far. Names are unique across
+        # sorts, since a name is all that identifies a constant when printing.
+        self.var_names = set()
         # An increasing identifier used to make fresh identifiers
         self.next_fresh_var = 0
 
@@ -164,16 +167,20 @@ class Context(object):
         """
         if (name, sort) not in self.vars:
             self.vars[(name, sort)] = self.tm.mkConst(sort.ast, name)
+            self.var_names.add(name)
         return self.vars[(name, sort)]
 
-    def next_fresh(self, sort, prefix):
-        """Make a name such that (name, sort) is fresh.
+    def next_fresh(self, prefix):
+        """Make a name that no constant uses, prefixed by `prefix`.
 
-        The name will be prefixed by `prefix`"""
+        The name is fresh regardless of sort: two constants sharing a name are
+        indistinguishable once printed, even when their sorts differ."""
         name = "{}{}".format(prefix, self.next_fresh_var)
-        while (name, sort) in self.vars:
+        while name in self.var_names:
             self.next_fresh_var += 1
             name = "{}{}".format(prefix, self.next_fresh_var)
+        # Never hand out this number again, whatever sort the caller uses it at
+        self.next_fresh_var += 1
         return name
 
     def __eq__(self, o):
@@ -1127,7 +1134,7 @@ def FreshFunction(*sig):
     if debugging():
         _assert(is_sort(rng), "SMT sort expected")
     ctx = rng.ctx
-    name = ctx.next_fresh(_to_function_sort(ctx, sig), "freshfn")
+    name = ctx.next_fresh("freshfn")
     return Function(name, *sig)
 
 
@@ -1500,7 +1507,7 @@ def FreshConst(sort, prefix="c"):
     False
     """
     ctx = sort.ctx
-    name = ctx.next_fresh(sort, prefix)
+    name = ctx.next_fresh(prefix)
     return Const(name, sort)
 
 
@@ -1877,8 +1884,7 @@ def FreshBool(prefix="b", ctx=None):
     False
     """
     ctx = _get_ctx(ctx)
-    sort = BoolSort(ctx)
-    name = ctx.next_fresh(sort, prefix)
+    name = ctx.next_fresh(prefix)
     return Bool(name, ctx)
 
 
@@ -3867,8 +3873,7 @@ def FreshInt(prefix="x", ctx=None):
     Int
     """
     ctx = _get_ctx(ctx)
-    sort = IntSort(ctx)
-    name = ctx.next_fresh(sort, prefix)
+    name = ctx.next_fresh(prefix)
     return Int(name, ctx)
 
 
@@ -3927,8 +3932,7 @@ def FreshReal(prefix="b", ctx=None):
     Real
     """
     ctx = _get_ctx(ctx)
-    sort = RealSort(ctx)
-    name = ctx.next_fresh(sort, prefix)
+    name = ctx.next_fresh(prefix)
     return Real(name, ctx)
 
 

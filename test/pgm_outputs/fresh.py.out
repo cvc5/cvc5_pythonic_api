@@ -1,0 +1,7 @@
+c0 c1 c2
+(and (fp.isNormal c0) (fp.isNormal c1) (fp.isSubnormal c2) (fp.isNormal (fp.add roundTowardZero (fp.mul roundTowardZero ((_ to_fp 8 24) roundTowardZero c0) ((_ to_fp 8 24) roundTowardZero c1)) c2)))
+False False False
+b3 x4 b5 c6
+freshfn7
+test8 test9
+b11
